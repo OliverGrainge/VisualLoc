@@ -9,7 +9,7 @@ from PIL import Image
 from ..utils import ImageDataset, dropbox_download_file
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
-
+from tqdm import tqdm
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -47,10 +47,12 @@ class Nordlands(BaseDataset):
         self.test_map_paths = get_paths("test", MAP_SET)
         self.test_query_paths = get_paths("test", QUERY_SET)
 
+        self.query_paths = self.query_partition("all")
+        self.map_paths = self.map_partition("all")
+
         self.name = "norldlands"
 
-
-    def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
+    def query_partition(self, partition: str) -> np.ndarray:
         # get the required partition of the dataset
         if partition == "train": paths = self.train_query_paths[:int(len(self.train_query_paths)*0.8)]
         elif partition == "val": paths = self.train_query_paths[int(len(self.train_query_paths)*0.8):]
@@ -62,31 +64,38 @@ class Nordlands(BaseDataset):
             paths = paths[sort_idx]
 
         else: raise Exception("Partition must be 'train', 'val' or 'all'")
-        
-        if preprocess == None:
-            return np.array([np.array(Image.open(pth)) for pth in paths])
-        else: 
-            imgs = np.array([np.array(Image.open(pth)) for pth in paths])
-            return torch.stack([preprocess(q) for q in imgs])
+        return paths
 
-
-    def map_images(self, partitions: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
-        if partition == "train" or "val":
-            paths = self.train_map_paths
-        elif partition == "test":
-            paths = self.test_map_paths
+    def map_partition(self, partition: str) -> np.ndarray:
+        if partition == "train" or "val": paths = self.train_map_paths
+        elif partition == "test": paths = self.test_map_paths
         elif partition == "all":
             paths = np.concatenate((self.train_map_paths, self.test_map_paths), axis=0)
             sort_index = [image_idx(img) for img in images]
             sort_idx = np.argsort(sort_index)
             paths = paths[sort_idx]
+        else: raise Exception("Partition not found")
+        return paths
+
+
+    def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
+        
+        paths = self.query_partition(partition)
+        
+        if preprocess == None:
+            return np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
         else: 
-            raise Exception("Partition not found")
+            imgs = np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
+            return torch.stack([preprocess(q) for q in imgs])
+
+
+    def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
+        paths = self.map_partition(partition)
 
         if preprocess == None:
-            return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
+            return np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
         else: 
-            imgs = np.array([np.array(Image.open(pth)) for pth in self.map_paths])
+            imgs = np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
 
@@ -97,17 +106,7 @@ class Nordlands(BaseDataset):
                             num_workers: int = 0) -> torch.utils.data.DataLoader:
 
 
-        # get the required partition of the dataset
-        if partition == "train": paths = self.train_query_paths[:int(len(self.train_query_paths)*0.8)]
-        elif partition == "val": paths = self.train_query_paths[int(len(self.train_query_paths)*0.8):]
-        elif partition == "test": paths = self.test_query_paths
-        elif partition == "all": 
-            paths = np.concatenate((self.train_query_paths, self.test_query_paths), axis=0)
-            sort_index = [image_idx(img) for img in paths]
-            sort_idx = np.argsort(sort_index)
-            paths = paths[sort_idx]
-            
-        else: raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)
@@ -120,24 +119,23 @@ class Nordlands(BaseDataset):
                         preprocess: torchvision.transforms.transforms.Compose = None, 
                         pin_memory: bool = False, 
                         num_workers: int = 0) -> torch.utils.data.DataLoader:
-
-        if partition == "train" or "val":
-            paths = self.train_map_paths
-        elif partition == "test":
-            paths = self.test_map_paths
-        elif partition == "all":
-            paths = np.concatenate((self.train_map_paths, self.test_map_paths), axis=0)
-            sort_index = [image_idx(img) for img in images]
-            sort_idx = np.argsort(sort_index)
-            paths = paths[sort_idx]
-        else: 
-            raise Exception("Partition not found")
-
-        dataset = ImageDataset(self.map_paths, preprocess=preprocess)
+        
+        paths = self.map_partition(partition)
+        dataset = ImageDataset(paths, preprocess=preprocess)
         dataloader = DataLoader(dataset, shuffle=shuffle, batch_size=batch_size,
                                 pin_memory=pin_memory, num_workers=num_workers)
         return dataloader
 
 
     def ground_truth(self, partition: str, gt_type: str) -> np.ndarray:
-        pass
+        query_paths = self.query_partition(partition)
+        map_paths = self.map_partition(partition)
+        query_idx = np.array([image_idx(img) for img in query_paths])
+        map_idx = np.array([image_idx(img) for img in map_paths])
+
+        ground_truth = map_idx[:, np.newaxis] == query_idx
+
+        return ground_truth
+
+
+        

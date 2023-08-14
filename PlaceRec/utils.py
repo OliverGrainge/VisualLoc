@@ -17,12 +17,15 @@ class ImageDataset(Dataset):
         return len(self.img_paths)
 
     def __getitem__(self, idx):
-        img = Image.open(self.img_paths[idx])
+        
 
         if self.preprocess is not None:
+            img = Image.open(self.img_paths[idx])
             img = self.preprocess(img)
+            return img
 
-        return np.array(img)
+        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
+        return img
 
 
 

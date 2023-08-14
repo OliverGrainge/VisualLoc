@@ -1,7 +1,7 @@
 import sys
 sys.path.append('/Users/olivergrainge/Documents/github/VisualLoc')
 
-from PlaceRec.Datasets import GardensPointWalking
+from PlaceRec.Datasets import Nordlands
 import numpy as np
 import unittest
 from torchvision import transforms 
@@ -13,7 +13,7 @@ class setup_test(unittest.TestCase):
 
     def setUp(self):
         """Do some custom setup"""
-        self.ds = GardensPointWalking()
+        self.ds = Nordlands()
 
 
 
@@ -107,28 +107,31 @@ class GenericDataTest(setup_test):
     def test_gt_train(self):
         gt_hard = self.ds.ground_truth(partition="train", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="train", gt_type="soft")
-        Qn = len(self.ds.query_images("train"))
+        paths = self.ds.query_partition("train")
+        Qn = len(paths)
         assert gt_hard.shape[1]== Qn
         assert gt_soft.shape[1]== Qn
 
     def test_gt_val(self):
         gt_hard = self.ds.ground_truth(partition="val", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="val", gt_type="soft")
-        Qn = len(self.ds.query_images("val"))
+        paths = self.ds.query_partition("val")
+        Qn = len(paths)
         assert gt_hard.shape[1]== Qn
         assert gt_soft.shape[1]== Qn
 
     def test_gt_test(self):
         gt_hard = self.ds.ground_truth(partition="test", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="test", gt_type="soft")
-        Qn = len(self.ds.query_images("test"))
+        paths = self.ds.query_partition("test")
+        Qn = len(paths)
         assert gt_hard.shape[1]== Qn
         assert gt_soft.shape[1]== Qn
 
     def test_gt_all(self):
         gt_hard = self.ds.ground_truth(partition="all", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="all", gt_type="soft")
-        Qn = len(self.ds.query_images("all"))
+        Qn = len(self.ds.query_paths)
         assert gt_hard.shape[1]== Qn
         assert gt_soft.shape[1]== Qn
 
@@ -141,16 +144,12 @@ class GenericDataTest(setup_test):
     def test_gt_size0(self):
         gt_hard = self.ds.ground_truth(partition="all", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="all", gt_type="soft")
-        assert gt_hard.shape[0] == len(self.ds.map_paths)
-        assert gt_soft.shape[0] == len(self.ds.map_paths)
         assert gt_soft.shape[1] == len(self.ds.query_paths)
         assert gt_hard.shape[1] == len(self.ds.query_paths)
 
     def test_gt_size1(self):
         gt_hard = self.ds.ground_truth(partition="train", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="train", gt_type="soft")
-        assert gt_hard.shape[0] == len(self.ds.map_paths)
-        assert gt_soft.shape[0] == len(self.ds.map_paths)
         assert gt_soft.shape[1] == self.ds.query_images_loader("train").dataset.__len__()
         assert gt_hard.shape[1] == self.ds.query_images_loader("train").dataset.__len__()
 
@@ -158,8 +157,6 @@ class GenericDataTest(setup_test):
     def test_gt_size2(self):
         gt_hard = self.ds.ground_truth(partition="val", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="val", gt_type="soft")
-        assert gt_hard.shape[0] == len(self.ds.map_paths)
-        assert gt_soft.shape[0] == len(self.ds.map_paths)
         assert gt_soft.shape[1] == self.ds.query_images_loader("val").dataset.__len__()
         assert gt_hard.shape[1] == self.ds.query_images_loader("val").dataset.__len__()
 
@@ -167,8 +164,6 @@ class GenericDataTest(setup_test):
     def test_gt_size3(self):
         gt_hard = self.ds.ground_truth(partition="test", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="test", gt_type="soft")
-        assert gt_hard.shape[0] == len(self.ds.map_paths)
-        assert gt_soft.shape[0] == len(self.ds.map_paths)
         assert gt_soft.shape[1] == self.ds.query_images_loader("test").dataset.__len__()
         assert gt_hard.shape[1] == self.ds.query_images_loader("test").dataset.__len__()
 

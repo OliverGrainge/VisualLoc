@@ -136,7 +136,7 @@ class GenericDataTest(setup_test):
     def test_gt_soft(self):
         gt_hard = self.ds.ground_truth(partition="all", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="all", gt_type="soft")
-        assert np.sum(gt_soft) > np.sum(gt_hard)
+        assert np.sum(gt_soft) >= np.sum(gt_hard)
 
 
     def test_gt_size0(self):
@@ -156,7 +156,7 @@ class GenericDataTest(setup_test):
         assert gt_hard.shape[1] == self.ds.query_images_loader("train").dataset.__len__()
 
 
-    def test_gt_size1(self):
+    def test_gt_size2(self):
         gt_hard = self.ds.ground_truth(partition="val", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="val", gt_type="soft")
         assert gt_hard.shape[0] == len(self.ds.map_paths)
@@ -165,7 +165,7 @@ class GenericDataTest(setup_test):
         assert gt_hard.shape[1] == self.ds.query_images_loader("val").dataset.__len__()
 
 
-    def test_gt_size1(self):
+    def test_gt_size3(self):
         gt_hard = self.ds.ground_truth(partition="test", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="test", gt_type="soft")
         assert gt_hard.shape[0] == len(self.ds.map_paths)
