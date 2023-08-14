@@ -52,3 +52,37 @@ def dropbox_download_file(dropbox_file_path, local_file_path):
 
 
 
+def get_method(name: str=None):
+    if name == "netvlad":
+        from PlaceRec.Methods import NetVLAD
+        method = NetVLAD()
+    elif name == "hog":
+        from PlaceRec.Methods import HOG
+        method = HOG()
+    elif name == "cosplace":
+        from PlaceRec.Methods import CosPlace
+        method = CosPlace()
+    elif name == "alexnet":
+        from PlaceRec.Methods import AlexNet
+        method = AlexNet()
+    elif name == "calc":
+        from PlaceRec.Methods import CALC
+        method = CALC()
+    else:
+        raise Exception("Method '" + name + "' not implemented")
+    return method
+
+
+def get_dataset(name: str=None):
+    if name == "gardenspointwalking":
+        from PlaceRec.Datasets import GardensPointWalking
+        dataset = GardensPointWalking()
+    elif name == "stlucia_small":
+        from PlaceRec.Datasets import StLucia_small
+        dataset = StLucia_small()
+    elif name == "sfu":
+        from PlaceRec.Datasets import SFU
+        dataset = SFU()
+    else:
+        raise Exception("Dataset '" + name + "' not implemented")
+    return dataset       
