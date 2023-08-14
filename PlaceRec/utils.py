@@ -20,13 +20,13 @@ class ImageDataset(Dataset):
         
 
         if self.preprocess is not None:
-            img = Image.open(self.img_paths[idx])
+            img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
+            img = Image.fromarray(img)
             img = self.preprocess(img)
             return img
 
         img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
         return img
-
 
 
 def dropbox_connect():
@@ -40,40 +40,18 @@ def dropbox_connect():
 
 
 
-
 def dropbox_download_file(dropbox_file_path, local_file_path):
-    """Download a file from Dropbox to the local machine."""
 
     try:
         dbx = dropbox_connect()
         dbx.files_download_to_file(local_file_path, dropbox_file_path)
 
+
     except Exception as e:
         print('Error downloading file from Dropbox: ' + str(e))
 
 
-
-
-
-def get_method(name: str=None):
-    if name == "netvlad":
-        from PlaceRec.Methods import NetVLAD
-        method = NetVLAD()
-    elif name == "hog":
-        from PlaceRec.Methods import HOG
-        method = HOG()
-    elif name == "cosplace":
-        from PlaceRec.Methods import CosPlace
-        method = CosPlace()
-    elif name == "alexnet":
-        from PlaceRec.Methods import AlexNet
-        method = AlexNet()
-    elif name == "calc":
-        from PlaceRec.Methods import CALC
-        method = CALC()
-    else:
-        raise Exception("Method '" + name + "' not implemented")
-    return method
+ 
 
 
 def get_dataset(name: str=None):
@@ -86,6 +64,33 @@ def get_dataset(name: str=None):
     elif name == "sfu":
         from PlaceRec.Datasets import SFU
         dataset = SFU()
+    elif name == "essex3in1":
+        from PlaceRec.Datasets import ESSEX3IN1
+        dataset = ESSEX3IN1()
+    elif name == "nordlands":
+        from PlaceRec.Datasets import Nordlands
+        dataset = Nordlands()
     else:
         raise Exception("Dataset '" + name + "' not implemented")
-    return dataset       
+    return dataset      
+
+
+def get_method(name: str=None):
+    if name == "calc":
+        from PlaceRec.Methods import CALC
+        method = CALC()
+    elif name == "netvlad":
+        from PlaceRec.Methods import NetVLAD
+        method = NetVLAD()
+    elif name == "hog": 
+        from PlaceRec.Methods import HOG
+        method = HOG()
+    elif name == "cosplace":
+        from PlaceRec.Methods import CosPlace
+        method = CosPlace()
+    elif name == "alexnet":
+        from PlaceRec.Methods import AlexNet
+        method = AlexNet()
+    else: 
+        raise Exception("Method not implemented")
+    return method

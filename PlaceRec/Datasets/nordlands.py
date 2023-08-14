@@ -14,7 +14,7 @@ from scipy.signal import convolve2d
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
-QUERY_SET = ["summer", "winter", "spring"]
+QUERY_SET = ["summer"]
 MAP_SET = ["fall"]
 
 def image_idx(img_path: str):
@@ -23,7 +23,6 @@ def image_idx(img_path: str):
 
 def get_paths(partition: list, seasons: list) -> list:
     if not os.path.isdir(package_directory + '/raw_images/Nordlands'): 
-        print(package_directory + '/raw_images/nordlands')
         raise Exception("Please Download Nordlands dataset to /raw_images/Nordlands")
     
     root = package_directory + '/raw_images/Nordlands/' + partition
@@ -58,24 +57,19 @@ class Nordlands(BaseDataset):
         if partition == "train": paths = self.train_query_paths[:int(len(self.train_query_paths)*0.8)]
         elif partition == "val": paths = self.train_query_paths[int(len(self.train_query_paths)*0.8):]
         elif partition == "test": paths = self.test_query_paths
-        elif partition == "all": 
-            paths = np.concatenate((self.train_query_paths, self.test_query_paths), axis=0)
-            sort_index = [image_idx(img) for img in paths]
-            sort_idx = np.argsort(sort_index)
-            paths = paths[sort_idx]
-
+        elif partition == "all": paths = self.train_query_paths
         else: raise Exception("Partition must be 'train', 'val' or 'all'")
         return paths
 
     def map_partition(self, partition: str) -> np.ndarray:
-        if partition == "train" or "val": paths = self.train_map_paths
-        elif partition == "test": paths = self.test_map_paths
-        elif partition == "all":
-            paths = np.concatenate((self.train_map_paths, self.test_map_paths), axis=0)
-            sort_index = [image_idx(img) for img in images]
-            sort_idx = np.argsort(sort_index)
-            paths = paths[sort_idx]
-        else: raise Exception("Partition not found")
+        if partition == "train" or partition == "val": 
+            paths = self.train_map_paths
+        elif partition == "test": 
+            paths = self.test_map_paths
+        elif partition == "all": 
+            paths = self.train_map_paths
+        else: 
+            raise Exception("Partition not found")
         return paths
 
 
@@ -138,7 +132,7 @@ class Nordlands(BaseDataset):
         # this if statement is very slow for the huge ground truth!
         # maybe comment out if trying to run tests fast.
         if gt_type == "soft":
-            ground_truth = convolve2d(ground_truth.astype(int), np.ones((3, 1), 'int'), mode='same').astype('bool')
+            ground_truth = convolve2d(ground_truth.astype(int), np.ones((15, 1), 'int'), mode='same').astype('bool')
         return ground_truth
 
 

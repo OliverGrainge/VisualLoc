@@ -11,3 +11,4 @@
 *.__MACOSX
 *__pycache__/
 *.pkl
+*.csv

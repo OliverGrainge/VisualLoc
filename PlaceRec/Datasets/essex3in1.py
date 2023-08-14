@@ -24,7 +24,7 @@ class ESSEX3IN1(BaseDataset):
         self.query_paths = np.array(sorted(glob(package_directory + "/raw_images/ESSEX3IN1/query_combined/*")))
         self.map_paths = np.array(sorted(glob(package_directory + "/raw_images/ESSEX3IN1/reference_combined/*")))
 
-        self.name = "gardenspointwalking"
+        self.name = "essex3in1"
 
     
     def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
@@ -38,19 +38,17 @@ class ESSEX3IN1(BaseDataset):
         else: raise Exception("Partition must be 'train', 'val' or 'all'")
 
         if preprocess == None:
-            return np.array([np.array(Image.open(pth).resize((2160, 2160))) for pth in paths])
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
         else: 
-            imgs = np.array([np.array(Image.open(pth).resize((2160, 2160))) for pth in paths])
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
 
     def map_images(self,partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> torch.Tensor:
         if preprocess == None:
-            return np.array([np.array(Image.open(pth).resize((2160, 2160))) for pth in self.map_paths])
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
         else:
-            imgs = np.array([np.array(Image.open(pth).resize((2160, 2160))) for pth in self.map_paths])
-            for q in imgs:
-                print(q.shape)
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
             return torch.stack([preprocess(q) for q in imgs])
 
 

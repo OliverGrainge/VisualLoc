@@ -33,7 +33,7 @@ class StLucia_small(BaseDataset):
         self.map_paths = np.array(sorted(glob.glob(package_directory + "/raw_images/StLucia_small/180809_1545/*.jpg")))
         self.query_paths = np.array(sorted(glob.glob(package_directory + "/raw_images/StLucia_small/100909_0845/*.jpg")))
 
-        self.name = "gardenspointwalking"
+        self.name = "stlucia_small"
 
 
     def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
@@ -107,9 +107,9 @@ class StLucia_small(BaseDataset):
 
         # load the full grount truth matrix with the relevant form
         if gt_type == "hard":
-            gt = gt_data['GThard'].astype('bool')
+            gt = gt_data['GThard'].astype('bool').T
         elif gt_type == "soft":
-            gt = gt_data['GTsoft'].astype('bool')
+            gt = gt_data['GTsoft'].astype('bool').T
         else: 
             raise Exception("gt_type must be either 'hard' or 'soft'")
 

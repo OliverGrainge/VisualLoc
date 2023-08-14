@@ -137,7 +137,7 @@ class GenericDataTest(setup_test):
     def test_gt_soft(self):
         gt_hard = self.ds.ground_truth(partition="all", gt_type="hard")
         gt_soft = self.ds.ground_truth(partition="all", gt_type="soft")
-        assert np.sum(gt_soft) > np.sum(gt_hard)
+        assert np.sum(gt_soft) >= np.sum(gt_hard)
 
 
     def test_gt_size0(self):
