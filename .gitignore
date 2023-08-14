@@ -6,3 +6,6 @@
 *tar.gz
 *.pth
 *.ckpt
+*.npz
+*.DS_Store
+*.__MACOSX
