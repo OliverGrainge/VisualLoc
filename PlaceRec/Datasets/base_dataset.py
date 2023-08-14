@@ -42,7 +42,7 @@ class BaseDataset(ABC):
 
 
     @abstractmethod
-    def map_images(self, preprocess: torchvision.transforms.transforms.Compose = None):
+    def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None):
         """
         This function returns the map images from the relevant partition of the dataset. 
         The partitions are either "train", "val", "test" or "all"

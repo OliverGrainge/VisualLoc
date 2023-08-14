@@ -52,11 +52,11 @@ class GenericDataTest(setup_test):
 
 
     def test_map_sequence(self):
-        loader = self.ds.map_images_loader(shuffle=False)
+        loader = self.ds.map_images_loader(partition="all", shuffle=False)
         for batch in loader:
             batch1 = batch
             break
-        loader = self.ds.map_images_loader(shuffle=False)
+        loader = self.ds.map_images_loader(partition="all", shuffle=False)
         for batch in loader:
             batch2 = batch
             break

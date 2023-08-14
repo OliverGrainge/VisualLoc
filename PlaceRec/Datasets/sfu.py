@@ -87,7 +87,7 @@ class SFU(BaseDataset):
 
 
 
-    def map_images_loader(self, batch_size: int = 16, shuffle: bool = False,
+    def map_images_loader(self, partition: str, batch_size: int = 16, shuffle: bool = False,
                             preprocess: torchvision.transforms.transforms.Compose = None, 
                             pin_memory: bool = False, 
                             num_workers: int = 0) -> torch.utils.data.DataLoader:

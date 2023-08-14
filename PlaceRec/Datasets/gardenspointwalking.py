@@ -54,7 +54,7 @@ class GardensPointWalking(BaseDataset):
             return torch.stack([preprocess(q) for q in imgs])
 
 
-    def map_images(self, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
+    def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
 
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
@@ -85,7 +85,7 @@ class GardensPointWalking(BaseDataset):
         return dataloader
 
 
-    def map_images_loader(self, batch_size: int = 16, shuffle: bool = False,
+    def map_images_loader(self, partition: str, batch_size: int = 16, shuffle: bool = False,
                             preprocess: torchvision.transforms.transforms.Compose = None, 
                             pin_memory: bool = False, 
                             num_workers: int = 0) -> torch.utils.data.DataLoader:
