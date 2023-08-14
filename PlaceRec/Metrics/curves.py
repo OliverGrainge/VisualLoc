@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Union
 import matplotlib.pyplot as plt
+import os
 
 
 def pr_curve(ground_truth:np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int=100,
@@ -35,27 +36,10 @@ def pr_curve(ground_truth:np.ndarray, similarity: np.ndarray, ground_truth_soft:
 
 
 
-def plot_pr_curve(ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int=100,
-             matching: str = 'multi', title: str = None, show: bool=True):
-    """
-    Plot of a single pr curve
-    """
-    P, R = pr_curve(ground_truth, similarity, ground_truth_soft, n_thresh=100)
-    fig, ax = plt.subplots()
-    ax.plot(R, P)
-    ax.set_xlabel("Recall")
-    ax.set_ylabel("Precision")
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title("PR Curve")
-    if show == True:
-        plt.show()
-    return ax
 
 
-def plot_pr_curves(ground_truth: np.ndarray, all_similarity: dict, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int=100,
-             matching: str = 'multi', title: str = None, show: bool=True) -> tuple[np.ndarray, np.ndarray]:
+def plot_pr_curve(ground_truth: np.ndarray, all_similarity: dict, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int=100,
+             matching: str = 'multi', title: str = None, show: bool=True, dataset_name: str=None) -> tuple[np.ndarray, np.ndarray]:
     """
     Plot of multiple pr curves on a single graph. all_similarity is a dictionary
     of keys consisting of method names and values the similarity matrix it produced. 
@@ -66,10 +50,16 @@ def plot_pr_curves(ground_truth: np.ndarray, all_similarity: dict, ground_truth_
         ax.plot(R, P, label=method_name)
     ax.set_xlabel("Recall")
     ax.set_ylabel("Precision")
+    ax.legend()
     if title:
         ax.set_title(title)
     else:
         ax.set_title("PR Curve")
+    if dataset_name is not None:
+        pth = os.getcwd() + "/Plots/PlaceRec/prcurve" 
+        if not os.path.exists(pth):
+            os.makedirs(pth)
+        fig.savefig(pth + "/" + dataset_name + ".png")
     if show ==True:
         plt.show()
     return ax
@@ -84,6 +74,11 @@ def plot_metric(methods: list, scores: np.ndarray, title: str, show: bool=True):
     if show:
         plt.show()
     return ax 
+
+
+
+
+
 
 
 
