@@ -2,7 +2,7 @@ import numpy as np
 from typing import Union
 import matplotlib.pyplot as plt
 import os
-
+from PIL import Image
 
 def pr_curve(ground_truth:np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int=100,
              matching: str = 'multi'):
@@ -74,6 +74,44 @@ def plot_metric(methods: list, scores: np.ndarray, title: str, show: bool=True):
     if show:
         plt.show()
     return ax 
+
+
+
+def plot_dataset_sample(dataset, gt_type: str, show: bool=True) -> None:
+    n_matches = 3
+    n_queries = 4
+    fig, ax = plt.subplots(n_queries, n_matches + 1, figsize=(15, 8))
+    query_paths = dataset.query_paths
+    map_paths = dataset.map_paths
+    ground_truth = dataset.ground_truth(partition="all", gt_type=gt_type)
+
+    samples = np.random.randint(0, len(query_paths), n_queries)
+    ref_matches = [np.argwhere(ground_truth[:, samp]) for samp in samples]
+    ref_paths = [map_paths[ref_match].flatten() for ref_match in ref_matches]
+
+    for i in range(n_queries):
+        ax[i, 0].imshow(np.array(Image.open(query_paths[samples[i]])))
+        ax[i, 0].axis('off')
+        ax[0, 0].set_title("Query Images")
+        for j in range(1, n_matches + 1):
+            ax[i, j].axis('off')
+            if i == 0:
+                ax[i, j].set_title("Ref Image " + str(j))
+            try:
+                ax[i, j].imshow(np.array(Image.open(ref_paths[i][j-1])))
+            except: 
+                continue
+    if show:
+        plt.suptitle("Sample of " + dataset.name + " Dataset", fontsize="18")
+        plt.tight_layout()
+        plt.show()
+
+    pth = os.getcwd() + "/Plots/Dataset_Samples/" 
+    if not os.path.exists(pth):
+        os.makedirs(pth)
+    fig.savefig(pth + "/" + dataset.name + ".png")
+    return None
+
 
 
 

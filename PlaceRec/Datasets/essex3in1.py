@@ -95,7 +95,8 @@ class ESSEX3IN1(BaseDataset):
 
         # load the full grount truth matrix with the relevant form
         if gt_type == 'soft':
-            gt = convolve2d(gt.astype(int), np.ones((5,1), 'int'), mode='same').astype('bool')
+            # No soft ground truth for this dataset 
+            pass
         elif gt_type == 'hard':
             pass 
         else: 

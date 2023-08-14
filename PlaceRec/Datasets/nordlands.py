@@ -138,7 +138,7 @@ class Nordlands(BaseDataset):
         # this if statement is very slow for the huge ground truth!
         # maybe comment out if trying to run tests fast.
         if gt_type == "soft":
-            grount_truth = convolve2d(ground_truth.astype(int), np.ones((3,1), 'int'), mode='same').astype('bool')
+            ground_truth = convolve2d(ground_truth.astype(int), np.ones((3, 1), 'int'), mode='same').astype('bool')
         return ground_truth
 
 
