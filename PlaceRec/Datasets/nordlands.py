@@ -10,6 +10,7 @@ from ..utils import ImageDataset, dropbox_download_file
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
 from tqdm import tqdm
+from scipy.signal import convolve2d
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -132,9 +133,12 @@ class Nordlands(BaseDataset):
         map_paths = self.map_partition(partition)
         query_idx = np.array([image_idx(img) for img in query_paths])
         map_idx = np.array([image_idx(img) for img in map_paths])
-
         ground_truth = map_idx[:, np.newaxis] == query_idx
 
+        # this if statement is very slow for the huge ground truth!
+        # maybe comment out if trying to run tests fast.
+        if gt_type == "soft":
+            grount_truth = convolve2d(ground_truth.astype(int), np.ones((3,1), 'int'), mode='same').astype('bool')
         return ground_truth
 
 

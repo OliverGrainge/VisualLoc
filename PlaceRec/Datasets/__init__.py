@@ -3,3 +3,6 @@ from .sfu import SFU
 from .gardenspointwalking import GardensPointWalking
 from .stlucia_small import StLucia_small
 from .nordlands import Nordlands
+from .essex3in1 import ESSEX3IN1
+
+ds = ESSEX3IN1()

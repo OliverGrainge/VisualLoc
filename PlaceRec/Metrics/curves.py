@@ -87,8 +87,3 @@ def plot_metric(methods: list, scores: np.ndarray, title: str, show: bool=True):
 
 
 
-
-
-
-
-
