@@ -66,11 +66,15 @@ def plot_pr_curve(ground_truth: np.ndarray, all_similarity: dict, ground_truth_s
 
 
 
-def plot_metric(methods: list, scores: np.ndarray, title: str, show: bool=True):
+def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str, show: bool=True, metric_name="no_name_given"):
     fig, ax = plt.subplots()
     ax.bar(methods, scores)
     plt.xticks(rotation=45)
     ax.set_title(title, fontsize='16')
+    pth = os.getcwd() + "/Plots/PlaceRec/" + metric_name 
+    if not os.path.exists(pth):
+        os.makedirs(pth)
+    fig.savefig(pth + "/" + dataset_name + ".png")
     if show:
         plt.show()
     return ax 

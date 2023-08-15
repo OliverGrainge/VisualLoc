@@ -1,5 +1,5 @@
 import argparse
-from PlaceRec.Metrics import plot_pr_curve, plot_dataset_sample
+from PlaceRec.Metrics import plot_pr_curve, plot_dataset_sample, count_flops, count_params, plot_metric, recallatk
 from PlaceRec.utils import get_dataset, get_method
 
 parser = argparse.ArgumentParser()
@@ -43,11 +43,44 @@ elif args.mode == "evaluate":
         gt_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
 
         all_similarity = {}
+        all_flops = {}
+        all_params = {}
+        recallat1 = {}
+        recallat5 = {}
+        recallat10 = {}
         for method_name in args.methods:
             method = get_method(method_name)
             method.load_descriptors(ds.name)
             similarity = method.similarity_matrix(method.query_desc, method.map_desc)
             all_similarity[method.name] = similarity
+            ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
+            ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+
+            if "count_flops" in args.metrics:
+                all_flops[method.name] = count_flops(method)
+            
+            if "count_params" in args.metrics:
+                print(count_params(method))
+                all_params[method.name] = count_params(method)
+
+            if "recall@1":
+                recallat1[method.name] = recallatk(ground_truth=ground_truth, 
+                                                   ground_truth_soft=ground_truth_soft, 
+                                                   similarity=similarity, 
+                                                   k=1)
+
+            if "recall@5":
+                recallat5[method.name] = recallatk(ground_truth=ground_truth, 
+                                                   ground_truth_soft=ground_truth_soft, 
+                                                   similarity=similarity, 
+                                                   k=5)
+
+            if "recall@10":
+                recallat10[method.name] = recallatk(ground_truth=ground_truth, 
+                                                   ground_truth_soft=ground_truth_soft, 
+                                                   similarity=similarity, 
+                                                   k=10)
+
 
         if "prcurve" in args.metrics:
             plot_pr_curve(ground_truth=gt_hard, 
@@ -60,6 +93,33 @@ elif args.mode == "evaluate":
 
         if "dataset_sample" in args.metrics:
             plot_dataset_sample(ds, gt_type="soft", show=False)
+
+
+        if "count_flops" in args.metrics:
+            plot_metric(methods=list(all_flops.keys()), scores=list(all_flops.values()), title="FLOP Count for Models",
+                        show=False, metric_name="count_flops", dataset_name=ds.name)
+
+        if "count_params" in args.metrics:
+            plot_metric(methods=list(all_flops.keys()), scores=list(all_flops.values()), title="Param Count for Models",
+                        show=False, metric_name="count_param", dataset_name=ds.name)
+
+        if "recall@1" in args.metrics:
+            plot_metric(methods=list(recallat1.keys()), scores=list(recallat1.values()), title="recall@1 for: " + ds.name,
+                        show=False, metric_name="recall@1", dataset_name=ds.name)
+
+        if "recall@5" in args.metrics:
+            plot_metric(methods=list(recallat5.keys()), scores=list(recallat5.values()), title="recall@5 for: " + ds.name,
+                        show=False, metric_name="recall@5", dataset_name=ds.name)
+
+        if "recall@10" in args.metrics:
+            plot_metric(methods=list(recallat10.keys()), scores=list(recallat10.values()), title="recall@10 for: " + ds.name,
+                        show=False, metric_name="recall@10", dataset_name=ds.name)
+
+        
+
+
+        
+        
 
 
                 

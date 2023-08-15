@@ -100,6 +100,7 @@ class HOG(BaseTechnique):
         self.preprocess = transforms.ToTensor()
         # initialize the map to None
         self.map = None
+        self.model = None
         # method name
         self.name = "hog"
 
