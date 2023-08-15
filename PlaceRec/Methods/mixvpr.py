@@ -9,6 +9,7 @@ import tqdm
 import torchvision.transforms as transforms
 import numpy as np
 from tqdm import tqdm
+import pickle
 import torch
 import torch.nn as nn
 import torchvision
@@ -18,7 +19,8 @@ import torch.nn as nn
 import numpy as np
 from typing import Tuple
 from .base_method import BaseTechnique
-
+from sklearn.neighbors import NearestNeighbors
+import sklearn
 
 try: 
     import faiss 
@@ -361,9 +363,13 @@ class MixVPR(BaseTechnique):
         self.model.load_state_dict(state_dict)
         self.model.eval()
 
-        self.preprocess = torch.nn.Sequential(
-            ResNet50_Weights.DEFAULT.transforms(),
-            transforms.Resize(320, antialias=True))
+        self.preprocess = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Resize(256, antialias=True),
+            transforms.CenterCrop(224),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Resize(320, antialias=True)
+        ])
 
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
@@ -371,7 +377,7 @@ class MixVPR(BaseTechnique):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(dataloader, desc="Computing NetVLAD Query Desc", disable=not pbar):
+            for batch in tqdm(dataloader, desc="Computing MixVPR Query Desc", disable=not pbar):
                 all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
@@ -387,7 +393,7 @@ class MixVPR(BaseTechnique):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(dataloader, desc="Computing NetVLAD Map Desc", disable=not pbar):
+            for batch in tqdm(dataloader, desc="Computing MixVPR Map Desc", disable=not pbar):
                 all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
@@ -429,20 +435,20 @@ class MixVPR(BaseTechnique):
 
 
     def save_descriptors(self, dataset_name: str) -> None:
-        if not os.path.isdir(netvlad_directory + "/descriptors/" + dataset_name):
-            os.makedirs(netvlad_directory + "/descriptors/" + dataset_name)
-        with open(netvlad_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl", "wb") as f:
+        if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
+            os.makedirs(package_directory + "/descriptors/" + dataset_name)
+        with open(package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl", "wb") as f:
             pickle.dump(self.query_desc, f)
-        with open(netvlad_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl", "wb") as f:
+        with open(package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl", "wb") as f:
             pickle.dump(self.map_desc, f)
         
 
     def load_descriptors(self, dataset_name: str) -> None:
-        if not os.path.isdir(netvlad_directory + "/descriptors/" + dataset_name):
+        if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             raise Exception("Descriptor not yet computed for: " + dataset_name)
-        with open(netvlad_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl", "rb") as f:
+        with open(package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl", "rb") as f:
             self.query_desc = pickle.load(f)
-        with open(netvlad_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl", "rb") as f:
+        with open(package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl", "rb") as f:
             self.map_desc = pickle.load(f)
             self.set_map(self.map_desc)
         
