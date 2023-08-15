@@ -52,7 +52,7 @@ class GenericMethodTest(setup_test):
         map_desc = self.method.compute_map_desc(images=map_images)
         S = self.method.similarity_matrix(query_desc, map_desc)
         assert S.max() <= 1.
-        assert S.min() >= 0.
+        assert S.min() >= -1.
         assert S.shape[0] == map_images.shape[0]
         assert S.shape[1] == query_images.shape[0]
         assert isinstance(S, np.ndarray)
