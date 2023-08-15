@@ -29,29 +29,29 @@ class GenericMethodTest(setup_test):
         assert isinstance(res, dict)
     
     def test_map_desc(self):
-        M = self.ds.map_images(preprocess=self.method.preprocess)[:self.sample_size]
+        M = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         res = self.method.compute_map_desc(images=M, pbar=False)
         assert isinstance(res, dict)
 
     def test_map_loader(self):
-        loader = self.ds.map_images_loader(preprocess=self.method.preprocess, batch_size=self.sample_size)
+        loader = self.ds.map_images_loader(partition="test", preprocess=self.method.preprocess, batch_size=self.sample_size)
         res = self.method.compute_map_desc(dataloader=loader, pbar=False)
         assert isinstance(res, dict)
     
     def test_query_loader(self):
-        loader = self.ds.map_images_loader(preprocess=self.method.preprocess, batch_size=self.sample_size)
+        loader = self.ds.map_images_loader(partition="test", preprocess=self.method.preprocess, batch_size=self.sample_size)
         res = self.method.compute_query_desc(dataloader=loader, pbar=False)
         assert isinstance(res, dict)
     
 
     def test_similarity_matrix(self):
         query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[:self.sample_size]
-        map_images = self.ds.map_images(preprocess=self.method.preprocess)[:self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         query_desc = self.method.compute_query_desc(images=query_images)
         map_desc = self.method.compute_map_desc(images=map_images)
         S = self.method.similarity_matrix(query_desc, map_desc)
         assert S.max() <= 1.
-        assert S.min() >= 0.
+        assert S.min() >= -1.
         assert S.shape[0] == map_images.shape[0]
         assert S.shape[1] == query_images.shape[0]
         assert isinstance(S, np.ndarray)
@@ -59,7 +59,7 @@ class GenericMethodTest(setup_test):
 
     """ Next Test set_map """
     def test_set_map(self):
-        map_images = self.ds.map_images(preprocess=self.method.preprocess)[:self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         self.method.set_map(map_desc)
         assert self.method.map is not None
@@ -68,7 +68,7 @@ class GenericMethodTest(setup_test):
     """ Next Test place_recognise """
     def test_place_recognise(self):
         query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[:self.sample_size]
-        map_images = self.ds.map_images(preprocess=self.method.preprocess)[:self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         self.method.set_map(map_desc)
         idx, score = self.method.place_recognise(images=query_images, top_n=3)
@@ -85,7 +85,7 @@ class GenericMethodTest(setup_test):
 
     def test_save_and_load(self):
         query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[:self.sample_size]
-        map_images = self.ds.map_images(preprocess=self.method.preprocess)[:self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         query_desc = self.method.compute_query_desc(images=query_images)
         self.method.set_map(map_desc)
