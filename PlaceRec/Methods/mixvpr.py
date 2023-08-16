@@ -343,7 +343,7 @@ class MixVPR(BaseTechnique):
             state_dict = torch.load(weight_pth, map_location=torch.device('cpu'))
         else:
             self.device = 'cpu'
-            state_dict = torch.load(weight_pth)
+            state_dict = torch.load(weight_pth, map_location=torch.device('cpu'))
             
 
         # Note that images must be resized to 320x320

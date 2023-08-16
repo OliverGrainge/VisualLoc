@@ -35,9 +35,7 @@ class GardensPointWalking(BaseDataset):
 
         self.name = "gardenspointwalking"
 
-
-    def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
-
+    def query_partition(self, partition: str) -> np.ndarray:
         size = len(self.query_paths)
 
         # get the required partition of the dataset
@@ -46,7 +44,15 @@ class GardensPointWalking(BaseDataset):
         elif partition == "test": paths = self.query_paths[int(size*0.8):]
         elif partition == "all": paths = self.query_paths
         else: raise Exception("Partition must be 'train', 'val' or 'all'")
-            
+
+        return paths
+
+    def map_partition(self, partition: str) -> np.ndarray:
+        return self.map_paths
+
+
+    def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
+        paths = self.query_partition(partition)
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in paths])
         else: 
@@ -55,7 +61,6 @@ class GardensPointWalking(BaseDataset):
 
 
     def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
-
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
         else: 

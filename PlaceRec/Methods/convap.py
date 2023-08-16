@@ -283,7 +283,7 @@ class CONVAP(BaseTechnique):
             state_dict = torch.load(weights_path, map_location=torch.device('cpu'))
         else:
             self.device = 'cpu'
-            state_dict = torch.load(weights_path)
+            state_dict = torch.load(weights_path, map_location=torch.device('cpu'))
             
 
         # Note that images must be resized to 320x320
@@ -295,7 +295,7 @@ class CONVAP(BaseTechnique):
                               agg_config={'in_channels': 2048,
                                         'out_channels': 1024,
                                         's1' : 2,
-                                        's2' : 2})
+                                        's2' : 2}).to(self.device)
 
         self.model.load_state_dict(state_dict)
         self.model.eval()

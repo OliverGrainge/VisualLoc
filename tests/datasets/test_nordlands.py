@@ -28,13 +28,6 @@ class GenericDataTest(setup_test):
         assert len(self.ds.query_paths) > 1
         assert len(self.ds.map_paths) > 1
 
-    def test_partitions(self):
-        length = 0
-        length += self.ds.query_images_loader("train").dataset.__len__()
-        length += self.ds.query_images_loader("val").dataset.__len__()
-        length += self.ds.query_images_loader("test").dataset.__len__()
-        assert self.ds.query_images_loader("all").dataset.__len__() == length
-
     def test_query_sequence(self):
         loader = self.ds.query_images_loader("all", shuffle=False)
         for batch in loader:

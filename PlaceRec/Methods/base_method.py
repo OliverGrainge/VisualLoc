@@ -16,6 +16,10 @@ class BaseTechnique(ABC):
     """
 
     map = None
+    map_desc = None
+    query_desc = None 
+    model = None
+
 
     @abstractmethod
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
