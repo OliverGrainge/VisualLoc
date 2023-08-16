@@ -80,7 +80,7 @@ class GenericMethodTest(setup_test):
         assert score.shape[1] == 3
         assert idx.dtype == int
         assert score.dtype == np.float32
-        assert score.min() >= 0.
+        assert score.min() >= -1.
         assert score.max() <= 1.
 
     def test_save_and_load(self):

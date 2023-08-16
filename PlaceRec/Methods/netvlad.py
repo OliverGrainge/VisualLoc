@@ -152,14 +152,6 @@ class NetVLAD(BaseTechnique):
             dropbox_download_file("/weights/msls_r18l3_netvlad_partial.pth", netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth")
             self.model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
 
-        # choose the accelerator
-        if torch.cuda.is_available():
-            self.device = 'cuda'
-        elif torch.backends.mps.is_available():
-            self.device = 'mps'
-        else:
-            torch.device = 'cpu'
-
         # send model to accelerator
         self.model.to(self.device)
         self.model.eval()
@@ -213,7 +205,7 @@ class NetVLAD(BaseTechnique):
             self.map.add(map_descriptors["map_descriptors"])
 
         except: 
-            self.map = NearestNeighbors(n_neighbors=10, algorithm='auto', 
+            self.map = NearestNeighbors(n_neighbors=10, algorithm='brute', 
                                         metric='cosine').fit(map_descriptors["map_descriptors"])
 
     def set_query(self, query_descriptors: dict) -> None:
@@ -224,6 +216,7 @@ class NetVLAD(BaseTechnique):
         desc = self.compute_query_desc(images=images, dataloader=dataloader, pbar=pbar)
         if isinstance(self.map, sklearn.neighbors._unsupervised.NearestNeighbors):
             dist, idx = self.map.kneighbors(desc["query_descriptors"])
+            print("===================", dist)
             return idx[:, :top_n], 1 - dist[:, :top_n]
         else: 
             faiss.normalize_L2(desc["query_descriptors"])
