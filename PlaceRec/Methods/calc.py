@@ -21,6 +21,11 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import sklearn
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
+
 
 PLACES_365_DIRECTORY = "/home/oliver/Documents/github/Datasets/Places/Places365"
 
@@ -226,11 +231,13 @@ class CALC(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Query Desc", disable=not pbar):
-                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
+                with torch.no_grad()
+                    all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         
         
@@ -242,11 +249,13 @@ class CALC(BaseTechnique):
     def compute_map_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         
         if images is not None and dataloader is None:
-            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Map Desc", disable=not pbar):
-                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
+                with torch.no_grad():
+                    all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("can only pass 'images' or 'dataloader'")

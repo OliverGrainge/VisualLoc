@@ -7,16 +7,40 @@ import dropbox
 from dropbox.exceptions import AuthError
 from .db_key import DROPBOX_ACCESS_TOKEN
 import torch
+from tqdm import tqdm
+
 try: 
     import cupy as cp
 
-    def cosine_similarity_cuda(A, B):
-        # Normalize the rows of A and B
-        A_norm = A / cp.linalg.norm(A, axis=1, keepdims=True)
-        B_norm = B / cp.linalg.norm(B, axis=1, keepdims=True)
-        # Compute the dot product between normalized A and B
-        similarity = cp.dot(A_norm, B_norm.T)
-        return similarity
+    def cosine_similarity_cuda(A, B, batch_size=2000, pbar: bool=True):
+        # Convert the input numpy matrices to cupy arrays
+        A_gpu = cp.array(A)
+        B_gpu = cp.array(B)
+        
+        # Normalize B matrix
+        B_gpu_norm = cp.linalg.norm(B_gpu, axis=1)
+        
+        # Result placeholder
+        result = []
+
+        for i in tqdm(range(0, A_gpu.shape[0], batch_size), desc="Computing Similiarty Matrix", disable=not pbar):
+            # Fetch the batch from A
+            A_batch = A_gpu[i:i+batch_size]
+            
+            # Compute dot product
+            dot_product = A_batch @ B_gpu.T
+            
+            # Normalize A batch
+            A_batch_norm = cp.linalg.norm(A_batch, axis=1)[:, cp.newaxis]
+            
+            # Calculate cosine similarity
+            cosine_sim_batch = dot_product / (A_batch_norm * B_gpu_norm)
+            
+            # Transfer the computed batch to CPU memory and append to results
+            result.append(cp.asnumpy(cosine_sim_batch))
+        
+        # Stack the results to get the complete cosine similarity matrix
+        return np.vstack(result)
 except: 
     pass
 

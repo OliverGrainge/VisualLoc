@@ -21,7 +21,10 @@ from typing import Tuple
 from .base_method import BaseTechnique
 from sklearn.neighbors import NearestNeighbors
 import sklearn
-from ..utils import cosine_similarity_cuda
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
 
 try: 
     import faiss 
@@ -375,11 +378,13 @@ class MixVPR(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing MixVPR Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+                with torch.no_grad():
+                    all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("Can only pass 'images' or 'dataloader'")
