@@ -283,7 +283,7 @@ class CONVAP(BaseTechnique):
             state_dict = torch.load(weights_path, map_location=torch.device('cpu'))
         else:
             self.device = 'cpu'
-            state_dict = torch.load(weights_path)
+            state_dict = torch.load(weights_path, map_location=torch.device('cpu'))
             
 
         # Note that images must be resized to 320x320
@@ -295,7 +295,7 @@ class CONVAP(BaseTechnique):
                               agg_config={'in_channels': 2048,
                                         'out_channels': 1024,
                                         's1' : 2,
-                                        's2' : 2})
+                                        's2' : 2}).to(self.device)
 
         self.model.load_state_dict(state_dict)
         self.model.eval()
@@ -307,6 +307,7 @@ class CONVAP(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
+
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
