@@ -72,6 +72,7 @@ def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str
     plt.xticks(rotation=45)
     ax.set_title(title, fontsize='16')
     pth = os.getcwd() + "/Plots/PlaceRec/" + metric_name 
+    plt.tight_layout()
     if not os.path.exists(pth):
         os.makedirs(pth)
     fig.savefig(pth + "/" + dataset_name + ".png")
@@ -80,15 +81,30 @@ def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str
     return ax 
 
 
+def plot_multiplex_selections(query_descriptors: dict, techniques: list, title: str, dataset_name: str, show: bool=False) -> None:
+    selections = query_descriptors["selections"]
+    fig, ax = plt.subplots()
+    hist = np.histogram(selections, bins=np.arange(len(techniques) + 1))
+    ax.bar(np.arange(len(techniques)), hist[0])
+    ax.set_xticks(np.arange(len(techniques)), techniques)
+    ax.set_title(title)
+    pth = os.getcwd() + "/Plots/PlaceRec/multiplex_selections"
+    if not os.path.exists(pth):
+        os.makedirs(pth)
+    fig.savefig(pth + "/" + dataset_name + ".png")
+    if show: 
+        plt.show()
+    return ax
+
+
 
 def plot_dataset_sample(dataset, gt_type: str, show: bool=True) -> None:
     n_matches = 3
     n_queries = 4
     fig, ax = plt.subplots(n_queries, n_matches + 1, figsize=(15, 8))
-    query_paths = dataset.test_query_paths
-    map_paths = dataset.test_map_paths
+    query_paths = dataset.query_partition("test")
+    map_paths = dataset.map_partition("test")
     ground_truth = dataset.ground_truth(partition="test", gt_type=gt_type)
-
     samples = np.random.randint(0, len(query_paths), n_queries)
     ref_matches = [np.argwhere(ground_truth[:, samp]) for samp in samples]
     ref_paths = [map_paths[ref_match].flatten() for ref_match in ref_matches]
@@ -116,6 +132,9 @@ def plot_dataset_sample(dataset, gt_type: str, show: bool=True) -> None:
         os.makedirs(pth)
     fig.savefig(pth + "/" + dataset.name + ".png")
     return None
+
+
+
 
 
 

@@ -11,6 +11,11 @@ from tqdm import tqdm
 import pickle
 
 try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
+
+try:
     import faiss
 except: 
     pass
@@ -107,12 +112,15 @@ class CosPlace(BaseTechnique):
                 faiss.normalize_L2(desc["query_descriptors"])
                 dist, idx = self.map.search(desc["query_descriptors"], top_n)
                 return idx, dist
-
+            
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        return cosine_similarity(map_descriptors["map_descriptors"],
-                                 query_descriptors["query_descriptors"]).astype(np.float32)
-
+        if self.device == 'cuda': 
+            return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
+                                          query_descriptors["query_descriptors"]).astype(np.float32)
+        else: 
+            return cosine_similarity(map_descriptors["map_descriptors"],
+                                    query_descriptors["query_descriptors"]).astype(np.float32)
 
     
     def save_descriptors(self, dataset_name: str) -> None:

@@ -1,14 +1,14 @@
 import argparse
-from PlaceRec.Metrics import plot_pr_curve, plot_dataset_sample, count_flops, count_params, plot_metric, recallatk
+from PlaceRec.Metrics import plot_pr_curve, plot_dataset_sample, count_flops, count_params, plot_metric, recallatk, plot_multiplex_selections
 from PlaceRec.utils import get_dataset, get_method
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--mode', required=True, choices=("describe", "evaluate"),
                     help='Specify either describe or evaluate', type=str)
-parser.add_argument('--datasets', choices=("sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands"),
+parser.add_argument('--datasets', choices=("sfu", "gsvcities", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "combined"),
                     help='specify one of the datasets from PlaceRec.Datasets', type=str, default=["stlucia_small"], nargs='+')
-parser.add_argument('--methods', choices=("netvlad", "hog", "cosplace", "calc", "alexnet"),
+parser.add_argument('--methods', choices=("netvlad", "hog", "cosplace", "calc", "alexnet", "mixvpr", "convap", "multiplexvpr"),
                     help="specify one of the techniques from vpr/vpr_tecniques", type=str, default="hog", nargs='+')
 parser.add_argument('--batchsize', type=int, default=10, help="Choose the Batchsize for VPR processing")
 parser.add_argument('--partition', type=str, default='test', help="choose from 'train', 'val', 'test' or 'all'")
@@ -23,7 +23,11 @@ args = parser.parse_args()
 
 if args.mode == "describe":
     for method_name in args.methods:
-        method = get_method(method_name)
+        if method_name == "multiplexvpr":
+            from multiplexVPR import MultiPlexVPR
+            method = MultiPlexVPR()
+        else:
+            method = get_method(method_name)
         for dataset_name in args.datasets:
             ds = get_dataset(dataset_name)
             map_loader = ds.map_images_loader(partition=args.partition, preprocess=method.preprocess, num_workers=args.num_workers)
@@ -49,12 +53,23 @@ elif args.mode == "evaluate":
         recallat5 = {}
         recallat10 = {}
         for method_name in args.methods:
-            method = get_method(method_name)
+            if method_name == "multiplexvpr":
+                from multiplexVPR import MultiPlexVPR
+                method = MultiPlexVPR()
+            else:
+                method = get_method(method_name)
             method.load_descriptors(ds.name)
             similarity = method.similarity_matrix(method.query_desc, method.map_desc)
             all_similarity[method.name] = similarity
             ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
             ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+
+            if "multiplex_selections" in args.metrics and method_name == "multiplexvpr":
+                print("hello")
+                plot_multiplex_selections(query_descriptors=method.query_desc,
+                                          techniques=[method.methods[i].name for i in range(len(method.methods))], 
+                                          title="Selection Histogram for " + dataset_name, 
+                                          dataset_name=dataset_name)
 
             if "count_flops" in args.metrics:
                 all_flops[method.name] = count_flops(method)
@@ -89,7 +104,8 @@ elif args.mode == "evaluate":
                             matching="single",
                             show=False, 
                             title="PR Curve for " + ds.name + " partition: " + args.partition, 
-                            dataset_name=ds.name)
+                            dataset_name=ds.name, 
+                            n_thresh=10)
 
         if "dataset_sample" in args.metrics:
             plot_dataset_sample(ds, gt_type="soft", show=False)

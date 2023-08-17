@@ -9,7 +9,7 @@ from multiplexVPR import METHODS
 
 
 # =========================== Selection Dataset Configuration =================
-DATASETS = ["nordlands"]
+DATASETS = ["gsvcities"]
 PARTITION = "train"
 METRICS = ["recall@1", "recall@3", "recall@5", "recall@10"]
 # ============================================================================
@@ -30,11 +30,12 @@ def vect_recallatk(ground_truth: np.ndarray, similarity: np.ndarray, ground_trut
 
     ground_truth = ground_truth.astype('bool')
     j = ground_truth.sum(0) > 0 # columns with matches
-    S = S[:,j] # select columns with a match
-    ground_truth = ground_truth[:,j] # select columns with a match
+    #S = S[:,j] # select columns with a match
+    #ground_truth = ground_truth[:,j] # select columns with a match
     i = S.argsort(0)[-k:,:]
     j = np.tile(np.arange(i.shape[1]), [k, 1])
     ground_truth = ground_truth[i, j]
+
     RatK = ground_truth.sum(0) > 0
     return RatK.astype(np.float32)
 
@@ -114,6 +115,15 @@ def summarise_datasets(pd_datasets: list):
 
 
 if __name__ == "__main__":
+    PARTITION = "train"
+    pd_datasets = compute_datasets()
+    save_datasets(pd_datasets)
+    summarise_datasets(pd_datasets)
+    PARTITION = "test"
+    pd_datasets = compute_datasets()
+    save_datasets(pd_datasets)
+    summarise_datasets(pd_datasets)
+    PARTITION = "val"
     pd_datasets = compute_datasets()
     save_datasets(pd_datasets)
     summarise_datasets(pd_datasets)

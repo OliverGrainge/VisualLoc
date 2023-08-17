@@ -51,7 +51,6 @@ class StLucia_small(BaseDataset):
         return self.map_paths
 
     def query_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None) -> np.ndarray:
-
         paths = self.query_partition(partition)
             
         if preprocess == None:
@@ -78,14 +77,7 @@ class StLucia_small(BaseDataset):
                             num_workers: int = 0) -> torch.utils.data.DataLoader:
 
 
-        size = len(self.query_paths)
-
-        # get the required partition of the dataset
-        if partition == "train": paths = self.query_paths[:int(size*0.6)]
-        elif partition == "val": paths = self.query_paths[int(size*0.6):int(size*0.8)]
-        elif partition == "test": paths = self.query_paths[int(size*0.8):]
-        elif partition == "all": paths = self.query_paths
-        else: raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)

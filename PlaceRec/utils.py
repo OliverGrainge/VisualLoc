@@ -6,6 +6,19 @@ import pathlib
 import dropbox
 from dropbox.exceptions import AuthError
 from .db_key import DROPBOX_ACCESS_TOKEN
+import torch
+try: 
+    import cupy as cp
+
+    def cosine_similarity_cuda(A, B):
+        # Normalize the rows of A and B
+        A_norm = A / cp.linalg.norm(A, axis=1, keepdims=True)
+        B_norm = B / cp.linalg.norm(B, axis=1, keepdims=True)
+        # Compute the dot product between normalized A and B
+        similarity = cp.dot(A_norm, B_norm.T)
+        return similarity
+except: 
+    pass
 
 
 class ImageDataset(Dataset):
@@ -70,6 +83,12 @@ def get_dataset(name: str=None):
     elif name == "nordlands":
         from PlaceRec.Datasets import Nordlands
         dataset = Nordlands()
+    elif name == "gsvcities":
+        from PlaceRec.Datasets import GsvCities
+        dataset = GsvCities()
+    elif name == "combined":
+        from PlaceRec.Datasets import Combined
+        dataset = Combined()
     else:
         raise Exception("Dataset '" + name + "' not implemented")
     return dataset      

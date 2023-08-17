@@ -363,8 +363,12 @@ class CONVAP(BaseTechnique):
 
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        return cosine_similarity(map_descriptors["map_descriptors"],
-                                 query_descriptors["query_descriptors"]).astype(np.float32)
+        if self.device == 'cuda': 
+            return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
+                                          query_descriptors["query_descriptors"]).astype(np.float32)
+        else: 
+            return cosine_similarity(map_descriptors["map_descriptors"],
+                                    query_descriptors["query_descriptors"]).astype(np.float32)
 
 
     def save_descriptors(self, dataset_name: str) -> None:

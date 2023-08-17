@@ -13,13 +13,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torchvision.models import ResNet18_Weights
+
 torch.set_float32_matmul_precision('medium')
 
-WEIGHTS_NAME = "gardenspointwalking_sfu_recall@1"
-TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gardenspointwalking_sfu_recall@1_train.csv"
-VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gardenspointwalking_sfu_recall@1_train.csv"
-TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gardenspointwalking_sfu_recall@1_train.csv"
-TARGET_SIZE = 2
+WEIGHTS_NAME = "combined_largesets_recall@1"
+TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/combined_recall@1_train.csv"
+VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/combined_recall@1_val.csv"
+TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/combined_recall@1_test.csv"
+TARGET_SIZE = 6
 BATCH_SIZE = 32
 NUM_WORKERS = 16
 
@@ -48,7 +49,7 @@ class SelectDataset(Dataset):
         img_path = record[1]
         targ = record[2:]        
         if self.preprocess:
-            img = self.preprocess(Image.open(img_path))
+            img = self.preprocess(Image.fromarray(np.array(Image.open(img_path))[:, :, :3]))
         else:
             img = Image.open(img_path)
         return img, torch.Tensor(targ.astype(np.float32))
@@ -90,7 +91,7 @@ class ResNet18(pl.LightningModule):
         super(ResNet18, self).__init__()
         
         # Load the pretrained ResNet18 model
-        self.model = resnet18(weights=Resnet18_Weights.DEFAULT)
+        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
         
         # Modify the final fully connected layer
         num_ftrs = self.model.fc.in_features
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     checkpoint_callback = ModelCheckpoint(
         monitor='val_loss',
         dirpath='SelectionNetworkCheckpoints',
-        filename='resnet18-{epoch:02d}-{val_loss:.2f}',
+        filename=WEIGHTS_NAME + '_resnet18-{epoch:02d}-{val_loss:.2f}',
         save_top_k=1,
         mode='min'
     )
@@ -154,7 +155,7 @@ if __name__ == "__main__":
     model = ResNet18(output_dim=TARGET_SIZE)
 
     # Define the trainer
-    trainer = pl.Trainer(max_epochs=5, logger=logger, callbacks=[checkpoint_callback])
+    trainer = pl.Trainer(max_epochs=200, logger=logger, callbacks=[checkpoint_callback])
 
     # Train the model
     trainer.fit(model, datamodule=datamodule)

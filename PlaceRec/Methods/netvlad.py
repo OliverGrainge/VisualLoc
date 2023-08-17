@@ -17,6 +17,11 @@ from ..db_key import DROPBOX_ACCESS_TOKEN
 import pickle
 from tqdm import tqdm
 
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
+
 
 netvlad_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -231,8 +236,12 @@ class NetVLAD(BaseTechnique):
 
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        return cosine_similarity(map_descriptors["map_descriptors"],
-                                 query_descriptors["query_descriptors"]).astype(np.float32)
+        try:
+            return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
+                                          query_descriptors["query_descriptors"]).astype(np.float32)
+        except:
+            return cosine_similarity(map_descriptors["map_descriptors"],
+                                    query_descriptors["query_descriptors"]).astype(np.float32)
 
 
     def save_descriptors(self, dataset_name: str) -> None:

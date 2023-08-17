@@ -12,9 +12,9 @@ from train_selection import ResNet18, select_transform
 from typing import Tuple
 import pickle
 
-METHODS = ["mixvpr", "netvlad", "cosplace", "hog", "calc", "convap"]
-SELECTION_MODEL_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/resnet18-epoch=04-val_loss=0.48.ckpt"
-BATCHSIZE = 32
+METHODS = ["mixvpr", "netvlad", "cosplace", "convap"]
+SELECTION_MODEL_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/combined_largesets_recall@1_resnet18-epoch=106-val_loss=0.55.ckpt"
+BATCHSIZE = 160
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))

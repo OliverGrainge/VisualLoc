@@ -11,7 +11,10 @@ import sklearn.neighbors
 import pickle
 import os
 from tqdm import tqdm
-
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
 # faiss only available on linux and mac
 try:
     import faiss
@@ -144,9 +147,12 @@ class AlexNet(BaseTechnique):
             return idx, dist
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        return cosine_similarity(map_descriptors["map_descriptors"],
-                                 query_descriptors["query_descriptors"]).astype(np.float32)
-
+        try:
+            return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
+                                          query_descriptors["query_descriptors"]).astype(np.float32)
+        except:
+            return cosine_similarity(map_descriptors["map_descriptors"],
+                                    query_descriptors["query_descriptors"]).astype(np.float32)
 
     def save_descriptors(self, dataset_name: str) -> None:
         if not os.path.isdir(alexnet_directory + "/descriptors/" + dataset_name):
