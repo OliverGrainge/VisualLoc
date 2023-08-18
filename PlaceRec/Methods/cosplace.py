@@ -114,14 +114,14 @@ class CosPlace(BaseTechnique):
                 return idx, dist
             
 
+
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        if self.device == 'cuda': 
+        try:
             return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
                                           query_descriptors["query_descriptors"]).astype(np.float32)
-        else: 
+        except:
             return cosine_similarity(map_descriptors["map_descriptors"],
                                     query_descriptors["query_descriptors"]).astype(np.float32)
-
     
     def save_descriptors(self, dataset_name: str) -> None:
         if not os.path.isdir(cosplace_directory + "/descriptors/" + dataset_name):

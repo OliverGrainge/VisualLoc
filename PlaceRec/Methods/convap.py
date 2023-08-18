@@ -16,6 +16,11 @@ import sklearn
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import cosine_similarity
 
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
+
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -362,11 +367,12 @@ class CONVAP(BaseTechnique):
             return idx, dist
 
 
+
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        if self.device == 'cuda': 
+        try:
             return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
                                           query_descriptors["query_descriptors"]).astype(np.float32)
-        else: 
+        except:
             return cosine_similarity(map_descriptors["map_descriptors"],
                                     query_descriptors["query_descriptors"]).astype(np.float32)
 

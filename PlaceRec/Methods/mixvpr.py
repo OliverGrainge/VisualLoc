@@ -21,7 +21,10 @@ from typing import Tuple
 from .base_method import BaseTechnique
 from sklearn.neighbors import NearestNeighbors
 import sklearn
-from ..utils import cosine_similarity_cuda
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
 
 try: 
     import faiss 
@@ -430,11 +433,12 @@ class MixVPR(BaseTechnique):
             return idx, dist
 
 
+
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        if self.device == 'cuda': 
+        try:
             return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
                                           query_descriptors["query_descriptors"]).astype(np.float32)
-        else: 
+        except:
             return cosine_similarity(map_descriptors["map_descriptors"],
                                     query_descriptors["query_descriptors"]).astype(np.float32)
 

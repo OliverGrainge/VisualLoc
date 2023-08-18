@@ -21,175 +21,50 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 import sklearn
-
-PLACES_365_DIRECTORY = "/home/oliver/Documents/github/Datasets/Places/Places365"
-
+try:
+    from ..utils import cosine_similarity_cuda
+except: 
+    pass
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
-class Places365(Dataset):
-    def __init__(self, root=None, split="train"):
-        catagory_paths = glob(root + "/" + split + "/*")
-        self.images = []
-        for cat in catagory_paths:
-            self.images += sorted(glob(cat + '/*'))
-        self.images = np.array(self.images)
-
-    def __len__(self):
-        return self.images.size
-
-    def __getitem__(self, idx):
-        return Image.open(self.images[idx])
-        
-
-
-class calcDataset(Dataset):
-    
-    def __init__(self, standard_dataset):
-        self.ds = standard_dataset
-
-        size = ((160, 120))
-
-        # preprocess with no transformation
-        self.preprocess1 = transforms.Compose([
-            transforms.Grayscale(),
-            transforms.Resize(size, antialias=True),
-            transforms.ToTensor()
-        ])
-        
-        # preprocess with random perspective
-        self.preprocess2 = transforms.Compose([
-            transforms.Grayscale(),
-            transforms.Resize((int(size[0] * 1.7), int(size[1] * 1.7)), antialias=True),
-            transforms.RandomPerspective(distortion_scale=0.4, p = 1.),
-            transforms.CenterCrop(size),
-            transforms.ToTensor(),
-        ])
-
-
-        winsize = (64, 64)
-        blocksize = (32, 32)
-        blockstride = (32, 32)
-        cellsize = (16, 16)
-        nbins = 9
-
-        self.hog = cv2.HOGDescriptor(winsize, blocksize, blockstride, cellsize, nbins)
-
-    def __len__(self):
-        return self.ds.__len__()
-
-
-    def __getitem__(self, idx):
-        img = self.ds.__getitem__(idx)
-
-        # preprocess the pair of images
-        imgs = [self.preprocess1(img), self.preprocess2(img)]
-
-        # shuffle them so target and input selection are random
-        random.shuffle(imgs)
-
-        target = np.array((imgs[1]*255).type(torch.uint8))[0]
-        target = torch.Tensor(self.hog.compute(target))
-
-        return imgs[0], target[None, :]
 
 
 
-
-
-class calcDataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=96):
+class CalcModel(nn.Module):
+    def __init__(self,  pretrained=True, weights="/home/oliver/Documents/github/VisualLoc/PlaceRec/Methods/weights/calc.caffemodel.pt"):
         super().__init__()
-        self.batch_size = batch_size
 
-
-    def setup(self, stage=None):
-        train_ds = Places365(root=PLACES_365_DIRECTORY, split="train")
-        self.train_dataset = calcDataset(train_ds)
-        test_ds = Places365(root=PLACES_365_DIRECTORY, split="val")
-        self.val_dataset = calcDataset(test_ds)
-
-    def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=16)
-
-
-    def val_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=16)
-
-
-    def test_dataloader(self):
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=16)
-
-
-
-
-
-
-class CALCModule(pl.LightningModule):
-    def __init__(self):
-        super().__init__()
-        self.input_dim = (1, 160, 120)
+        self.input_dim = (1, 120, 160)
         self.conv1 = nn.Conv2d(1, 64, kernel_size=(5,5), stride=2, padding=4)
-        self.norm1 = nn.BatchNorm2d(64)
         self.conv2 = nn.Conv2d(64, 128, kernel_size=(4,4), stride=1, padding=2)
-        self.norm2 = nn.BatchNorm2d(128)
         self.conv3 = nn.Conv2d(128, 4, kernel_size=(3,3), stride=1, padding=0)
-        self.fc1 = nn.Linear(936, 1064)
-        self.fc2 = nn.Linear(1064, 2048)
-        self.fc3 = nn.Linear(2048, 4032)
-
         self.pool = nn.MaxPool2d(kernel_size=(3,3), stride=2)
+        self.lrn1 = nn.LocalResponseNorm(5, alpha=0.0001, beta=0.75)
+        self.lrn2 = nn.LocalResponseNorm(5, alpha=0.0001, beta=0.75)
+
+        if pretrained:
+            state_dict = torch.load(weights)
+            my_new_state_dict = {}
+            my_layers = list(self.state_dict().keys())
+            for layer in my_layers:
+                my_new_state_dict[layer] = state_dict[layer]
+            self.load_state_dict(my_new_state_dict)
 
 
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = self.pool(x)
-        x = self.norm1(x)
+        x = self.lrn1(x)
 
         x = F.relu(self.conv2(x))
         x = self.pool(x)
-        x = self.norm2(x)
-
-        x = F.relu(self.conv3(x))
-        x = torch.flatten(x, 1)
-        x = F.sigmoid(self.fc1(x))
-        x = F.sigmoid(self.fc2(x))
-        x = F.sigmoid(self.fc3(x))
-        return x
-
-    
-    def describe(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.pool(x)
-        x = self.norm1(x)
-
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = self.norm2(x)
+        x = self.lrn2(x)
 
         x = F.relu(self.conv3(x))
         x = torch.flatten(x, 1)
         return x
-
-
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.forward(x)
-        loss = F.mse_loss(y_hat[:, None, :], y)
-        self.log("train_loss", loss)
-        return loss
-
-
-    def validation_step(self, batch, batch_idx):
-        x, y = batch
-        y_hat = self.forward(x)
-        loss = F.mse_loss(y_hat[:, None, :], y)
-        self.log("val_loss", loss)
-        #return loss
-
-    def configure_optimizers(self):
-        return torch.optim.SGD(self.parameters(), lr=9e-4, momentum=0.9, weight_decay=5e-4)
 
 
 
@@ -206,7 +81,7 @@ class CALC(BaseTechnique):
         else:
             self.device = torch.device("cpu")
 
-        self.model = CALCModule.load_from_checkpoint(package_directory + "/weights/calc_weights.ckpt").to(self.device)
+        self.model = CalcModel(pretrained=True).to(self.device)
         self.model.eval()
 
         self.preprocess = transforms.Compose([
@@ -226,11 +101,11 @@ class CALC(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
+            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Query Desc", disable=not pbar):
-                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         
         
@@ -242,11 +117,11 @@ class CALC(BaseTechnique):
     def compute_map_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         
         if images is not None and dataloader is None:
-            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
+            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Map Desc", disable=not pbar):
-                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("can only pass 'images' or 'dataloader'")
@@ -286,12 +161,11 @@ class CALC(BaseTechnique):
             dist, idx = self.map.search(desc["query_descriptors"], top_n)
             return idx, dist
 
-
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
-        if self.device == 'cuda': 
+        try:
             return cosine_similarity_cuda(map_descriptors["map_descriptors"], 
                                           query_descriptors["query_descriptors"]).astype(np.float32)
-        else: 
+        except:
             return cosine_similarity(map_descriptors["map_descriptors"],
                                     query_descriptors["query_descriptors"]).astype(np.float32)
 
@@ -317,19 +191,3 @@ class CALC(BaseTechnique):
 
 
 
-if __name__ == '__main__': 
-    torch.set_float32_matmul_precision('medium')
-    model = CALC()
-    model.train()
-    data = calcDataModule()
-    logger = TensorBoardLogger("tb_logs", name="calc")
-    checkpoint_callback = ModelCheckpoint(dirpath="weights/",
-                                          filename="calc_weights",
-                                          monitor="val_loss", save_top_k=1,
-                                          mode='min')
-
-    trainer = pl.Trainer(accelerator="gpu", devices=1, 
-                         logger=logger, max_epochs=42, callbacks=[checkpoint_callback])
-
-    trainer.fit(model=model, datamodule=data)
-    trainer.test(model=model, datamodule=datamodule)

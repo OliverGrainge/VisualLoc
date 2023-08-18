@@ -13,4 +13,5 @@
 *.pkl
 *.csv
 *.yml
+*.pt
 events*
