@@ -82,7 +82,7 @@ class GenericMethodTest(setup_test):
 
     def test_save_and_load(self):
         query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[:self.sample_size]
-        map_images = self.ds.map_image(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[:self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         query_desc = self.method.compute_query_desc(images=query_images)
 
