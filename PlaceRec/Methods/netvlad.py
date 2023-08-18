@@ -180,11 +180,13 @@ class NetVLAD(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing NetVLAD Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+                with torch.no_grad()
+                    all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("Can only pass 'images' or 'dataloader'")
@@ -196,11 +198,13 @@ class NetVLAD(BaseTechnique):
 
     def compute_map_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader = None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad()
+                all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing NetVLAD Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+                with torch.no_grad()
+                    all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("Can only pass 'images' or 'dataloader'")

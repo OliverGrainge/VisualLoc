@@ -11,7 +11,8 @@ from multiplexVPR import METHODS
 # =========================== Selection Dataset Configuration =================
 DATASETS = ["gsvcities"]
 PARTITION = "train"
-METRICS = ["recall@1", "recall@3", "recall@5", "recall@10"]
+METRICS = ["recall@1"]
+BATCH_SIZE = 128
 # ============================================================================
 
 def vect_recallatk(ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None,
@@ -74,8 +75,8 @@ def compute_datasets():
         ground_truth_soft = ds.ground_truth(partition=PARTITION, gt_type="soft")
         for method_name in METHODS: 
             method = get_method(method_name)
-            query_loader = ds.query_images_loader(partition=PARTITION, shuffle=False, num_workers=16, preprocess=method.preprocess, batch_size=64)
-            map_loader = ds.map_images_loader(partition=PARTITION, shuffle=False, num_workers=16, preprocess=method.preprocess, batch_size=64)
+            query_loader = ds.query_images_loader(partition=PARTITION, shuffle=False, num_workers=16, preprocess=method.preprocess, batch_size=BATCH_SIZE)
+            map_loader = ds.map_images_loader(partition=PARTITION, shuffle=False, num_workers=16, preprocess=method.preprocess, batch_size=BATCH_SIZE)
             query_desc = method.compute_query_desc(dataloader=query_loader)
             map_desc = method.compute_map_desc(dataloader=map_loader)
             similarity = method.similarity_matrix(query_desc, map_desc)
@@ -91,6 +92,10 @@ def compute_datasets():
             del method 
             del query_loader
             del map_loader
+            del similarity
+            del map_desc
+            del query_desc
+        del ds
         
     pd_datasets = [pd.DataFrame.from_dict(dataset) for dataset in datasets]
     return pd_datasets

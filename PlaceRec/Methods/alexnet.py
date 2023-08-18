@@ -60,7 +60,8 @@ class AlexNet(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor=None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                desc = self.model(images.to(self.device)).detach().cpu().numpy()
             Ds = desc.reshape([images.shape[0], -1]) # flatten
             rng = np.random.default_rng(seed=0)
             Proj = rng.standard_normal([Ds.shape[1], self.nDims], 'float32')
@@ -70,7 +71,8 @@ class AlexNet(BaseTechnique):
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing AlexNet Query Desc", disable=not pbar):
-                desc = self.model(batch.to(self.device)).detach().cpu().numpy()
+                with torch.no_grad():
+                    desc = self.model(batch.to(self.device)).detach().cpu().numpy()
                 Ds = desc.reshape([batch.shape[0], -1]) # flatten
                 rng = np.random.default_rng(seed=0)
                 Proj = rng.standard_normal([Ds.shape[1], self.nDims], 'float32')
@@ -89,7 +91,8 @@ class AlexNet(BaseTechnique):
 
     def compute_map_desc(self, images: np.ndarray = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                desc = self.model(images.to(self.device)).detach().cpu().numpy()
             Ds = desc.reshape([images.shape[0], -1]) # flatten
             rng = np.random.default_rng(seed=0)
             Proj = rng.standard_normal([Ds.shape[1], self.nDims], 'float32')
@@ -99,7 +102,8 @@ class AlexNet(BaseTechnique):
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing AlexNet Map Desc", disable=not pbar):
-                desc = self.model(batch.to(self.device)).detach().cpu().numpy()
+                with torch.no_grad():
+                    desc = self.model(batch.to(self.device)).detach().cpu().numpy()
                 Ds = desc.reshape([batch.shape[0], -1]) # flatten
                 rng = np.random.default_rng(seed=0)
                 Proj = rng.standard_normal([Ds.shape[1], self.nDims], 'float32')

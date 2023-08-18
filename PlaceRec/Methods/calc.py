@@ -101,11 +101,11 @@ class CALC(BaseTechnique):
 
     def compute_query_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         
         
@@ -117,11 +117,11 @@ class CALC(BaseTechnique):
     def compute_map_desc(self, images: torch.Tensor = None, dataloader: torch.utils.data.dataloader.DataLoader=None, pbar: bool=True) -> dict:
         
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            all_desc = self.model.describe(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(dataloader, desc="Computing CALC Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+                all_desc.append(self.model.describe(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else: 
             raise Exception("can only pass 'images' or 'dataloader'")
