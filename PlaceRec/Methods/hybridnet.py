@@ -130,21 +130,45 @@ class SubtractMean:
 
 
 
+class SubtractMean:
+    def __init__(self, mean_image=None):
+        self.mean_image = mean_image
+
+    def __call__(self, image):
+        return image - self.mean_image
+    
+    def __repr__(self):
+        return self.__class__.__name__
+    
+
+class ChannelSwap:
+    def __call__(self, tensor):
+        """
+        Swap channels from RGB to BGR or vice versa.
+        
+        Args:
+        - tensor (torch.Tensor): Input tensor in CxHxW format.
+        
+        Returns:
+        - torch.Tensor: Tensor with swapped channels.
+        """
+        # Swap channels
+        return tensor[[2, 1, 0], :, :]
+
+
+
 class HybridNet(BaseTechnique):
     
     def __init__(self):
         super().__init__()
 
-        """
         if torch.cuda.is_available():
             self.device = torch.device("cuda")
         elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
             self.device = torch.device("mps")
         else:
             self.device = torch.device("cpu")
-        """
 
-        self.device = "cpu"
 
         self.model = HybridNetModel()
         self.model.load_state_dict(torch.load(package_directory + '/weights/HybridNet.caffemodel.pt'))
@@ -154,12 +178,16 @@ class HybridNet(BaseTechnique):
 
         self.mean_image = torch.Tensor(np.load(package_directory + '/weights/hybridnet_mean.npy'))
 
+
         self.preprocess = transforms.Compose([
             transforms.ToTensor(),
+            transforms.Lambda(lambda x: x * 255.0),
             transforms.Resize((256,256), antialias=True),
             SubtractMean(mean_image = self.mean_image),
+            ChannelSwap(),
             transforms.Resize((227, 227), antialias=True)
         ])
+
 
 
         self.map = None
