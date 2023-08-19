@@ -67,12 +67,9 @@ class HybridNet(nn.Module):
         x = self.norm2(self.pool2(self.relu2(self.conv2(x))))
         x = self.relu3(self.conv3(x))
         x = self.relu4(self.conv4(x))
-        x = self.relu5(self.conv5(x))
-        x = self.pool6(self.relu6(self.conv6(x)))
-        x = x.view(x.size(0), -1)  # Flatten the tensor
-        x = self.drop7(self.relu7(self.fc7_new(x)))
-        x = self.fc8_new(x)
-        x = self.prob(x)
+        x = self.conv5(x)
+
+        #implement spatial pooling
         return x
 
 # Create the model
