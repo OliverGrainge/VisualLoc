@@ -144,6 +144,13 @@ class NetVLAD(BaseTechnique):
         self.name = "netvlad"
         self.model = ResNet_NetVLAD()
 
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
+
         # load the model weights
         try:
             self.model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
