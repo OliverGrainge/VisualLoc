@@ -67,6 +67,18 @@ class CalcModel(nn.Module):
         return x
 
 
+from torchvision import transforms
+import numpy as np
+import cv2
+from PIL import Image
+
+class ConvertToYUVandEqualizeHist:
+    def __call__(self, img):
+        img_yuv = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2YUV)
+        img_yuv[:,:,0] = cv2.equalizeHist(img_yuv[:,:,0])
+        img_rgb = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
+        return Image.fromarray(img_rgb)
+
 
 
 class CALC(BaseTechnique):
@@ -85,10 +97,13 @@ class CALC(BaseTechnique):
         self.model.eval()
 
         self.preprocess = transforms.Compose([
+            ConvertToYUVandEqualizeHist(),
+            transforms.Grayscale(num_output_channels=1),
+            transforms.Resize((120, 160), interpolation=Image.BICUBIC),
             transforms.ToTensor(),
-            transforms.Grayscale(),
-            transforms.Resize((160, 120), antialias=True)
+            #transforms.Normalize((0.5,), (0.5,))  # Assuming the raw scale in Caffe transformation is equivalent to this normalization.
         ])
+
 
 
         self.map = None
@@ -109,7 +124,7 @@ class CALC(BaseTechnique):
             all_desc = np.vstack(all_desc)
         
         
-        query_desc = {"query_descriptors": all_desc}
+        query_desc = {"query_descriptors": all_desc/np.linalg.norm(all_desc, axis=0)}
         self.set_query(query_desc)
         return query_desc
 
@@ -126,7 +141,7 @@ class CALC(BaseTechnique):
         else: 
             raise Exception("can only pass 'images' or 'dataloader'")
 
-        map_desc = {'map_descriptors': all_desc}
+        map_desc = {'map_descriptors': all_desc/np.linalg.norm(all_desc, axis=0)}
         self.set_map(map_desc)
 
         return map_desc
