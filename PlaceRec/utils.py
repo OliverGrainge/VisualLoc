@@ -91,6 +91,12 @@ def get_method(name: str=None):
     elif name == "alexnet":
         from PlaceRec.Methods import AlexNet
         method = AlexNet()
+    elif name == "hybridnet":
+        from PlaceRec.Methods import HybridNet
+        method = HybridNet()
+    elif name == "amosnet":
+        from PlaceRec.Methods import AmosNet
+        method = AmosNet()
     else: 
         raise Exception("Method not implemented")
     return method
