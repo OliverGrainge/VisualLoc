@@ -8,7 +8,7 @@ parser.add_argument('--mode', required=True, choices=("describe", "evaluate"),
                     help='Specify either describe or evaluate', type=str)
 parser.add_argument('--datasets', choices=("sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands"),
                     help='specify one of the datasets from PlaceRec.Datasets', type=str, default=["stlucia_small"], nargs='+')
-parser.add_argument('--methods', choices=("netvlad", "hog", "cosplace", "calc", "alexnet"),
+parser.add_argument('--methods', choices=("amosnet", "hybridnet", "netvlad", "hog", "cosplace", "calc", "alexnet"),
                     help="specify one of the techniques from vpr/vpr_tecniques", type=str, default="hog", nargs='+')
 parser.add_argument('--batchsize', type=int, default=10, help="Choose the Batchsize for VPR processing")
 parser.add_argument('--partition', type=str, default='test', help="choose from 'train', 'val', 'test' or 'all'")

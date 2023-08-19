@@ -12,4 +12,5 @@
 *__pycache__/
 *.pkl
 *.csv
+*.npy
 *.pt

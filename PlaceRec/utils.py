@@ -20,7 +20,7 @@ class ImageDataset(Dataset):
         
 
         if self.preprocess is not None:
-            img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
+            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
             img = Image.fromarray(img)
             img = self.preprocess(img)
             return img
@@ -91,6 +91,12 @@ def get_method(name: str=None):
     elif name == "alexnet":
         from PlaceRec.Methods import AlexNet
         method = AlexNet()
+    elif name == "hybridnet":
+        from PlaceRec.Methods import HybridNet
+        method = HybridNet()
+    elif name == "amosnet":
+        from PlaceRec.Methods import AmosNet
+        method = AmosNet()
     else: 
         raise Exception("Method not implemented")
     return method
