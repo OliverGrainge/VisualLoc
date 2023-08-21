@@ -20,7 +20,14 @@ parser.add_argument(
 )
 parser.add_argument(
     "--datasets",
-    choices=("sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands"),
+    choices=(
+        "gsvcities",
+        "sfu",
+        "gardenspointwalking",
+        "stlucia_small",
+        "essex3in1",
+        "nordlands",
+    ),
     help="specify one of the datasets from PlaceRec.Datasets",
     type=str,
     default=["stlucia_small"],
