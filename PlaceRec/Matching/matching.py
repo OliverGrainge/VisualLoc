@@ -2,7 +2,6 @@ import numpy as np
 from scipy.stats import norm
 
 
-
 def threshold(similarity: np.ndarray, threshold: float) -> np.ndarray:
     matches = similarity >= threshold
     return matches
@@ -19,6 +18,6 @@ def auto_threshold(similarity: np.ndarray) -> np.ndarray:
 def single_match_threshold(similarity: np.ndarray) -> np.ndarray:
     i = np.argmax(similarity, axis=0)
     j = np.int64(range(len(i)))
-    matches = np.zeros_like(similarity, dtype='bool')
+    matches = np.zeros_like(similarity, dtype="bool")
     matches[i, j] = True
     return matches
