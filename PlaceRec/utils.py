@@ -97,6 +97,12 @@ def get_method(name: str=None):
     elif name == "amosnet":
         from PlaceRec.Methods import AmosNet
         method = AmosNet()
+    elif name == "convap":
+        from PlaceRec.Methods import CONVAP
+        method = CONVAP()
+    elif name == "mixvpr":
+        from PlaceRec.Methods import MixVPR
+        method = MixVPR()
     else: 
         raise Exception("Method not implemented")
     return method
