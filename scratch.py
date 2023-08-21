@@ -5,17 +5,17 @@ import numpy as np
 
 
 from PlaceRec.Methods import RegionVLAD, NetVLAD
-from PlaceRec.Datasets import GardensPointWalking
+from PlaceRec.Datasets import GsvCities
 
-method = RegionVLAD()
-ds = GardensPointWalking()
+ds = GsvCities()
 
 
-method.load_descriptors(ds.name)
+gt = ds.ground_truth("test", gt_type="hard")
+gts = ds.ground_truth("test", gt_type="soft")
 
-query_images = ds.query_images("test", preprocess=method.preprocess)[:2]
+qp = ds.query_partition("test")
+mp = ds.map_partition("test")
 
-idx, score = method.place_recognise(images=query_images, top_n=2)
+print(len(mp), len(qp))
 
-print(idx)
-print(score)
+print(gt.shape, gts.shape)

@@ -67,6 +67,10 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import Nordlands
 
         dataset = Nordlands()
+    elif name == "gsvcities":
+        from PlaceRec.Datasets import GsvCities
+
+        dataset = GsvCities()
     else:
         raise Exception("Dataset '" + name + "' not implemented")
     return dataset
