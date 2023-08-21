@@ -35,8 +35,10 @@ class GsvBase:
         return self.dataframe.loc[place_id]
 
     def split_place(self, df):
-        boundary = int(len(df.index) * 0.5)
-        query, reference = df[:boundary], df[boundary:]
+        df = df.head(4)
+        # boundary = int(len(df.index) * 0.5)
+        # query, reference = df[:boundary], df[boundary:]
+        query, reference = df.iloc[:2], df.iloc[2:]
         return query, reference
 
     def get_fulldataframe(self):
@@ -154,9 +156,9 @@ class GsvCities(BaseDataset, GsvBase):
         self.map_place_ids = mid
 
         q_size = len(self.query_place_ids)
-        self.train_ids = qid[: int(q_size * 0.6)]
-        self.val_ids = qid[int(q_size * 0.6) : int(q_size * 0.8)]
-        self.test_ids = qid[int(q_size * 0.8) :]
+        self.train_ids = qid[: int(q_size * 0.8)]
+        self.val_ids = qid[int(q_size * 0.8) : int(q_size * 0.9)]
+        self.test_ids = qid[int(q_size * 0.9) :]
 
         self.name = "gsvcities"
 
@@ -261,7 +263,7 @@ class GsvCities(BaseDataset, GsvBase):
             q_ids = self.train_ids
         elif partition == "test":
             q_ids = self.test_ids
-        elif partition == "train":
+        elif partition == "val":
             q_ids = self.val_ids
         else:
             q_ids = self.query_place_ids
