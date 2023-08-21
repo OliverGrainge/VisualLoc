@@ -7,3 +7,4 @@ from .mixvpr import MixVPR
 from .convap import CONVAP
 from .hybridnet import HybridNet
 from .amosnet import AmosNet
+from .regionvlad import RegionVLAD
