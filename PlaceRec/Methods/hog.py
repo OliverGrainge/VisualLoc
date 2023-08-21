@@ -12,6 +12,7 @@ import os
 from os import path
 from tqdm import tqdm
 import pickle
+import os
 
 
 hog_directory = os.path.dirname(os.path.abspath(__file__))
@@ -92,8 +93,6 @@ def conv_match_dotproduct(
 
 class HOG(BaseFunctionality):
     def __init__(self):
-        import os
-
         self.device = "cpu"
         # preprocess images for method (None required)
         self.preprocess = transforms.ToTensor()
