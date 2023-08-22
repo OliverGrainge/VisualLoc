@@ -12,8 +12,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 import sklearn
 import zipfile
-from ..utils import dropbox_download_file
-from ..db_key import DROPBOX_ACCESS_TOKEN
+from ..utils import s3_bucket_download
+
 import pickle
 from tqdm import tqdm
 
@@ -163,6 +163,7 @@ class ResNet_NetVLAD(nn.Module):
 
 class NetVLAD(BaseFunctionality):
     def __init__(self):
+        super().__init__()
         self.name = "netvlad"
         self.model = ResNet_NetVLAD()
 
@@ -181,11 +182,8 @@ class NetVLAD(BaseFunctionality):
                 )
             )
         except:
-            print("===> downloading netvlad weights")
-            dropbox_download_file(
-                "/weights/msls_r18l3_netvlad_partial.pth",
-                netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth",
-            )
+            s3_bucket_download("placerecdata/weights/msls_r18l3_netvlad_partial.pth", netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth")
+
             self.model.load_state_dict(
                 torch.load(
                     netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"

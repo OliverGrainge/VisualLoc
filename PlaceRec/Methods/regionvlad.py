@@ -10,6 +10,7 @@ import pickle
 from torchvision import transforms
 from tqdm import tqdm
 from typing import Tuple
+from ..utils import s3_bucket_download
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -129,12 +130,14 @@ class RegionVLAD(BaseFunctionality):
         super().__init__()
         self.name = "regionvlad"
 
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-            self.device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
+
+        # download the required data 
+        if not os.path.exists(package_directory + "/weights/alexnet_places365.caffemodel.pt"):
+            s3_bucket_download("placerecdata/weights/alexnet_places365.caffemodel.pt", package_directory + "/weights/alexnet_places365.caffemodel.pt")
+        if not os.path.exists(package_directory + "/weights/regionvlad_mean_image.npy"):
+            s3_bucket_download("placerecdata/weights/regionvlad_mean_image.npy", package_directory + "/weights/regionvlad_mean_image.npy")
+        if not os.path.exists(package_directory + "/weights/regionvlad_vocab_400.pkl"):
+            s3_bucket_download("placerecdata/weights/regionvlad_vocab_400.pkl", package_directory + "/weights/regionvlad_vocab_400.pkl")
 
         self.model = AlexnetPlaces365()
         self.model.load_state_dict(

@@ -6,7 +6,7 @@ import torchvision
 import torch
 from glob import glob
 from PIL import Image
-from ..utils import ImageDataset, dropbox_download_file
+from ..utils import ImageDataset
 from torch.utils.data import DataLoader
 
 
@@ -19,9 +19,7 @@ class SFU(BaseDataset):
         if not os.path.isdir(package_directory + "/raw_images/SFU"):
             print("====> Downloading SFU Dataset")
             # download dataset as zip file
-            dropbox_download_file(
-                "/vpr_datasets/SFU.zip", package_directory + "/raw_images/SFU.zip"
-            )
+            raise NotImplementedError
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/SFU.zip", "r"

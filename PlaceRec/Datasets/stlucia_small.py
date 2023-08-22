@@ -6,7 +6,7 @@ import torchvision
 import torch
 import glob
 from PIL import Image
-from ..utils import ImageDataset, dropbox_download_file
+from ..utils import ImageDataset
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
 
@@ -20,10 +20,7 @@ class StLucia_small(BaseDataset):
         if not os.path.isdir(package_directory + "/raw_images/StLucia_small"):
             print("====> Downloading StLucia_small Dataset")
             # download dataset as zip file
-            dropbox_download_file(
-                "/vpr_datasets/StLucia_small.zip",
-                package_directory + "/raw_images/StLucia_small.zip",
-            )
+            raise NotImplementedError
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/StLucia_small.zip", "r"

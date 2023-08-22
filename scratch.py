@@ -1,21 +1,39 @@
-import torch.nn as nn
-import torch.nn.init as init
-import torch
-import numpy as np
+
+import boto3
+import botocore
+
+"""
+
+bucket_name = 'visuallocbucket'
+key = 'placerecdata/weights/msls_r18l3_netvlad_partial.pth'
+download_path = './msls_r18l3_netvlad_partial.pth'
+
+# Download the file
 
 
-from PlaceRec.Methods import RegionVLAD, NetVLAD
-from PlaceRec.Datasets import GsvCities
+from PlaceRec import s3_bucket_download 
 
-ds = GsvCities()
+s3_bucket_download(key, download_path)
+
+"""
+
+from PlaceRec.Methods import NetVLAD, CONVAP, MixVPR
+from PlaceRec.Datasets import GardensPointWalking
+
+method = NetVLAD()
+ds = GardensPointWalking()
+loader = ds.query_images_loader("test", preprocess=method.preprocess)
+q_desc = method.compute_query_desc(dataloader=loader)
 
 
-gt = ds.ground_truth("test", gt_type="hard")
-gts = ds.ground_truth("test", gt_type="soft")
+method = MixVPR()
+ds = GardensPointWalking()
+loader = ds.query_images_loader("test", preprocess=method.preprocess)
+q_desc = method.compute_query_desc(dataloader=loader)
 
-qp = ds.query_partition("test")
-mp = ds.map_partition("test")
 
-print(len(mp), len(qp))
 
-print(gt.shape, gts.shape)
+method = CONVAP()
+ds = GardensPointWalking()
+loader = ds.query_images_loader("test", preprocess=method.preprocess)
+q_desc = method.compute_query_desc(dataloader=loader)

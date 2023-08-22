@@ -21,6 +21,8 @@ from typing import Tuple
 from .base_method import BaseFunctionality
 from sklearn.neighbors import NearestNeighbors
 import sklearn
+from ..utils import s3_bucket_download
+
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -334,22 +336,22 @@ class VPRModel(pl.LightningModule):
 
 class MixVPR(BaseFunctionality):
     def __init__(self):
+        super().__init__()
         self.name = "mixpvr"
 
         weight_pth = (
             package_directory
             + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
         )
-        # choose the accelerator
-        if torch.cuda.is_available():
-            self.device = "cuda"
+
+        if not os.path.exists(weight_pth):
+            s3_bucket_download("placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+                                package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt")
+
+        if self.device == "cuda":
             state_dict = torch.load(weight_pth)
-        elif torch.backends.mps.is_available():
-            self.device = "cpu"
-            state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
         else:
-            self.device = "cpu"
-            state_dict = torch.load(weight_pth)
+            state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
 
         # Note that images must be resized to 320x320
         self.model = VPRModel(

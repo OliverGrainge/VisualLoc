@@ -6,7 +6,7 @@ import torchvision
 import torch
 from glob import glob
 from PIL import Image
-from ..utils import ImageDataset, dropbox_download_file
+from ..utils import ImageDataset
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
 import pandas as pd
