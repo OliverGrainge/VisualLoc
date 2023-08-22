@@ -12,6 +12,7 @@ from typing import Tuple, List
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import numpy as np
+from ..utils import s3_bucket_download
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -150,12 +151,19 @@ class HybridNet(BaseFunctionality):
     def __init__(self):
         super().__init__()
 
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-            self.device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
+        if not os.path.exists(package_directory + "/weights/HybridNet.caffemodel.pt"):
+            s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt",
+                                package_directory + "/weights/HybridNet.caffemodel.pt")
+
+        if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
+            s3_bucket_download("placerecdata/weights/hybridnet_mean.npy",
+                                package_directory + "/weights/hybridnet_mean.npy")
+        
+
+        # hybridnet layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
+
 
         self.model = HybridNetModel()
         self.model.load_state_dict(

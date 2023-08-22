@@ -170,6 +170,13 @@ class BaseFunctionality(BaseTechnique):
         self.map = None
         self.name = None
 
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        elif torch.backends.mps.is_available():
+            self.device = "mps"
+        else:
+            self.device = "cpu"
+
     def set_query(self, query_descriptors: dict) -> None:
         self.query_desc = query_descriptors
 

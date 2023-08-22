@@ -12,6 +12,7 @@ from tqdm import tqdm
 from .base_method import BaseFunctionality
 import pickle
 from typing import Tuple
+from ..utils import s3_bucket_download
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -268,20 +269,25 @@ class VPRModel(pl.LightningModule):
 
 class CONVAP(BaseFunctionality):
     def __init__(self):
+        super().__init__()
         self.name = "convap"
 
         weights_path = package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt"
-        # choose the accelerator
-        if torch.cuda.is_available():
-            self.device = "cuda"
-            state_dict = torch.load(weights_path)
-        elif torch.backends.mps.is_available():
-            self.device = "cpu"
-            state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
-        else:
-            self.device = "cpu"
-            state_dict = torch.load(weights_path)
 
+        # Some layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
+
+        # download the weights 
+        if not os.path.exists(weights_path):
+            s3_bucket_download("placerecdata/weights/resnet50_ConvAP_1024_2x2.ckpt", package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
+
+        # read in the state dict
+        if self.device == "mps" or self.device == "cpu":
+            state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
+        else: 
+            state_dict = torch.load(weights_path)
+       
         # Note that images must be resized to 320x320
         self.model = VPRModel(
             backbone_arch="resnet50",

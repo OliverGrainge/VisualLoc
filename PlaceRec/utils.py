@@ -5,7 +5,24 @@ from PIL import Image
 import pathlib
 import dropbox
 from dropbox.exceptions import AuthError
+import boto3
+import os
+from tqdm import tqdm
 from .db_key import DROPBOX_ACCESS_TOKEN
+
+import boto3
+import botocore
+
+
+
+
+
+
+
+# Download the file
+
+
+
 
 
 class ImageDataset(Dataset):
@@ -27,23 +44,29 @@ class ImageDataset(Dataset):
         return img
 
 
-def dropbox_connect():
-    """Create a connection to Dropbox."""
+# ============== S3 Bucket ===========================================================================
 
-    try:
-        dbx = dropbox.Dropbox(DROPBOX_ACCESS_TOKEN)
-    except AuthError as e:
-        print("Error connecting to Dropbox with access token: " + str(e))
-    return dbx
+class ProgressPercentage(tqdm):
+    def __init__(self, client, bucket, filename):
+        self._size = client.head_object(Bucket=bucket, Key=filename)["ContentLength"]
+        super(ProgressPercentage, self).__init__(total=self._size, unit='B', unit_scale=True, desc="Downloading " + filename.split('/')[-1])
 
+    def __call__(self, bytes_amount):
+        self.update(bytes_amount)
 
-def dropbox_download_file(dropbox_file_path, local_file_path):
-    try:
-        dbx = dropbox_connect()
-        dbx.files_download_to_file(local_file_path, dropbox_file_path)
+def s3_bucket_download(remote_path: str, local_path: str):
+    s3 = boto3.client('s3', region_name="eu-north-1", config=boto3.session.Config(signature_version=botocore.UNSIGNED))
+    
+    # Define the bucket name and the datasets to download
+    bucket_name = 'visuallocbucket'
+    
+    # Download each dataset
+    progress = ProgressPercentage(s3, bucket_name, remote_path)
+    s3.download_file(bucket_name, remote_path, local_path, Callback=progress)
+    
+    return None
 
-    except Exception as e:
-        print("Error downloading file from Dropbox: " + str(e))
+# ==========================================================================================================
 
 
 def get_dataset(name: str = None):

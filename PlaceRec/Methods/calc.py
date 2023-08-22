@@ -25,6 +25,7 @@ from torchvision import transforms
 import numpy as np
 import cv2
 from PIL import Image
+from ..utils import s3_bucket_download
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -34,7 +35,7 @@ class CalcModel(nn.Module):
     def __init__(
         self,
         pretrained=True,
-        weights="/home/oliver/Documents/github/VisualLoc/PlaceRec/Methods/weights/calc.caffemodel.pt",
+        weights=package_directory + "/weights/calc.caffemodel.pt",
     ):
         super().__init__()
 
@@ -78,14 +79,14 @@ class ConvertToYUVandEqualizeHist:
 
 class CALC(BaseFunctionality):
     def __init__(self):
-        super().__init__()
+        super().__init__()  
 
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-            self.device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
+        if not os.path.exists(package_directory + '/weights/calc.caffemodel.pt'):
+            s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
+
+        # calc layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
 
         self.model = CalcModel(pretrained=True).to(self.device)
         self.model.eval()
@@ -96,7 +97,6 @@ class CALC(BaseFunctionality):
                 transforms.Grayscale(num_output_channels=1),
                 transforms.Resize((120, 160), interpolation=Image.BICUBIC),
                 transforms.ToTensor(),
-                # transforms.Normalize((0.5,), (0.5,))  # Assuming the raw scale in Caffe transformation is equivalent to this normalization.
             ]
         )
 

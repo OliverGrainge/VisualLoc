@@ -12,6 +12,7 @@ from typing import Tuple, List
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import numpy as np
+from ..utils import s3_bucket_download
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -141,12 +142,17 @@ scale_transform = transforms.Lambda(lambda x: x * 255.0)
 class AmosNet(BaseFunctionality):
     def __init__(self):
         super().__init__()
-        if torch.cuda.is_available():
-            self.device = torch.device("cuda")
-        elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-            self.device = torch.device("mps")
-        else:
-            self.device = torch.device("cpu")
+        if not os.path.exists(package_directory + "/weights/AmosNet.caffemodel.pt"):
+            s3_bucket_download("placerecdata/weights/AmosNet.caffemodel.pt",
+                                package_directory + "/weights/AmosNet.caffemodel.pt")
+
+        if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
+            s3_bucket_download("placerecdata/weights/amosnet_mean.npy",
+                                package_directory + "/weights/amosnet_mean.npy")
+
+        # amosnet layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
 
         self.model = AmosNetModel()
         self.model.load_state_dict(
