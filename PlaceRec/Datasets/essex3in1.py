@@ -6,7 +6,7 @@ import torchvision
 import torch
 from glob import glob
 from PIL import Image
-from ..utils import ImageDataset
+from ..utils import ImageDataset, s3_bucket_download
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
 
@@ -17,7 +17,14 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class ESSEX3IN1(BaseDataset):
     def __init__(self):
         if not os.path.isdir(package_directory + "/raw_images/ESSEX3IN1"):
-            raise Exception("Dataset not downloaded")
+            s3_bucket_download("placerecdata/datasets/ESSEX3IN1.zip",
+                package_directory + "/raw_images/ESSEX3IN1.zip")
+
+            with zipfile.ZipFile(
+                package_directory + "/raw_images/ESSEX3IN1.zip", "r"
+            ) as zip_ref:
+                os.makedirs(package_directory + "/raw_images/ESSEX3IN1")
+                zip_ref.extractall(package_directory + "/raw_images/")
 
         self.query_paths = np.array(
             sorted(glob(package_directory + "/raw_images/ESSEX3IN1/query_combined/*"))

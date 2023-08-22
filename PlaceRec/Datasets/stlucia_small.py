@@ -9,7 +9,7 @@ from PIL import Image
 from ..utils import ImageDataset
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
-
+from ..utils import s3_bucket_download
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,9 +18,9 @@ class StLucia_small(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/StLucia_small"):
-            print("====> Downloading StLucia_small Dataset")
             # download dataset as zip file
-            raise NotImplementedError
+            s3_bucket_download("placerecdata/datasets/StLucia_small.zip",
+                                package_directory + "/raw_images/StLucia_small.zip")
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/StLucia_small.zip", "r"

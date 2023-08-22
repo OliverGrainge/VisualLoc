@@ -6,7 +6,7 @@ import torchvision
 import torch
 import glob
 from PIL import Image
-from ..utils import ImageDataset
+from ..utils import ImageDataset, s3_bucket_download
 from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
 
@@ -18,9 +18,9 @@ class GardensPointWalking(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/GardensPointWalking"):
-            print("====> Downloading GardensPointWalking Dataset")
             # download dataset as zip file
-            raise NotImplementedError
+            s3_bucket_download("placerecdata/datasets/GardensPointWalking.zip",
+                    package_directory + "/raw_images/GardensPointWalking.zip")
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/GardensPointWalking.zip", "r"

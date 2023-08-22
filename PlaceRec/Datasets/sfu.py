@@ -6,8 +6,9 @@ import torchvision
 import torch
 from glob import glob
 from PIL import Image
-from ..utils import ImageDataset
+from ..utils import ImageDataset, s3_bucket_download
 from torch.utils.data import DataLoader
+
 
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -17,9 +18,9 @@ class SFU(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/SFU"):
-            print("====> Downloading SFU Dataset")
             # download dataset as zip file
-            raise NotImplementedError
+            s3_bucket_download("placerecdata/datasets/SFU.zip",
+                    package_directory + "/raw_images/SFU.zip")
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/SFU.zip", "r"
