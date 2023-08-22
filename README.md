@@ -14,6 +14,7 @@ dataset = GardensPointWalking()
 
 
 To instantiate the methods, complete the following. Again any required model weights will be downloaded automatically.
+
 '''python 
 from PlaceRec.Methods import NetVLAD
 
@@ -23,7 +24,7 @@ method = NetVLAD()
 
 To apply the various techniques to a given data the following processing steps can be performed. 
 
-'''
+'''python
 from PlaceRec.Datasets import GardensWalkingPoint
 from PlaceRec.Methods import NetVLAD 
 
