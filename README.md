@@ -6,25 +6,25 @@ format with an automated testing framework.
 
 To Instantiate the datasets complete the following. The raw image data will automatically download. 
 
-'''python 
+ ```python 
 from PlaceRec.Datasets import GardensPointWalking 
 
 dataset = GardensPointWalking()
-'''
+ ```
 
 
 To instantiate the methods, complete the following. Again any required model weights will be downloaded automatically.
 
-'''python 
+ ```python 
 from PlaceRec.Methods import NetVLAD
 
 method = NetVLAD()
-'''
+ ```
 
 
 To apply the various techniques to a given data the following processing steps can be performed. 
 
-'''python
+ ```python
 from PlaceRec.Datasets import GardensWalkingPoint
 from PlaceRec.Methods import NetVLAD 
 
@@ -45,4 +45,4 @@ idx, scores = method.place_recognition(dataloader=query_loader)
 
 # idx: a numpy array where query image i is matched with refernce image idx[i] with a cosine distance of scores[i]
 
-'''
+ ```
