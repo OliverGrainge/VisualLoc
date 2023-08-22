@@ -48,3 +48,40 @@ idx, scores = method.place_recognition(dataloader=query_loader)
 # idx: a numpy array where query image i is matched with refernce image idx[i] with a cosine distance of scores[i]
 
  ```
+
+ The Implemented Visual Place Recognition Techniques Include; 
+
+ - NetVLAD
+ - HybridNet
+ - AmosNet
+ - CALC
+ - CosPlace 
+ - MixVPR
+ - CONVAP
+ - HOG
+ - AlexNet
+
+The following BenchMarked Datasets Include: 
+- GardensPointWalking 
+- ESSEX3IN1
+- SFU
+- StLucia_small
+- GsvCities 
+- Nordlands 
+
+
+# Command Line Interface for evaluating method performance
+to first compute the descriptors. In this command line instruction all variables are lowercase. "partition" variable can take the 
+name of 'train', 'test', 'val' or 'all'. The "batchsize" variable is an integer indicating the batchsize. Here {dataset_names} can include 
+a list of technique names all lower case. {methods_names} can again include multiple technique names in lower case
+
+```console
+python main.py --datasets {dataset_names} --methods {methods_names} --partition {partition} --batchsize {batchsize} --mode describe
+```
+
+To evaluate the performance of the various methods. The following command can be performed. It will create a folder /Plots containing 
+a number of plots evaluating performance of vpr techniques.
+```console
+python main.py --datasets {dataset_name} --methods {methods_names} --partition {partition} --batchsize {batchsize} --mode evaluate
+               --metrics prcurve count_flops count_params recall@1 recall@5 recall@10
+```
