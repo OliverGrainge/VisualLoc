@@ -54,6 +54,7 @@ idx, scores = method.place_recognition(dataloader=query_loader)
  - NetVLAD
  - HybridNet
  - AmosNet
+ - RegionVLAD
  - CALC
  - CosPlace 
  - MixVPR
