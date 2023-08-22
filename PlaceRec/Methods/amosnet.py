@@ -144,7 +144,15 @@ class AmosNet(BaseFunctionality):
         super().__init__()
         if not os.path.exists(package_directory + "/weights/AmosNet.caffemodel.pt"):
             s3_bucket_download("placerecdata/weights/AmosNet.caffemodel.pt",
-                                package_directory + "/AmosNet.caffemodel.pt")
+                                package_directory + "/weights/AmosNet.caffemodel.pt")
+
+        if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
+            s3_bucket_download("placerecdata/weights/amosnet_mean.npy",
+                                package_directory + "/weights/amosnet_mean.npy")
+
+        # amosnet layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
 
         self.model = AmosNetModel()
         self.model.load_state_dict(

@@ -155,6 +155,16 @@ class HybridNet(BaseFunctionality):
             s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt",
                                 package_directory + "/weights/HybridNet.caffemodel.pt")
 
+        if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
+            s3_bucket_download("placerecdata/weights/hybridnet_mean.npy",
+                                package_directory + "/weights/hybridnet_mean.npy")
+        
+
+        # hybridnet layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
+
+
         self.model = HybridNetModel()
         self.model.load_state_dict(
             torch.load(package_directory + "/weights/HybridNet.caffemodel.pt")

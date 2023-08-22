@@ -35,7 +35,7 @@ class CalcModel(nn.Module):
     def __init__(
         self,
         pretrained=True,
-        weights="/home/oliver/Documents/github/VisualLoc/PlaceRec/Methods/weights/calc.caffemodel.pt",
+        weights=package_directory + "/weights/calc.caffemodel.pt",
     ):
         super().__init__()
 
@@ -83,6 +83,10 @@ class CALC(BaseFunctionality):
 
         if not os.path.exists(package_directory + '/weights/calc.caffemodel.pt'):
             s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
+
+        # calc layers not implemented on metal
+        if self.device == "mps":
+            self.device = "cpu"
 
         self.model = CalcModel(pretrained=True).to(self.device)
         self.model.eval()
