@@ -17,11 +17,11 @@ import torch.nn as nn
 
 torch.set_float32_matmul_precision("medium")
 
-WEIGHTS_NAME = "gsvcities_netvlad_only_recall@1"
-TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_train.csv"
-VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_val.csv"
-TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_test.csv"
-TARGET_SIZE = 3
+WEIGHTS_NAME = "nordlands_netvlad_only_recall@1"
+TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_train.csv"
+VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_val.csv"
+TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_test.csv"
+TARGET_SIZE = 1
 BATCH_SIZE = 196
 NUM_WORKERS = 16
 
@@ -51,7 +51,7 @@ class SelectDataset(Dataset):
         record = self.df.iloc[idx].to_numpy()
         query_img_path = record[1]
         ref_img_path = record[2]
-        targ = record[3:]
+        targ = record[3]
         if self.preprocess:
             query_img = self.preprocess(
                 Image.fromarray(np.array(Image.open(query_img_path))[:, :, :3])
@@ -62,7 +62,7 @@ class SelectDataset(Dataset):
             img = torch.vstack((query_img, map_img))
         else:
             raise NotImplementedError
-        return img, torch.Tensor(targ.astype(np.float32)).float()
+        return img, torch.Tensor([targ]).float()
 
 
 class SelectionDataModule(pl.LightningDataModule):
@@ -190,14 +190,11 @@ if __name__ == "__main__":
     )
 
     # Initialize the model
-    model = ResNet18.load_from_checkpoint(
-        "/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/gsvcities_recall@1_resnet18-epoch=06-val_loss=0.49.ckpt",
-        output_dim=TARGET_SIZE,
-    )
+    model = ResNet18(output_dim=TARGET_SIZE)
 
     # Define the trainer
     trainer = pl.Trainer(max_epochs=100, logger=logger, callbacks=[checkpoint_callback])
 
     # Train the model
-    # trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, datamodule=datamodule)
     trainer.test(model=model, datamodule=datamodule)
