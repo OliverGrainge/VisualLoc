@@ -8,3 +8,4 @@ from .convap import CONVAP
 from .hybridnet import HybridNet
 from .amosnet import AmosNet
 from .regionvlad import RegionVLAD
+from .densevlad import DenseVLAD

@@ -162,6 +162,10 @@ def get_method(name: str = None):
         from PlaceRec.Methods import RegionVLAD
 
         method = RegionVLAD()
+    elif name == "densevlad":
+        from PlaceRec.Methods import DenseVLAD
+
+        method = DenseVLAD()
     else:
         raise Exception("Method not implemented")
     return method
