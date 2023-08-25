@@ -17,8 +17,10 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class ESSEX3IN1(BaseDataset):
     def __init__(self):
         if not os.path.isdir(package_directory + "/raw_images/ESSEX3IN1"):
-            s3_bucket_download("placerecdata/datasets/ESSEX3IN1.zip",
-                package_directory + "/raw_images/ESSEX3IN1.zip")
+            s3_bucket_download(
+                "placerecdata/datasets/ESSEX3IN1.zip",
+                package_directory + "/raw_images/ESSEX3IN1.zip",
+            )
 
             with zipfile.ZipFile(
                 package_directory + "/raw_images/ESSEX3IN1.zip", "r"
@@ -37,11 +39,7 @@ class ESSEX3IN1(BaseDataset):
 
         self.name = "essex3in1"
 
-    def query_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ) -> torch.Tensor:
+    def query_partition(self, partition: str) -> np.ndarray:
         size = len(self.query_paths)
 
         # get the required partition of the dataset
@@ -55,7 +53,17 @@ class ESSEX3IN1(BaseDataset):
             paths = self.query_paths
         else:
             raise Exception("Partition must be 'train', 'val' or 'all'")
+        return paths
 
+    def map_partition(self, partition: str) -> np.ndarray:
+        return self.map_paths
+
+    def query_images(
+        self,
+        partition: str,
+        preprocess: torchvision.transforms.transforms.Compose = None,
+    ) -> torch.Tensor:
+        paths = self.query_partition(partition)
         if preprocess == None:
             return np.array(
                 [np.array(Image.open(pth).resize((720, 720))) for pth in paths]
@@ -90,19 +98,7 @@ class ESSEX3IN1(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        size = len(self.query_paths)
-
-        # get the required partition of the dataset
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)

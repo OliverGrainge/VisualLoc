@@ -19,8 +19,10 @@ class GardensPointWalking(BaseDataset):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/GardensPointWalking"):
             # download dataset as zip file
-            s3_bucket_download("placerecdata/datasets/GardensPointWalking.zip",
-                    package_directory + "/raw_images/GardensPointWalking.zip")
+            s3_bucket_download(
+                "placerecdata/datasets/GardensPointWalking.zip",
+                package_directory + "/raw_images/GardensPointWalking.zip",
+            )
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/GardensPointWalking.zip", "r"
@@ -46,11 +48,7 @@ class GardensPointWalking(BaseDataset):
 
         self.name = "gardenspointwalking"
 
-    def query_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ) -> np.ndarray:
+    def query_partition(self, partition: str) -> None:
         size = len(self.query_paths)
 
         # get the required partition of the dataset
@@ -64,7 +62,17 @@ class GardensPointWalking(BaseDataset):
             paths = self.query_paths
         else:
             raise Exception("Partition must be 'train', 'val' or 'all'")
+        return paths
 
+    def map_partition(self, partition: str) -> None:
+        return self.map_paths
+
+    def query_images(
+        self,
+        partition: str,
+        preprocess: torchvision.transforms.transforms.Compose = None,
+    ) -> np.ndarray:
+        paths = self.query_partition(partition)
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in paths])
         else:
@@ -91,19 +99,7 @@ class GardensPointWalking(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        size = len(self.query_paths)
-
-        # get the required partition of the dataset
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)

@@ -14,9 +14,6 @@ from scipy.signal import convolve2d
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
-QUERY_SET = ["summer"]
-MAP_SET = ["fall"]
-
 
 def image_idx(img_path: str):
     img_path = int(img_path.split("/")[-1][:-4])
@@ -42,11 +39,11 @@ def get_paths(partition: list, seasons: list) -> list:
 
 
 class Nordlands(BaseDataset):
-    def __init__(self):
-        self.train_map_paths = get_paths("train", MAP_SET)
-        self.train_query_paths = get_paths("train", QUERY_SET)
-        self.test_map_paths = get_paths("test", MAP_SET)
-        self.test_query_paths = get_paths("test", QUERY_SET)
+    def __init__(self, map_set=["summer"], query_set=["fall"]):
+        self.train_map_paths = get_paths("train", map_set)
+        self.train_query_paths = get_paths("train", query_set)
+        self.test_map_paths = get_paths("test", map_set)
+        self.test_query_paths = get_paths("test", query_set)
 
         self.query_paths = self.query_partition("all")
         self.map_paths = self.map_partition("all")
@@ -68,8 +65,10 @@ class Nordlands(BaseDataset):
         return paths
 
     def map_partition(self, partition: str) -> np.ndarray:
-        if partition == "train" or partition == "val":
-            paths = self.train_map_paths
+        if partition == "train":
+            paths = self.train_map_paths[: int(len(self.train_map_paths) * 0.8)]
+        elif partition == "val":
+            paths = self.train_map_paths[int(len(self.train_map_paths) * 0.8) :]
         elif partition == "test":
             paths = self.test_map_paths
         elif partition == "all":

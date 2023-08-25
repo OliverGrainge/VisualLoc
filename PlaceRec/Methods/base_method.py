@@ -199,10 +199,16 @@ class BaseFunctionality(BaseTechnique):
         self,
         images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
+        descriptors: np.ndarray = None,
         top_n: int = 1,
         pbar: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        desc = self.compute_query_desc(images=images, dataloader=dataloader, pbar=pbar)
+        if descriptors is None:
+            desc = self.compute_query_desc(
+                images=images, dataloader=dataloader, pbar=pbar
+            )
+        else:
+            desc = {"query_descriptors": descriptors}
         if isinstance(self.map, sklearn.neighbors._unsupervised.NearestNeighbors):
             dist, idx = self.map.kneighbors(desc["query_descriptors"])
             return idx[:, :top_n], 1 - dist[:, :top_n]
@@ -221,6 +227,7 @@ class BaseFunctionality(BaseTechnique):
     def save_descriptors(self, dataset_name: str) -> None:
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             os.makedirs(package_directory + "/descriptors/" + dataset_name)
+
         with open(
             package_directory
             + "/descriptors/"

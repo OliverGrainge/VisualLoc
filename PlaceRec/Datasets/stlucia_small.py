@@ -19,8 +19,10 @@ class StLucia_small(BaseDataset):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/StLucia_small"):
             # download dataset as zip file
-            s3_bucket_download("placerecdata/datasets/StLucia_small.zip",
-                                package_directory + "/raw_images/StLucia_small.zip")
+            s3_bucket_download(
+                "placerecdata/datasets/StLucia_small.zip",
+                package_directory + "/raw_images/StLucia_small.zip",
+            )
             # unzip the dataset
             with zipfile.ZipFile(
                 package_directory + "/raw_images/StLucia_small.zip", "r"
@@ -46,14 +48,9 @@ class StLucia_small(BaseDataset):
 
         self.name = "stlucia_small"
 
-    def query_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ) -> np.ndarray:
-        size = len(self.query_paths)
-
+    def query_partition(self, partition: str) -> np.ndarray:
         # get the required partition of the dataset
+        size = len(self.query_paths)
         if partition == "train":
             paths = self.query_paths[: int(size * 0.6)]
         elif partition == "val":
@@ -64,6 +61,17 @@ class StLucia_small(BaseDataset):
             paths = self.query_paths
         else:
             raise Exception("Partition must be 'train', 'val' or 'all'")
+        return paths
+
+    def map_partition(self, partition: str) -> np.ndarray:
+        return self.map_paths
+
+    def query_images(
+        self,
+        partition: str,
+        preprocess: torchvision.transforms.transforms.Compose = None,
+    ) -> np.ndarray:
+        paths = self.query_partition(partition)
 
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in paths])
@@ -76,10 +84,11 @@ class StLucia_small(BaseDataset):
         partition: str,
         preprocess: torchvision.transforms.transforms.Compose = None,
     ):
+        paths = self.map_partition(partition)
         if preprocess == None:
-            return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
+            return np.array([np.array(Image.open(pth)) for pth in paths])
         else:
-            imgs = np.array([np.array(Image.open(pth)) for pth in self.map_paths])
+            imgs = np.array([np.array(Image.open(pth)) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def query_images_loader(
@@ -91,19 +100,7 @@ class StLucia_small(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        size = len(self.query_paths)
-
-        # get the required partition of the dataset
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)
@@ -126,7 +123,7 @@ class StLucia_small(BaseDataset):
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
         # build the dataloader
-        dataset = ImageDataset(self.map_paths, preprocess=preprocess)
+        dataset = ImageDataset(self.map_partition(partition), preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,

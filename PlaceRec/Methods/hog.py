@@ -182,7 +182,7 @@ class HOG(BaseFunctionality):
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(
-                dataloader, desc="Computing HOG Query Desc", disable=not pbar
+                dataloader, desc="Computing HOG Map Desc", disable=not pbar
             ):
                 batch = list(np.array(batch).transpose(0, 2, 3, 1))
                 ref_desc_list = []

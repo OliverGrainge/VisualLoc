@@ -38,7 +38,7 @@ class GsvBase:
         df = df.head(4)
         # boundary = int(len(df.index) * 0.5)
         # query, reference = df[:boundary], df[boundary:]
-        query, reference = df.iloc[:2], df.iloc[2:]
+        query, reference = df.iloc[:3], df.iloc[3:]
         return query, reference
 
     def get_fulldataframe(self):
@@ -129,8 +129,6 @@ class GsvBase:
             query_place, map_place = self.split_place(place)
             query_names = self.get_paths(query_place)
             map_names = self.get_paths(map_place)
-            a = [idx for _ in range(len(query_names))]
-            b = [idx for _ in range(len(map_names))]
             query_place_id += [idx for _ in range(len(query_names))]
             map_place_id += [idx for _ in range(len(map_names))]
             query_paths += query_names
@@ -167,7 +165,7 @@ class GsvCities(BaseDataset, GsvBase):
 
         # get the required partition of the dataset
         if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
+            paths = self.query_paths[: int(size * 0.8)]
         elif partition == "val":
             paths = self.query_paths[int(size * 0.8) : int(size * 0.9)]
         elif partition == "test":

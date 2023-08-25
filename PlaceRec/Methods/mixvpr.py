@@ -24,7 +24,6 @@ import sklearn
 from ..utils import s3_bucket_download
 
 
-
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -345,8 +344,11 @@ class MixVPR(BaseFunctionality):
         )
 
         if not os.path.exists(weight_pth):
-            s3_bucket_download("placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-                                package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt")
+            s3_bucket_download(
+                "placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+                package_directory
+                + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+            )
 
         if self.device == "cuda":
             state_dict = torch.load(weight_pth)
@@ -391,15 +393,17 @@ class MixVPR(BaseFunctionality):
         pbar: bool = True,
     ) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(
                 dataloader, desc="Computing MixVPR Query Desc", disable=not pbar
             ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+                with torch.no_grad():
+                    all_desc.append(
+                        self.model(batch.to(self.device)).detach().cpu().numpy()
+                    )
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")
@@ -415,15 +419,17 @@ class MixVPR(BaseFunctionality):
         pbar: bool = True,
     ) -> dict:
         if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
+            with torch.no_grad():
+                all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
             for batch in tqdm(
                 dataloader, desc="Computing MixVPR Map Desc", disable=not pbar
             ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+                with torch.no_grad():
+                    all_desc.append(
+                        self.model(batch.to(self.device)).detach().cpu().numpy()
+                    )
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")

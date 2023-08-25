@@ -6,13 +6,39 @@ import numpy as np
 from typing import Union
 import os
 from multiplexVPR import METHODS
+from PIL import Image
 
 
 # =========================== Selection Dataset Configuration =================
-DATASETS = ["gsvcities"]
-PARTITION = "train"
+DATASETS = [
+    "gsvcities_Bangkok",
+    "gsvcities_Barcelona",
+    "gsvcities_Boston",
+    "gsvcities_Brussels",
+    "gsvcities_BuenosAires",
+    "gsvcities_Chicago",
+    "gsvcities_Lisbon",
+    "gsvcities_London",
+    "gsvcities_LosAngeles",
+    "gsvcities_Madrid",
+    "gsvcities_Medellin",
+    "gsvcities_Melbourne",
+    "gsvcities_MexicoCity",
+    "gsvcities_Miami",
+    "gsvcities_Minneapolis",
+    "gsvcities_Osaka",
+    "gsvcities_OSL",
+    "gsvcities_Phoenix",
+    "gsvcities_PRG",
+    "gsvcities_PRS",
+    "gsvcities_Rome",
+    "gsvcities_TRT",
+    "gsvcities_WashingtonDC",
+]
+
 METRICS = ["recall@1"]
-BATCH_SIZE = 128
+BATCH_SIZE = 260
+DATASET_NAME = "gsvcities_combined"
 # ============================================================================
 
 
@@ -93,14 +119,40 @@ def compute_datasets():
     datasets = [{} for _ in range(len(METRICS))]
     for dataset in datasets:
         dataset["query_images"] = []
+        dataset["ref_images"] = []
         for method_name in METHODS:
             dataset[method_name] = []
 
     # compute the data
     for dataset_name in DATASETS:
+        print(
+            " ========================= ", dataset_name, "==========================="
+        )
+        print(" ")
         ds = get_dataset(dataset_name)
+        gt = ds.ground_truth(partition=PARTITION, gt_type="hard")
         for dataset in datasets:
+            s = len(dataset["query_images"])
             dataset["query_images"] += ds.query_partition(partition=PARTITION).tolist()
+            map_paths = ds.map_partition(partition=PARTITION)
+            ref_idx = gt.argmax(0)
+            dataset["ref_images"] += map_paths[ref_idx].tolist()
+
+            """
+            import matplotlib.pyplot as plt
+
+            for i in range(s, s + 500, 100):
+                img = Image.open(dataset["query_images"][i])
+                img2 = Image.open(dataset["ref_images"][i])
+                fig, ax = plt.subplots(2)
+                ax[0].imshow(img)
+                ax[1].imshow(img2)
+                plt.show()
+            """
+
+            if len(dataset["query_images"]) != len(dataset["ref_images"]):
+                print(len(dataset["query_images"]), len(dataset["ref_images"]))
+                raise Exception
 
         ground_truth = ds.ground_truth(partition=PARTITION, gt_type="hard")
         ground_truth_soft = ds.ground_truth(partition=PARTITION, gt_type="soft")
@@ -151,7 +203,7 @@ def compute_datasets():
 
 def save_datasets(pd_datasets: list):
     for i, df in enumerate(pd_datasets):
-        name = "_".join(DATASETS) + "_" + METRICS[i] + "_" + PARTITION + ".csv"
+        name = DATASET_NAME + METRICS[i] + "_" + PARTITION + ".csv"
         df.to_csv(os.getcwd() + "/SelectionData/" + name)
 
 

@@ -6,6 +6,7 @@ from PlaceRec.Metrics import (
     count_params,
     plot_metric,
     recallatk,
+    plot_selection_histogram,
 )
 from PlaceRec.utils import get_dataset, get_method
 
@@ -15,19 +16,12 @@ parser.add_argument(
     "--mode",
     required=True,
     choices=("describe", "evaluate"),
-    help="Specify either describe or evaluate",
+    help="Specify either describe or evaluate or both",
     type=str,
+    nargs="+",
 )
 parser.add_argument(
     "--datasets",
-    choices=(
-        "gsvcities",
-        "sfu",
-        "gardenspointwalking",
-        "stlucia_small",
-        "essex3in1",
-        "nordlands",
-    ),
     help="specify one of the datasets from PlaceRec.Datasets",
     type=str,
     default=["stlucia_small"],
@@ -36,6 +30,7 @@ parser.add_argument(
 parser.add_argument(
     "--methods",
     choices=(
+        "multiplexvpr",
         "regionvlad",
         "mixvpr",
         "convap",
@@ -46,6 +41,7 @@ parser.add_argument(
         "cosplace",
         "calc",
         "alexnet",
+        "densevlad",
     ),
     help="specify one of the techniques from vpr/vpr_tecniques",
     type=str,
@@ -71,7 +67,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-if args.mode == "describe":
+if "describe" in args.mode:
     for method_name in args.methods:
         method = get_method(method_name)
         for dataset_name in args.datasets:
@@ -82,23 +78,28 @@ if args.mode == "describe":
                 num_workers=args.num_workers,
             )
             _ = method.compute_map_desc(dataloader=map_loader)
-            del map_loader
+            # del map_loader
             query_loader = ds.query_images_loader(
                 partition=args.partition,
                 preprocess=method.preprocess,
                 num_workers=args.num_workers,
             )
-            _ = method.compute_query_desc(dataloader=query_loader)
+            if method_name == "multiplexvpr":
+                _ = method.compute_query_desc(
+                    query_dataloader=query_loader, map_dataloader=map_loader
+                )
+            else:
+                _ = method.compute_query_desc(dataloader=query_loader)
             del query_loader
             method.save_descriptors(ds.name)
             del ds
         del method
 
-elif args.mode == "evaluate":
+elif "evaluate" in args.mode:
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
-        gt_hard = ds.ground_truth(partition=args.partition, gt_type="hard")
-        gt_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+        ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
+        ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
 
         all_similarity = {}
         all_flops = {}
@@ -111,10 +112,12 @@ elif args.mode == "evaluate":
             method.load_descriptors(ds.name)
             similarity = method.similarity_matrix(method.query_desc, method.map_desc)
             all_similarity[method.name] = similarity
-            ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
-            ground_truth_soft = ds.ground_truth(
-                partition=args.partition, gt_type="soft"
-            )
+            if "multiplexvpr_selections" and method_name == "multiplexvpr":
+                plot_selection_histogram(
+                    query_desc=method.query_desc,
+                    methods=method.methods,
+                    dataset_name=dataset_name,
+                )
 
             if "count_flops" in args.metrics:
                 all_flops[method.name] = count_flops(method)
@@ -149,9 +152,9 @@ elif args.mode == "evaluate":
 
         if "prcurve" in args.metrics:
             plot_pr_curve(
-                ground_truth=gt_hard,
+                ground_truth=ground_truth,
                 all_similarity=all_similarity,
-                ground_truth_soft=gt_soft,
+                ground_truth_soft=ground_truth_soft,
                 matching="single",
                 show=False,
                 title="PR Curve for " + ds.name + " partition: " + args.partition,
