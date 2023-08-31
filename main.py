@@ -82,7 +82,7 @@ if args.mode == "describe":
             )
             _ = method.compute_query_desc(dataloader=query_loader)
             del query_loader
-            method.save_descriptors(ds.name)
+            method.save_descriptors(ds.name, partition=args.partition)
             del ds
         del method
 

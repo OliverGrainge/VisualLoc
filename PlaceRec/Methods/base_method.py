@@ -218,7 +218,7 @@ class BaseFunctionality(BaseTechnique):
             map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]
         ).astype(np.float32)
 
-    def save_descriptors(self, dataset_name: str) -> None:
+    def save_descriptors(self, dataset_name: str, partition: str) -> None:
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             os.makedirs(package_directory + "/descriptors/" + dataset_name)
         with open(
@@ -227,6 +227,8 @@ class BaseFunctionality(BaseTechnique):
             + dataset_name
             + "/"
             + self.name
+            + "_"
+            + partition
             + "_query.pkl",
             "wb",
         ) as f:
@@ -237,12 +239,14 @@ class BaseFunctionality(BaseTechnique):
             + dataset_name
             + "/"
             + self.name
+            + "_"
+            + partition
             + "_map.pkl",
             "wb",
         ) as f:
             pickle.dump(self.map_desc, f)
 
-    def load_descriptors(self, dataset_name: str) -> None:
+    def load_descriptors(self, dataset_name: str, partition: str) -> None:
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             raise Exception("Descriptor not yet computed for: " + dataset_name)
         with open(
@@ -251,6 +255,8 @@ class BaseFunctionality(BaseTechnique):
             + dataset_name
             + "/"
             + self.name
+            + "_"
+            + partition
             + "_query.pkl",
             "rb",
         ) as f:
@@ -261,6 +267,8 @@ class BaseFunctionality(BaseTechnique):
             + dataset_name
             + "/"
             + self.name
+            + "_"
+            + partition
             + "_map.pkl",
             "rb",
         ) as f:
