@@ -10,35 +10,11 @@ from PIL import Image
 
 
 # =========================== Selection Dataset Configuration =================
-DATASETS = [
-    "gsvcities_Bangkok",
-    "gsvcities_Barcelona",
-    "gsvcities_Boston",
-    "gsvcities_Brussels",
-    "gsvcities_BuenosAires",
-    "gsvcities_Chicago",
-    "gsvcities_Lisbon",
-    "gsvcities_London",
-    "gsvcities_LosAngeles",
-    "gsvcities_Madrid",
-    "gsvcities_Medellin",
-    "gsvcities_Melbourne",
-    "gsvcities_MexicoCity",
-    "gsvcities_Miami",
-    "gsvcities_Minneapolis",
-    "gsvcities_Osaka",
-    "gsvcities_OSL",
-    "gsvcities_Phoenix",
-    "gsvcities_PRG",
-    "gsvcities_PRS",
-    "gsvcities_Rome",
-    "gsvcities_TRT",
-    "gsvcities_WashingtonDC",
-]
+DATASETS = ["nordlands_summer", "nordlands_winter", "nordlands_spring"]
 
 METRICS = ["recall@1"]
-BATCH_SIZE = 260
-DATASET_NAME = "gsvcities_combined"
+BATCH_SIZE = 64
+DATASET_NAME = "nordlands_combined_prevframe_"
 # ============================================================================
 
 
@@ -136,6 +112,8 @@ def compute_datasets():
             dataset["query_images"] += ds.query_partition(partition=PARTITION).tolist()
             map_paths = ds.map_partition(partition=PARTITION)
             ref_idx = gt.argmax(0)
+            ref_idx = ref_idx - 1
+            ref_idx[ref_idx == -1] = 0
             dataset["ref_images"] += map_paths[ref_idx].tolist()
 
             """

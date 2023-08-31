@@ -15,13 +15,16 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torchvision.models import ResNet18_Weights
 import torch.nn as nn
 
+
+METHODS = ["netvlad", "hybridnet"]
+
 torch.set_float32_matmul_precision("medium")
 
-WEIGHTS_NAME = "nordlands_netvlad_only_recall@1"
-TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_train.csv"
-VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_val.csv"
-TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/nordlands_spring_nordlands_winter_nordlands_summer_recall@1_test.csv"
-TARGET_SIZE = 1
+WEIGHTS_NAME = "gsvcities_netvlad_hybridnet_oneright"
+TRAIN_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_oneright_train.csv"
+VAL_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_oneright_val.csv"
+TEST_DATASET_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionData/gsvcities_combinedrecall@1_oneright_test.csv"
+TARGET_SIZE = 2
 BATCH_SIZE = 196
 NUM_WORKERS = 16
 
@@ -49,9 +52,11 @@ class SelectDataset(Dataset):
 
     def __getitem__(self, idx):
         record = self.df.iloc[idx].to_numpy()
-        query_img_path = record[1]
-        ref_img_path = record[2]
-        targ = record[3]
+        query_img_path = record[2]
+        ref_img_path = record[3]
+        targ = [self.df.iloc[idx][method] for method in METHODS]
+        targ = np.argmax(targ)
+
         if self.preprocess:
             query_img = self.preprocess(
                 Image.fromarray(np.array(Image.open(query_img_path))[:, :, :3])
@@ -62,7 +67,7 @@ class SelectDataset(Dataset):
             img = torch.vstack((query_img, map_img))
         else:
             raise NotImplementedError
-        return img, torch.Tensor([targ]).float()
+        return img, torch.tensor(targ)
 
 
 class SelectionDataModule(pl.LightningDataModule):
@@ -113,7 +118,8 @@ class ResNet18(pl.LightningModule):
         super(ResNet18, self).__init__()
 
         # Load the pretrained ResNet18 model
-        self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        # self.model = resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.model = resnet18(pretrained=False)
 
         # Modify the final fully connected layer
         num_ftrs = self.model.fc.in_features
@@ -137,7 +143,8 @@ class ResNet18(pl.LightningModule):
         self.model.conv1 = new_conv
 
         # loss function
-        self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        # self.loss_fn = torch.nn.BCEWithLogitsLoss()
+        self.loss_fn = torch.nn.CrossEntropyLoss()
 
     def forward(self, x):
         return self.model(x)
@@ -172,7 +179,9 @@ class ResNet18(pl.LightningModule):
         return torch.sum(y_pred & y_true) / (y_pred.shape[0] * y_pred.shape[1])
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = optim.SGD(
+            self.parameters(), lr=0.001, momentum=0.9, weight_decay=0.0005
+        )
         return optimizer
 
 
@@ -191,6 +200,7 @@ if __name__ == "__main__":
 
     # Initialize the model
     model = ResNet18(output_dim=TARGET_SIZE)
+    model.train()
 
     # Define the trainer
     trainer = pl.Trainer(max_epochs=100, logger=logger, callbacks=[checkpoint_callback])

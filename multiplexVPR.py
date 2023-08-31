@@ -15,8 +15,8 @@ from torchvision import transforms
 from PIL import Image
 import faiss
 
-METHODS = ["netvlad", "hybridnet", "amosnet"]
-SELECTION_MODEL_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/combined_largesets_recall@1_resnet18-epoch=45-val_loss=0.52.ckpt"
+METHODS = ["netvlad", "hybridnet"]
+SELECTION_MODEL_PATH = "/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/nordlands_amosnet_netvlad_oneright_resnet18-epoch=00-val_loss=0.67.ckpt"
 BATCHSIZE = 160
 
 
@@ -26,7 +26,7 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class MultiPlexVPR(BaseFunctionality):
     def __init__(
         self,
-        selection_weights="/home/oliver/Documents/github/VisualLoc/SelectionNetworkCheckpoints/combined_largesets_recall@1_resnet18-epoch=45-val_loss=0.52.ckpt",
+        selection_weights=SELECTION_MODEL_PATH,
         methods=METHODS,
     ):
         super().__init__()
@@ -39,9 +39,11 @@ class MultiPlexVPR(BaseFunctionality):
             method.model.to("cpu")
 
         # instantiate selection model
-        self.selection_model = ResNet18.load_from_checkpoint(
-            selection_weights, output_dim=len(methods)
-        ).to(self.device)
+        self.selection_model = ResNet18(output_dim=2).to(
+            self.device
+        )  # load_from_checkpoint(
+        # selection_weights, output_dim=len(methods)
+        # ).to(self.device)
         self.preprocess = transforms.Compose(
             [
                 transforms.Resize(256),
@@ -61,8 +63,8 @@ class MultiPlexVPR(BaseFunctionality):
             return 0
         input = self.select_network_preprocess(query_img, ref_img)
         logits = self.selection_model(input.to(self.device)).detach().cpu()
-        print("=====", logits.numpy())
         selection = logits.argmax().item()
+        print(logits)
         return selection
 
     def compute_query_desc(
