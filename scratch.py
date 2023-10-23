@@ -4,6 +4,7 @@ from PlaceRec.Methods import NetVLAD
 method = NetVLAD()
 dataset = GardensPointWalking()
 
+print(method.name)
 # get query and map loaders for batch inference on images
 query_loader = dataset.query_images_loader("train", preprocess=method.preprocess)
 map_loader = dataset.map_images_loader("train", preprocess=method.preprocess)
