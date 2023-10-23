@@ -179,7 +179,7 @@ elif args.mode == "evaluate":
                 title="CPU Latency (ms)",
                 show=False, 
                 metric_name="cpu_latency"
-                dataset_name=ds.na
+                dataset_name=ds.name
             )
 
         if "dataset_sample" in args.metrics:

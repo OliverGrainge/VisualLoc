@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import precision_recall_curve
 from thop import profile
-from curves import pr_curve
 
 from PlaceRec.Datasets import GardensPointWalking
 
@@ -58,7 +57,7 @@ def recall_at_100p(
     similarity: np.ndarray,
     ground_truth_soft: Union[None, np.ndarray] = None,
     k: int = 1,
-    matching: str = "mutli",
+    matching: str = "single",
     n_thresh: int = 100,
 ) -> float:
     """

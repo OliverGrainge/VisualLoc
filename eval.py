@@ -12,6 +12,7 @@ from PlaceRec.Metrics import (
     plot_pr_curve,
     recall_at_100p,
     recallatk,
+    average_precision
 )
 from PlaceRec.utils import get_dataset, get_method
 
@@ -79,6 +80,7 @@ for dataset_name in args.datasets:
     recallat100p = {}
     latency_cpu = {}
     latency_gpu = {}
+    aupr = {}
 
     try:
         df = pd.read_csv("Plots/results.csv")
@@ -98,6 +100,8 @@ for dataset_name in args.datasets:
                 "recall@5",
                 "recall@10",
                 "recall@100p",
+                "average_precision",
+
             ]
         )
 
@@ -130,6 +134,10 @@ for dataset_name in args.datasets:
         if "cpu_latency" in args.metrics:
             latency_cpu[method.name] = benchmark_latency_cpu(method)
             table_data["cpu_latency"] = latency_cpu[method.name]
+
+        if "average_precision" in args.metrics:
+            aupr[method.name] = average_precision(ground_truth=ground_truth, ground_truth_soft=ground_truth_soft, similarity=similarity)
+            table_data["average_precision"] = aupr[method.name]
 
         if "recall@1" in args.metrics:
             recallat1[method.name] = recallatk(
@@ -182,11 +190,19 @@ for dataset_name in args.datasets:
             title="PR Curve for " + ds.name + " partition: " + args.partition,
             dataset_name=ds.name,
         )
+    if "average_precision" in args.metrics:
+        plot_metric(
+            methods=list(aupr.keys()),
+            scores=list(aupr.values()),
+            show=False,
+            metric_name="average_precision",
+            title="Average Precision",
+            dataset_name=ds.name
+        )
 
     if "recall@100p" in args.metrics:
         plot_metric(
             methods=list(recallat100p.keys()),
-            scores=list(recallat100p.values()),
             title="recall@100precision",
             show=False,
             metric_name="recall@100p",

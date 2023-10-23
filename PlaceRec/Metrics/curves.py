@@ -7,7 +7,7 @@ from PIL import Image
 
 
 def pr_curve(
-    ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int = 100, matching: str = "multi"
+    ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, n_thresh: int = 100, matching: str = "single"
 ):
     """
     Return the precision and recalls over a number of thesholds
@@ -47,7 +47,7 @@ def plot_pr_curve(
     all_similarity: dict,
     ground_truth_soft: Union[None, np.ndarray] = None,
     n_thresh: int = 100,
-    matching: str = "multi",
+    matching: str = "single",
     title: str = None,
     show: bool = True,
     dataset_name: str = None,
