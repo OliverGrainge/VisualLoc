@@ -23,7 +23,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
-from .base_method import BaseFunctionality
+from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -74,69 +74,29 @@ class ConvertToYUVandEqualizeHist:
         return Image.fromarray(img_rgb)
 
 
-class CALC(BaseFunctionality):
+############################ CALC VPR Model ####################################################
+
+preprocess = transforms.Compose(
+    [
+        ConvertToYUVandEqualizeHist(),
+        transforms.Grayscale(num_output_channels=1),
+        transforms.Resize((120, 160), interpolation=Image.BICUBIC),
+        transforms.ToTensor(),
+    ]
+)
+
+if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
+    s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
+
+model = CalcModel(pretrained=True)
+
+
+class CALC(BaseModelWrapper):
     def __init__(self):
-        super().__init__()
+        super().__init__(model=model, preprocess=preprocess, name="calc")
 
-        if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
-            s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
-
-        # calc layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
 
-        self.model = CalcModel(pretrained=True).to(self.device)
+        self.model.to(self.device)
         self.model.eval()
-
-        self.preprocess = transforms.Compose(
-            [
-                ConvertToYUVandEqualizeHist(),
-                transforms.Grayscale(num_output_channels=1),
-                transforms.Resize((120, 160), interpolation=Image.BICUBIC),
-                transforms.ToTensor(),
-            ]
-        )
-
-        self.map = None
-        self.map_desc = None
-        self.query_desc = None
-        self.name = "calc"
-
-    def compute_query_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing CALC Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-
-        query_desc = {"query_descriptors": all_desc / np.linalg.norm(all_desc, axis=0)}
-        self.set_query(query_desc)
-        return query_desc
-
-    def compute_map_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing CALC Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("can only pass 'images' or 'dataloader'")
-
-        map_desc = {"map_descriptors": all_desc / np.linalg.norm(all_desc, axis=0)}
-        self.set_map(map_desc)
-
-        return map_desc

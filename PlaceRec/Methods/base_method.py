@@ -1,12 +1,13 @@
-from abc import ABC, abstractmethod
-import numpy as np
-from typing import Tuple
-import torch
-import pickle
-import sklearn
-from sklearn.metrics.pairwise import cosine_similarity
-import faiss
 import os
+import pickle
+from abc import ABC, abstractmethod
+from typing import Tuple
+
+import faiss
+import numpy as np
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -27,7 +28,6 @@ class BaseTechnique(ABC):
     @abstractmethod
     def compute_query_desc(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
@@ -45,7 +45,6 @@ class BaseTechnique(ABC):
     @abstractmethod
     def compute_map_desc(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
@@ -92,7 +91,6 @@ class BaseTechnique(ABC):
     @abstractmethod
     def place_recognise(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
         top_n: int = 1,
@@ -115,9 +113,7 @@ class BaseTechnique(ABC):
         pass
 
     @abstractmethod
-    def similarity_matrix(
-        self, query_descriptors: np.ndarray, map_descriptors: np.ndarray
-    ) -> np.ndarray:
+    def similarity_matrix(self, query_descriptors: np.ndarray, map_descriptors: np.ndarray) -> np.ndarray:
         """
         computes the similarity matrix using the cosine similarity metric. It returns
         a numpy matrix M. where M[i, j] determines how similar query i is to map image j.
@@ -155,19 +151,15 @@ class BaseTechnique(ABC):
         pass
 
 
-
-
-
-
-
 class BaseFunctionality(BaseTechnique):
     """
-    This class provides the basic functionality for place recognition tasks. 
-    It allows setting and querying of descriptors, saving and loading of descriptors, 
+    This class provides the basic functionality for place recognition tasks.
+    It allows setting and querying of descriptors, saving and loading of descriptors,
     and computing a similarity matrix.
     """
-    
+
     def __init__(self):
+        super().__init__()
         """
         Initialize the BaseFunctionality class.
         
@@ -177,11 +169,13 @@ class BaseFunctionality(BaseTechnique):
             map: A FAISS index for map descriptors.
             name: A string representing the name of the method.
             device: A string representing the compute device (cuda, mps, or cpu).
+            model: A pytorch model for feature extraction
         """
         self.query_desc = None
         self.map_desc = None
         self.map = None
         self.name = None
+        self.model = None
 
         if torch.cuda.is_available():
             self.device = "cuda"
@@ -193,7 +187,7 @@ class BaseFunctionality(BaseTechnique):
     def set_query(self, query_descriptors: dict) -> None:
         """
         Set the query descriptors.
-        
+
         Args:
             query_descriptors (dict): A dictionary containing query descriptors.
         """
@@ -202,7 +196,7 @@ class BaseFunctionality(BaseTechnique):
     def set_map(self, map_descriptors: dict) -> None:
         """
         Set the map descriptors and initialize a FAISS index for them.
-        
+
         Args:
             map_descriptors (dict): A dictionary containing map descriptors.
         """
@@ -213,71 +207,56 @@ class BaseFunctionality(BaseTechnique):
 
     def place_recognise(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         top_n: int = 1,
         pbar: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Recognize places based on images or a dataloader. 
-        
+        Recognize places based on images or a dataloader.
+
         Args:
             images (torch.Tensor): A batch of images.
             dataloader (torch.utils.data.dataloader.DataLoader): A DataLoader for images.
             top_n (int): Number of top results to return.
             pbar (bool): Whether to show a progress bar.
-        
+
         Returns:
             Tuple[np.ndarray, np.ndarray]: Indices and distances of recognized places.
         """
-        desc = self.compute_query_desc(images=images, dataloader=dataloader, pbar=pbar)
+        desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
         faiss.normalize_L2(desc["query_descriptors"])
         dist, idx = self.map.search(desc["query_descriptors"], top_n)
         return idx, dist
 
-    def similarity_matrix(
-        self, query_descriptors: dict, map_descriptors: dict
-    ) -> np.ndarray:
+    def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
         """
         Compute the similarity matrix between query and map descriptors.
-        
+
         Args:
             query_descriptors (dict): A dictionary containing query descriptors.
             map_descriptors (dict): A dictionary containing map descriptors.
-        
+
         Returns:
             np.ndarray: A similarity matrix.
         """
-        return cosine_similarity(
-            map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]
-        ).astype(np.float32)
+        return cosine_similarity(map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]).astype(np.float32)
 
     def save_descriptors(self, dataset_name: str) -> None:
         """
         Save the descriptors to disk.
-        
+
         Args:
             dataset_name (str): Name of the dataset for which descriptors are saved.
         """
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             os.makedirs(package_directory + "/descriptors/" + dataset_name)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_query.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
             "wb",
         ) as f:
             pickle.dump(self.query_desc, f)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_map.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
             "wb",
         ) as f:
             pickle.dump(self.map_desc, f)
@@ -285,33 +264,63 @@ class BaseFunctionality(BaseTechnique):
     def load_descriptors(self, dataset_name: str) -> None:
         """
         Load the descriptors from disk.
-        
+
         Args:
             dataset_name (str): Name of the dataset for which descriptors are loaded.
-        
+
         Raises:
             Exception: If descriptors for the given dataset are not found.
         """
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             raise Exception("Descriptor not yet computed for: " + dataset_name)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_query.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
             "rb",
         ) as f:
             self.query_desc = pickle.load(f)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_map.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
             "rb",
         ) as f:
             self.map_desc = pickle.load(f)
             # self.set_map(self.map_desc)
+
+
+class BaseModelWrapper(BaseFunctionality):
+    def __init__(self, model, preprocess, name):
+        super().__init__()
+        self.name = name
+        self.model = model
+        self.preprocess = preprocess
+        self.model.to(self.device)
+        self.model.eval()
+
+    def compute_query_desc(
+        self,
+        dataloader: torch.utils.data.dataloader.DataLoader = None,
+        pbar: bool = True,
+    ) -> dict:
+        all_desc = []
+        for batch in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
+            all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+        all_desc = np.vstack(all_desc)
+
+        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
+        query_desc = {"query_descriptors": all_desc}
+        self.set_query(query_desc)
+        return query_desc
+
+    def compute_map_desc(
+        self,
+        dataloader: torch.utils.data.dataloader.DataLoader = None,
+        pbar: bool = True,
+    ) -> dict:
+        all_desc = []
+        for batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
+            all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
+        all_desc = np.vstack(all_desc)
+
+        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
+        map_desc = {"map_descriptors": all_desc}
+        self.set_map(map_desc)
+        return map_desc

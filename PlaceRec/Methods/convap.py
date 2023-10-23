@@ -12,7 +12,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
-from .base_method import BaseFunctionality
+from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -113,7 +113,7 @@ class ResNet(nn.Module):
         return x
 
 
-class ConvAP(nn.Module):
+class ConvAPModel(nn.Module):
     """Implementation of ConvAP as of https://arxiv.org/pdf/2210.10239.pdf
 
     Args:
@@ -124,7 +124,7 @@ class ConvAP(nn.Module):
     """
 
     def __init__(self, in_channels, out_channels=512, s1=2, s2=2):
-        super(ConvAP, self).__init__()
+        super(ConvAPModel, self).__init__()
         self.channel_pool = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True)
         self.AAP = nn.AdaptiveAvgPool2d((s1, s2))
 
@@ -183,7 +183,7 @@ def get_aggregator(agg_arch="ConvAP", agg_config={}):
 
     elif "convap" in agg_arch.lower():
         assert "in_channels" in agg_config
-        return ConvAP(**agg_config)
+        return ConvAPModel(**agg_config)
 
 
 class VPRModel(pl.LightningModule):
@@ -254,88 +254,50 @@ class VPRModel(pl.LightningModule):
         return x
 
 
-class CONVAP(BaseFunctionality):
+######################################### CONVAP MODEL ########################################################
+weights_path = package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt"
+# download the weights
+if not os.path.exists(weights_path):
+    s3_bucket_download("placerecdata/weights/resnet50_ConvAP_1024_2x2.ckpt", package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
+
+
+# read in the state dict
+if not torch.cuda.is_available():
+    state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
+else:
+    state_dict = torch.load(weights_path)
+
+
+# Note that images must be resized to 320x320
+model = VPRModel(
+    backbone_arch="resnet50",
+    pretrained=True,
+    layers_to_freeze=2,
+    layers_to_crop=[],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
+    agg_arch="ConvAP",
+    agg_config={"in_channels": 2048, "out_channels": 1024, "s1": 2, "s2": 2},
+)
+
+
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Resize(
+            (480, 640),
+            interpolation=transforms.InterpolationMode.BILINEAR,
+            antialias=True,
+        ),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+
+class ConvAP(BaseModelWrapper):
     def __init__(self):
-        super().__init__()
-        self.name = "convap"
+        super().__init__(model=model, preprocess=preprocess, name="convap")
 
-        weights_path = package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt"
-
-        # Some layers not implemented on metal
+        # some layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
 
-        # download the weights
-        if not os.path.exists(weights_path):
-            s3_bucket_download("placerecdata/weights/resnet50_ConvAP_1024_2x2.ckpt", package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
-
-        # read in the state dict
-        if self.device == "mps" or self.device == "cpu":
-            state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
-        else:
-            state_dict = torch.load(weights_path)
-
-        # Note that images must be resized to 320x320
-        self.model = VPRModel(
-            backbone_arch="resnet50",
-            pretrained=True,
-            layers_to_freeze=2,
-            layers_to_crop=[],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
-            agg_arch="ConvAP",
-            agg_config={"in_channels": 2048, "out_channels": 1024, "s1": 2, "s2": 2},
-        ).to(self.device)
-
-        self.model.load_state_dict(state_dict)
-        self.model.eval()
-
-        self.preprocess = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Resize(
-                    (480, 640),
-                    interpolation=transforms.InterpolationMode.BILINEAR,
-                    antialias=True,
-                ),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
-
-    def compute_query_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing ConvAP Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("Can only pass 'images' or 'dataloader'")
-        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
-        query_desc = {"query_descriptors": all_desc}
-        self.set_query(query_desc)
-        return query_desc
-
-    def compute_map_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing ConvAP Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("Can only pass 'images' or 'dataloader'")
-        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
-        map_desc = {"map_descriptors": all_desc}
-        self.set_map(map_desc)
-        return map_desc
+        self.model.to(self.device)

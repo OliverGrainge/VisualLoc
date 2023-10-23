@@ -171,47 +171,27 @@ class RegionVLAD(BaseFunctionality):
 
     def compute_query_desc(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
-        if images is not None and dataloader is None:
-            all_features = self.model(images.to(self.device)).detach().cpu().numpy()
-            vlads = [self.desc_features(all_features[i], images[i]) for i in range(images.shape[0])]
-            self.query_desc = {"query_descriptors": vlads}
-            return self.query_desc
-
-        elif dataloader is not None and images is None:
-            vlads = []
-            for batch in tqdm(dataloader, desc="Computing RegionVLAD Query Desc", disable=not pbar):
-                batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
-                vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
-            self.query_desc = {"query_descriptors": vlads}
-            return self.query_desc
-        else:
-            raise Exception("Must either pass a Dataloader OR Images")
+        vlads = []
+        for batch in tqdm(dataloader, desc="Computing RegionVLAD Query Desc", disable=not pbar):
+            batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
+            vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
+        self.query_desc = {"query_descriptors": vlads}
+        return self.query_desc
 
     def compute_map_desc(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
-        if images is not None and dataloader is None:
-            all_features = self.model(images.to(self.device)).detach().cpu().numpy()
-            vlads = [self.desc_features(all_features[i], images[i]) for i in range(images.shape[0])]
-            self.map_desc = {"map_descriptors": vlads}
-            return self.map_desc
-
-        elif dataloader is not None and images is None:
-            vlads = []
-            for batch in tqdm(dataloader, desc="Computing RegionVLAD Map Desc", disable=not pbar):
-                batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
-                vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
-            self.map_desc = {"map_descriptors": vlads}
-            return self.map_desc
-        else:
-            raise Exception("Must either pass a Dataloader OR Images")
+        vlads = []
+        for batch in tqdm(dataloader, desc="Computing RegionVLAD Map Desc", disable=not pbar):
+            batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
+            vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
+        self.map_desc = {"map_descriptors": vlads}
+        return self.map_desc
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
         similarity = np.zeros(
@@ -234,22 +214,14 @@ class RegionVLAD(BaseFunctionality):
 
     def place_recognise(
         self,
-        images: torch.Tensor = None,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         top_n: int = 1,
         pbar: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         # this is a single threaded brute force approach
         # will be very slow
-        if self.map_desc is None:
-            raise Exception("Please Compute the map features with 'compute_map_desc' before performing vpr")
 
-        if images is not None and dataloader is None:
-            q_desc = self.compute_query_desc(images=images)
-        elif dataloader is not None and images is None:
-            q_desc = self.compute_query_desc(dataloader=dataloader)
-        else:
-            raise Exception("Can only pass images OR dataloader")
+        q_desc = self.compute_query_desc(dataloader=dataloader)
 
         scores = np.zeros((len(self.map_desc["map_descriptors"]), len(q_desc["query_descriptors"])))
         for i in range(len(self.map_desc["map_descriptors"])):

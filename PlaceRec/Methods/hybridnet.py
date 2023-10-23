@@ -13,7 +13,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
-from .base_method import BaseFunctionality
+from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -145,78 +145,36 @@ class ChannelSwap:
         return tensor[[2, 1, 0], :, :]
 
 
-class HybridNet(BaseFunctionality):
+################################ HybridNet #########################################################
+if not os.path.exists(package_directory + "/weights/HybridNet.caffemodel.pt"):
+    s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt", package_directory + "/weights/HybridNet.caffemodel.pt")
+
+if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
+    s3_bucket_download("placerecdata/weights/hybridnet_mean.npy", package_directory + "/weights/hybridnet_mean.npy")
+
+
+model = HybridNetModel()
+model.load_state_dict(torch.load(package_directory + "/weights/HybridNet.caffemodel.pt"))
+
+mean_image = torch.Tensor(np.load(package_directory + "/weights/hybridnet_mean.npy"))
+
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x * 255.0),
+        transforms.Resize((256, 256), antialias=True),
+        SubtractMean(mean_image=mean_image),
+        ChannelSwap(),
+        transforms.Resize((227, 227), antialias=True),
+    ]
+)
+
+
+class HybridNet(BaseModelWrapper):
     def __init__(self):
-        super().__init__()
-
-        if not os.path.exists(package_directory + "/weights/HybridNet.caffemodel.pt"):
-            s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt", package_directory + "/weights/HybridNet.caffemodel.pt")
-
-        if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
-            s3_bucket_download("placerecdata/weights/hybridnet_mean.npy", package_directory + "/weights/hybridnet_mean.npy")
-
+        super().__init__(model=model, preprocess=preprocess, name="hybridnet")
         # hybridnet layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
-
-        self.model = HybridNetModel()
-        self.model.load_state_dict(torch.load(package_directory + "/weights/HybridNet.caffemodel.pt"))
         self.model.to(self.device)
         self.model.eval()
-
-        self.mean_image = torch.Tensor(np.load(package_directory + "/weights/hybridnet_mean.npy"))
-
-        self.preprocess = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Lambda(lambda x: x * 255.0),
-                transforms.Resize((256, 256), antialias=True),
-                SubtractMean(mean_image=self.mean_image),
-                ChannelSwap(),
-                transforms.Resize((227, 227), antialias=True),
-            ]
-        )
-
-        self.map = None
-        self.map_desc = None
-        self.query_desc = None
-        self.name = "hybridnet"
-
-    def compute_query_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing HybridNet Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-
-        query_desc = {"query_descriptors": all_desc}
-        self.set_query(query_desc)
-        return query_desc
-
-    def compute_map_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing HybridNet Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("can only pass 'images' or 'dataloader'")
-
-        map_desc = {"map_descriptors": all_desc}
-        self.set_map(map_desc)
-
-        return map_desc

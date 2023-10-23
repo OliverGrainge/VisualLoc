@@ -13,7 +13,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
-from .base_method import BaseFunctionality
+from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -137,76 +137,36 @@ class ChannelSwap:
 scale_transform = transforms.Lambda(lambda x: x * 255.0)
 
 
-class AmosNet(BaseFunctionality):
+######################################### AMOSNET #######################################################
+
+if not os.path.exists(package_directory + "/weights/AmosNet.caffemodel.pt"):
+    s3_bucket_download("placerecdata/weights/AmosNet.caffemodel.pt", package_directory + "/weights/AmosNet.caffemodel.pt")
+
+if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
+    s3_bucket_download("placerecdata/weights/amosnet_mean.npy", package_directory + "/weights/amosnet_mean.npy")
+
+model = AmosNetModel()
+model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
+mean_image = torch.Tensor(np.load(package_directory + "/weights/amosnet_mean.npy"))
+
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        scale_transform,
+        transforms.Resize((256, 256), antialias=True),
+        SubtractMean(mean_image=mean_image),
+        ChannelSwap(),
+        transforms.Resize((227, 227), antialias=True),
+    ]
+)
+
+
+class AmosNet(BaseModelWrapper):
     def __init__(self):
-        super().__init__()
-        if not os.path.exists(package_directory + "/weights/AmosNet.caffemodel.pt"):
-            s3_bucket_download("placerecdata/weights/AmosNet.caffemodel.pt", package_directory + "/weights/AmosNet.caffemodel.pt")
-
-        if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
-            s3_bucket_download("placerecdata/weights/amosnet_mean.npy", package_directory + "/weights/amosnet_mean.npy")
-
-        # amosnet layers not implemented on metal
+        super().__init__(model=model, preprocess=preprocess, name="amosnet")
+        # some layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
 
-        self.model = AmosNetModel()
-        self.model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
         self.model.to(self.device)
         self.model.eval()
-
-        self.mean_image = torch.Tensor(np.load(package_directory + "/weights/amosnet_mean.npy"))
-
-        self.preprocess = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                scale_transform,
-                transforms.Resize((256, 256), antialias=True),
-                SubtractMean(mean_image=self.mean_image),
-                ChannelSwap(),
-                transforms.Resize((227, 227), antialias=True),
-            ]
-        )
-
-        self.map = None
-        self.map_desc = None
-        self.query_desc = None
-        self.name = "amosnet"
-
-    def compute_query_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing AmosNet Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-
-        query_desc = {"query_descriptors": all_desc}
-        self.set_query(query_desc)
-        return query_desc
-
-    def compute_map_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing AmosNet Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("can only pass 'images' or 'dataloader'")
-
-        map_desc = {"map_descriptors": all_desc}
-        self.set_map(map_desc)
-        return map_desc

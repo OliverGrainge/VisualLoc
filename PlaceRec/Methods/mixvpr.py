@@ -19,7 +19,7 @@ from torchvision.models import ResNet50_Weights
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
-from .base_method import BaseFunctionality
+from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -313,89 +313,51 @@ class VPRModel(pl.LightningModule):
 # -------------------------------------------------------------------------------
 
 
-class MixVPR(BaseFunctionality):
+weight_pth = package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
+
+if not os.path.exists(weight_pth):
+    s3_bucket_download(
+        "placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+        package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+    )
+
+
+if torch.cuda.is_available == "cuda":
+    state_dict = torch.load(weight_pth)
+else:
+    state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
+
+
+# Note that images must be resized to 320x320
+model = VPRModel(
+    backbone_arch="resnet50",
+    layers_to_crop=[4],
+    agg_arch="mixvpr",
+    agg_config={
+        "in_channels": 1024,
+        "in_h": 20,
+        "in_w": 20,
+        "out_channels": 256,
+        "mix_depth": 4,
+        "mlp_ratio": 1,
+        "out_rows": 2,
+    },
+)
+
+model.load_state_dict(state_dict)
+
+
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Resize(256, antialias=True),
+        transforms.CenterCrop(224),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Resize(320, antialias=True),
+    ]
+)
+
+
+class MixVPR(BaseModelWrapper):
     def __init__(self):
-        super().__init__()
-        self.name = "mixpvr"
-
-        weight_pth = package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
-
-        if not os.path.exists(weight_pth):
-            s3_bucket_download(
-                "placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-                package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-            )
-
-        if self.device == "cuda":
-            state_dict = torch.load(weight_pth)
-        else:
-            state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
-
-        # Note that images must be resized to 320x320
-        self.model = VPRModel(
-            backbone_arch="resnet50",
-            layers_to_crop=[4],
-            agg_arch="mixvpr",
-            agg_config={
-                "in_channels": 1024,
-                "in_h": 20,
-                "in_w": 20,
-                "out_channels": 256,
-                "mix_depth": 4,
-                "mlp_ratio": 1,
-                "out_rows": 2,
-            },
-        ).to(self.device)
-
-        self.model.load_state_dict(state_dict)
-        self.model.eval()
-
-        self.preprocess = transforms.Compose(
-            [
-                transforms.ToTensor(),
-                transforms.Resize(256, antialias=True),
-                transforms.CenterCrop(224),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-                transforms.Resize(320, antialias=True),
-            ]
-        )
-
-    def compute_query_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing MixVPR Query Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("Can only pass 'images' or 'dataloader'")
-
-        query_desc = {"query_descriptors": all_desc}
-        self.set_query(query_desc)
-        return query_desc
-
-    def compute_map_desc(
-        self,
-        images: torch.Tensor = None,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        pbar: bool = True,
-    ) -> dict:
-        if images is not None and dataloader is None:
-            all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
-        elif dataloader is not None and images is None:
-            all_desc = []
-            for batch in tqdm(dataloader, desc="Computing MixVPR Map Desc", disable=not pbar):
-                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-            all_desc = np.vstack(all_desc)
-        else:
-            raise Exception("Can only pass 'images' or 'dataloader'")
-
-        map_desc = {"map_descriptors": all_desc}
-        self.set_map(map_desc)
-        return map_desc
+        super().__init__(model=model, preprocess=preprocess, name="mixvpr")
