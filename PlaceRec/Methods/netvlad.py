@@ -98,7 +98,6 @@ class NetVLAD_Aggregation(nn.Module):
         )
         with torch.no_grad():
             backbone = backbone.eval()
-            logging.debug("Extracting features to initialize NetVLAD layer")
             descriptors = np.zeros(shape=(descriptors_num, args.features_dim), dtype=np.float32)
             for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100)):
                 inputs = inputs.to(args.device)
@@ -113,7 +112,6 @@ class NetVLAD_Aggregation(nn.Module):
                     descriptors[startix : startix + descs_num_per_image, :] = image_descriptors[ix, sample, :]
         kmeans = faiss.Kmeans(args.features_dim, self.clusters_num, niter=100, verbose=False)
         kmeans.train(descriptors)
-        logging.debug(f"NetVLAD centroids shape: {kmeans.centroids.shape}")
         self.init_params(kmeans.centroids, descriptors)
         self = self.to(args.device)
 

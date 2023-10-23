@@ -4,12 +4,10 @@ import pathlib
 import boto3
 import botocore
 import numpy as np
-import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-# Download the file
 
 
 class ImageDataset(Dataset):
@@ -119,9 +117,9 @@ def get_method(name: str = None):
 
         method = AmosNet()
     elif name == "convap":
-        from PlaceRec.Methods import CONVAP
+        from PlaceRec.Methods import ConvAP
 
-        method = CONVAP()
+        method = ConvAP()
     elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 

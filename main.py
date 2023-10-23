@@ -64,7 +64,7 @@ parser.add_argument("--metrics", type=str, default="prcurve", nargs="+")
 parser.add_argument(
     "--num_workers",
     type=int,
-    default=16,
+    default=0,
     help="Choose the number of processing the threads for the dataloader",
 )
 args = parser.parse_args()

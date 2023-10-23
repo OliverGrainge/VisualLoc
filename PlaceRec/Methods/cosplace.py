@@ -9,12 +9,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from tqdm import tqdm
+import sys
 
 from .base_method import BaseModelWrapper
 
 cosplace_directory = os.path.dirname(os.path.abspath(__file__))
 
 
+original_stdout = sys.stdout
+sys.stdout = open(os.devnull, 'w')
 model = torch.hub.load(
     "gmberton/cosplace",
     "get_trained_model",
@@ -22,6 +25,7 @@ model = torch.hub.load(
     fc_output_dim=2048,
     verbose=False,
 )
+sys.stdout = original_stdout
 
 preprocess = transforms.Compose(
     [
