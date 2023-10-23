@@ -3,12 +3,9 @@ import numpy as np
 from torch.utils.data import Dataset
 from PIL import Image
 import pathlib
-import dropbox
-from dropbox.exceptions import AuthError
 import boto3
 import os
 from tqdm import tqdm
-from .db_key import DROPBOX_ACCESS_TOKEN
 
 import boto3
 import botocore
