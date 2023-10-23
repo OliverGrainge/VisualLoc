@@ -1,5 +1,6 @@
 import os
 import pickle
+import sys
 from typing import Tuple
 
 import numpy as np
@@ -9,7 +10,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from tqdm import tqdm
-import sys
 
 from .base_method import BaseModelWrapper
 
@@ -17,7 +17,7 @@ cosplace_directory = os.path.dirname(os.path.abspath(__file__))
 
 
 original_stdout = sys.stdout
-sys.stdout = open(os.devnull, 'w')
+sys.stdout = open(os.devnull, "w")
 model = torch.hub.load(
     "gmberton/cosplace",
     "get_trained_model",

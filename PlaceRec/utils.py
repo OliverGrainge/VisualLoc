@@ -9,7 +9,6 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
         self.img_paths = img_paths
