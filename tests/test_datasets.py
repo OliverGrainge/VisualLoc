@@ -1,19 +1,21 @@
-import argparse
-import unittest
-
-import numpy as np
-import torch
-from torchvision import transforms
-
+import unittest 
 from PlaceRec.Datasets import GardensPointWalking
+import torch
+import argparse 
 from PlaceRec.utils import get_dataset
+from torchvision import transforms
+import numpy as np
+# List all method modules you want to test
 
-# List all method datasets you want to test
+
+
 datasets_to_test = ["stlucia_small", "gardenspointwalking", "sfu"]
+
 
 
 def create_test_case(dataset_module):
     class CustomTestMethod(unittest.TestCase):
+        
         def setUp(self):
             self.ds = dataset_module
 
@@ -166,18 +168,18 @@ def create_test_case(dataset_module):
             assert gt_soft.shape[1] == self.ds.query_images_loader("test").dataset.__len__()
             assert gt_hard.shape[1] == self.ds.query_images_loader("test").dataset.__len__()
 
+
     # Rename the test class to include the method module's name for clarity
     CustomTestMethod.__name__ = f"Test{dataset_module.name}"
-
+    
     return CustomTestMethod
-
 
 # Generate test classes dynamically and set them in the global namespace
 for dataset_name in datasets_to_test:
     dataset = get_dataset(dataset_name)
     test_class = create_test_case(dataset)
     globals()[test_class.__name__] = test_class
+   
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

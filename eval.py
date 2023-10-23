@@ -1,5 +1,6 @@
 import argparse
 from PlaceRec.utils import get_dataset, get_method
+import pandas as pd
 
 from PlaceRec.Metrics import (
     count_flops,
@@ -12,16 +13,8 @@ from PlaceRec.Metrics import (
     benchmark_latency_gpu
 )
 
-
 parser = argparse.ArgumentParser()
 
-parser.add_argument(
-    "--mode",
-    required=True,
-    choices=("describe", "evaluate"),
-    help="Specify either describe or evaluate",
-    type=str,
-)
 parser.add_argument(
     "--datasets",
     choices=(
@@ -37,6 +30,7 @@ parser.add_argument(
     default=["stlucia_small"],
     nargs="+",
 )
+
 parser.add_argument(
     "--methods",
     choices=(
@@ -56,50 +50,25 @@ parser.add_argument(
     default="hog",
     nargs="+",
 )
-parser.add_argument("--batchsize", type=int, default=10, help="Choose the Batchsize for VPR processing")
+
 parser.add_argument(
     "--partition",
     type=str,
     default="test",
     help="choose from 'train', 'val', 'test' or 'all'",
 )
-parser.add_argument("--metrics", type=str, default="prcurve", nargs="+")
-parser.add_argument(
-    "--num_workers",
-    type=int,
-    default=0,
-    help="Choose the number of processing the threads for the dataloader",
-)
+
+parser.add_argument("--metrics",
+    type=str,
+    default="prcurve",
+    nargs="+")
+
 
 
 args = parser.parse_args()
 
 
-if args.mode == "describe":
-    for method_name in args.methods:
-        method = get_method(method_name)
-        for dataset_name in args.datasets:
-            ds = get_dataset(dataset_name)
-            map_loader = ds.map_images_loader(
-                partition=args.partition,
-                preprocess=method.preprocess,
-                num_workers=args.num_workers,
-            )
-            _ = method.compute_map_desc(dataloader=map_loader)
-            del map_loader
-            query_loader = ds.query_images_loader(
-                partition=args.partition,
-                preprocess=method.preprocess,
-                num_workers=args.num_workers,
-            )
-            _ = method.compute_query_desc(dataloader=query_loader)
-            del query_loader
-            method.save_descriptors(ds.name)
-            del ds
-        del method
-
-elif args.mode == "evaluate":
-    for dataset_name in args.datasets:
+for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
         gt_hard = ds.ground_truth(partition=args.partition, gt_type="hard")
         gt_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
@@ -110,46 +79,87 @@ elif args.mode == "evaluate":
         recallat1 = {}
         recallat5 = {}
         recallat10 = {}
-        latency_gpu = {}
         latency_cpu = {}
+        latency_gpu = {}
 
+        try: 
+            df = pd.read_csv("Plots/results.csv")
+        except:
+            df = pd.DataFrame(columns=[
+                "id", 
+                "dataset",
+                "descriptor_bytes",
+                "descriptor_dim",
+                "flops",
+                "params",
+                "gpu_latency",
+                "cpu_latency",
+                "recall@1",
+                "recall@5",
+                "recall@10",
+            ])
+
+            df.set_index("id", inplace=True)
+
+        
         for method_name in args.methods:
+            table_data = {}
+            results_id = method_name + "_" + dataset_name
             method = get_method(method_name)
             method.load_descriptors(ds.name)
             similarity = method.similarity_matrix(method.query_desc, method.map_desc)
             all_similarity[method.name] = similarity
             ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
             ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+            table_data["descriptor_bytes"] = method.query_desc["query_descriptors"].nbytes/method.query_desc["query_descriptors"].shape[0]
+            table_data["descriptor_dim"] = method.query_desc["query_descriptors"].shape[1]
 
             if "count_flops" in args.metrics:
                 all_flops[method.name] = count_flops(method)
+                table_data["flops"] = all_flops[method.name]
+
             if "count_params" in args.metrics:
                 all_params[method.name] = count_params(method)
+                table_data["params"] = all_params[method.name]
+
+            
             if "gpu_latency" in args.metrics:
                 latency_gpu[method.name] = benchmark_latency_gpu(method)
+                table_data["gpu_latency"] = latency_gpu[method.name]
+
             if "cpu_latency" in args.metrics:
                 latency_cpu[method.name] = benchmark_latency_cpu(method)
-            if "recall@1":
+                table_data["cpu_latency"] = latency_cpu[method.name]
+
+            if "recall@1" in args.metrics:
                 recallat1[method.name] = recallatk(
                     ground_truth=ground_truth,
                     ground_truth_soft=ground_truth_soft,
                     similarity=similarity,
                     k=1,
                 )
-            if "recall@5":
+                table_data["recall@1"] = recallat1[method.name]
+
+            if "recall@5" in args.metrics:
                 recallat5[method.name] = recallatk(
                     ground_truth=ground_truth,
                     ground_truth_soft=ground_truth_soft,
                     similarity=similarity,
                     k=5,
                 )
-            if "recall@10":
+
+                table_data["recall@5"] = recallat5[method.name]
+
+            if "recall@10" in args.metrics:
                 recallat10[method.name] = recallatk(
                     ground_truth=ground_truth,
                     ground_truth_soft=ground_truth_soft,
                     similarity=similarity,
                     k=10,
                 )
+                table_data["recall@10"] = recallat10[method.name]
+                table_data["dataset"] = dataset_name
+        df.loc[results_id] = table_data
 
         if "prcurve" in args.metrics:
             plot_pr_curve(
@@ -168,7 +178,7 @@ elif args.mode == "evaluate":
                 scores=list(latency_gpu.values()),
                 title="GPU Latency (ms)",
                 show=False, 
-                metric_name="gpu_latency"
+                metric_name="gpu_latency",
                 dataset_name=ds.name
             )
 
@@ -178,8 +188,8 @@ elif args.mode == "evaluate":
                 scores=list(latency_cpu.values()),
                 title="CPU Latency (ms)",
                 show=False, 
-                metric_name="cpu_latency"
-                dataset_name=ds.na
+                metric_name="cpu_latency",
+                dataset_name=ds.name,
             )
 
         if "dataset_sample" in args.metrics:
@@ -234,3 +244,5 @@ elif args.mode == "evaluate":
                 metric_name="recall@10",
                 dataset_name=ds.name,
             )
+
+df.to_csv("Plots/results.csv")
