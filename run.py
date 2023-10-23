@@ -1,4 +1,5 @@
 import argparse
+
 from PlaceRec.utils import get_dataset, get_method
 
 parser = argparse.ArgumentParser()
@@ -41,11 +42,7 @@ parser.add_argument(
     nargs="+",
 )
 
-parser.add_argument(
-    "--batchsize",
-    type=int,
-    default=10,
-    help="Choose the Batchsize for VPR processing")
+parser.add_argument("--batchsize", type=int, default=10, help="Choose the Batchsize for VPR processing")
 
 parser.add_argument(
     "--partition",
@@ -61,12 +58,7 @@ parser.add_argument(
     help="Choose the number of processing the threads for the dataloader",
 )
 
-parser.add_argument(
-    "--pin_memory",
-    type=bool,
-    default=False,
-    help="Choose whether to pin memory in GPU"
-)
+parser.add_argument("--pin_memory", type=bool, default=False, help="Choose whether to pin memory in GPU")
 
 args = parser.parse_args()
 
@@ -79,10 +71,7 @@ for method_name in args.methods:
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
         map_loader = ds.map_images_loader(
-            partition=args.partition,
-            preprocess=method.preprocess,
-            num_workers=args.num_workers,
-            pin_memory=args.pin_memory
+            partition=args.partition, preprocess=method.preprocess, num_workers=args.num_workers, pin_memory=args.pin_memory
         )
         _ = method.compute_map_desc(dataloader=map_loader)
         del map_loader

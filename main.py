@@ -1,17 +1,17 @@
 import argparse
-from PlaceRec.utils import get_dataset, get_method
 
 from PlaceRec.Metrics import (
+    benchmark_latency_cpu,
+    benchmark_latency_gpu,
     count_flops,
     count_params,
     plot_dataset_sample,
     plot_metric,
     plot_pr_curve,
+    recall_at_100p,
     recallatk,
-    benchmark_latency_cpu,
-    benchmark_latency_gpu
 )
-
+from PlaceRec.utils import get_dataset, get_method
 
 parser = argparse.ArgumentParser()
 

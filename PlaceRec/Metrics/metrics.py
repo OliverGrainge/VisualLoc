@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from sklearn.metrics import precision_recall_curve
 from thop import profile
+from curves import pr_curve
 
 from PlaceRec.Datasets import GardensPointWalking
 
@@ -82,7 +83,6 @@ def recall_at_100p(
     if ground_truth_soft is not None:
         assert similarity.shape == ground_truth_soft.shape, "S_in and GTsoft must have the same shape"
     assert similarity.ndim == 2, "S_in, GThard and GTsoft must be two-dimensional"
-    assert matching in ["single", "multi"], "matching should contain one of the following strings: [single, multi]"
     assert n_thresh > 1, "n_thresh must be >1"
 
     # get precision-recall curve
@@ -292,3 +292,36 @@ def get_model_size_in_bytes(model, model_type):
     os.remove(temp_file)
 
     return size_in_bytes
+
+
+def average_precision(ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None) -> float:
+    """
+    Compute the average precision (AP) for the given ground truth and similarity scores.
+
+    The function first computes the precision-recall curve using the provided ground truth and similarity scores.
+    It then calculates the average precision by summing the areas of rectangles under the precision-recall curve.
+
+    Parameters:
+    - ground_truth (np.ndarray): A 2D binary array where each column corresponds to a data point and each row
+                                 corresponds to a possible match. An entry of 1 indicates a correct match, and 0 otherwise.
+    - similarity (np.ndarray): A 2D array of the same shape as ground_truth, representing the similarity scores
+                               between data points and possible matches. Higher values indicate higher similarity.
+    - ground_truth_soft (Union[None, np.ndarray], optional): A 2D binary array of the same shape as ground_truth,
+                                                            indicating soft ground truth values. An entry of 1 suggests
+                                                            a possible match, but with lower confidence than the hard ground truth.
+                                                            Default is None.
+
+    Returns:
+    - float: The average precision value, representing the area under the precision-recall curve.
+
+    """
+    P, R = pr_curve(ground_truth=ground_truth, similarity=similarity, ground_truth_soft=ground_truth_soft)
+    # Ensure that recall is monotonically increasing
+    for i in range(len(R) - 1, 0, -1):
+        P[i - 1] = max(P[i - 1], P[i])
+
+    # Compute the AP using the formula
+    AP = 0.0
+    for i in range(1, len(R)):
+        AP += (R[i] - R[i - 1]) * P[i]
+    return AP
