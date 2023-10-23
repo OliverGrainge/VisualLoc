@@ -1,4 +1,5 @@
 import argparse
+from PlaceRec.utils import get_dataset, get_method
 
 from PlaceRec.Metrics import (
     count_flops,
@@ -7,8 +8,10 @@ from PlaceRec.Metrics import (
     plot_metric,
     plot_pr_curve,
     recallatk,
+    benchmark_latency_cpu,
+    benchmark_latency_gpu
 )
-from PlaceRec.utils import get_dataset, get_method
+
 
 parser = argparse.ArgumentParser()
 
@@ -67,6 +70,8 @@ parser.add_argument(
     default=0,
     help="Choose the number of processing the threads for the dataloader",
 )
+
+
 args = parser.parse_args()
 
 
@@ -105,6 +110,9 @@ elif args.mode == "evaluate":
         recallat1 = {}
         recallat5 = {}
         recallat10 = {}
+        latency_gpu = {}
+        latency_cpu = {}
+
         for method_name in args.methods:
             method = get_method(method_name)
             method.load_descriptors(ds.name)
@@ -115,11 +123,12 @@ elif args.mode == "evaluate":
 
             if "count_flops" in args.metrics:
                 all_flops[method.name] = count_flops(method)
-
             if "count_params" in args.metrics:
-                print(count_params(method))
                 all_params[method.name] = count_params(method)
-
+            if "gpu_latency" in args.metrics:
+                latency_gpu[method.name] = benchmark_latency_gpu(method)
+            if "cpu_latency" in args.metrics:
+                latency_cpu[method.name] = benchmark_latency_cpu(method)
             if "recall@1":
                 recallat1[method.name] = recallatk(
                     ground_truth=ground_truth,
@@ -127,7 +136,6 @@ elif args.mode == "evaluate":
                     similarity=similarity,
                     k=1,
                 )
-
             if "recall@5":
                 recallat5[method.name] = recallatk(
                     ground_truth=ground_truth,
@@ -135,7 +143,6 @@ elif args.mode == "evaluate":
                     similarity=similarity,
                     k=5,
                 )
-
             if "recall@10":
                 recallat10[method.name] = recallatk(
                     ground_truth=ground_truth,
@@ -153,6 +160,26 @@ elif args.mode == "evaluate":
                 show=False,
                 title="PR Curve for " + ds.name + " partition: " + args.partition,
                 dataset_name=ds.name,
+            )
+        
+        if "gpu_latency" in args.metrics:
+            plot_metric(
+                methods=list(latency_gpu.keys()),
+                scores=list(latency_gpu.values()),
+                title="GPU Latency (ms)",
+                show=False, 
+                metric_name="gpu_latency"
+                dataset_name=ds.name
+            )
+
+        if "cpu_latency" in args.metrics:
+            plot_metric(
+                methods=list(latency_cpu.keys()),
+                scores=list(latency_cpu.values()),
+                title="CPU Latency (ms)",
+                show=False, 
+                metric_name="cpu_latency"
+                dataset_name=ds.na
             )
 
         if "dataset_sample" in args.metrics:
