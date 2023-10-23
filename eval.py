@@ -3,6 +3,7 @@ import argparse
 import pandas as pd
 
 from PlaceRec.Metrics import (
+    average_precision,
     benchmark_latency_cpu,
     benchmark_latency_gpu,
     count_flops,
@@ -12,7 +13,6 @@ from PlaceRec.Metrics import (
     plot_pr_curve,
     recall_at_100p,
     recallatk,
-    average_precision
 )
 from PlaceRec.utils import get_dataset, get_method
 
@@ -101,7 +101,6 @@ for dataset_name in args.datasets:
                 "recall@10",
                 "recall@100p",
                 "average_precision",
-
             ]
         )
 
@@ -197,7 +196,7 @@ for dataset_name in args.datasets:
             show=False,
             metric_name="average_precision",
             title="Average Precision",
-            dataset_name=ds.name
+            dataset_name=ds.name,
         )
 
     if "recall@100p" in args.metrics:

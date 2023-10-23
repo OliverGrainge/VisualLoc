@@ -161,15 +161,15 @@ elif args.mode == "evaluate":
                 title="PR Curve for " + ds.name + " partition: " + args.partition,
                 dataset_name=ds.name,
             )
-        
+
         if "gpu_latency" in args.metrics:
             plot_metric(
                 methods=list(latency_gpu.keys()),
                 scores=list(latency_gpu.values()),
                 title="GPU Latency (ms)",
-                show=False, 
-                metric_name="gpu_latency"
-                dataset_name=ds.name
+                show=False,
+                metric_name="gpu_latency",
+                dataset_name=ds.name,
             )
 
         if "cpu_latency" in args.metrics:
@@ -177,9 +177,9 @@ elif args.mode == "evaluate":
                 methods=list(latency_cpu.keys()),
                 scores=list(latency_cpu.values()),
                 title="CPU Latency (ms)",
-                show=False, 
-                metric_name="cpu_latency"
-                dataset_name=ds.name
+                show=False,
+                metric_name="cpu_latency",
+                dataset_name=ds.name,
             )
 
         if "dataset_sample" in args.metrics:
