@@ -1,16 +1,17 @@
-import zipfile
 import os
-import numpy as np
-from .base_dataset import BaseDataset
-import torchvision
-import torch
+import zipfile
 from glob import glob
+
+import numpy as np
+import torch
+import torchvision
 from PIL import Image
-from ..utils import ImageDataset
+from scipy.signal import convolve2d
 from torch.utils.data import DataLoader
-from scipy.signal import convolve2d
 from tqdm import tqdm
-from scipy.signal import convolve2d
+
+from ..utils import ImageDataset
+from .base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -86,19 +87,9 @@ class Nordlands(BaseDataset):
         paths = self.query_partition(partition)
 
         if preprocess == None:
-            return np.array(
-                [
-                    np.array(Image.open(pth).resize((320, 320)))[:, :, :3]
-                    for pth in paths
-                ]
-            )
+            return np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
         else:
-            imgs = np.array(
-                [
-                    np.array(Image.open(pth).resize((320, 320)))[:, :, :3]
-                    for pth in paths
-                ]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def map_images(
@@ -109,19 +100,9 @@ class Nordlands(BaseDataset):
         paths = self.map_partition(partition)
 
         if preprocess == None:
-            return np.array(
-                [
-                    np.array(Image.open(pth).resize((320, 320)))[:, :, :3]
-                    for pth in paths
-                ]
-            )
+            return np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
         else:
-            imgs = np.array(
-                [
-                    np.array(Image.open(pth).resize((320, 320)))[:, :, :3]
-                    for pth in paths
-                ]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((320, 320)))[:, :, :3] for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def query_images_loader(
@@ -176,7 +157,5 @@ class Nordlands(BaseDataset):
         # this if statement is very slow for the huge ground truth!
         # maybe comment out if trying to run tests fast.
         if gt_type == "soft":
-            ground_truth = convolve2d(
-                ground_truth.astype(int), np.ones((15, 1), "int"), mode="same"
-            ).astype("bool")
+            ground_truth = convolve2d(ground_truth.astype(int), np.ones((15, 1), "int"), mode="same").astype("bool")
         return ground_truth

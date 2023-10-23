@@ -1,16 +1,17 @@
-import zipfile
 import os
-import numpy as np
-from .base_dataset import BaseDataset
-import torchvision
-import torch
+import zipfile
 from glob import glob
-from PIL import Image
-from ..utils import ImageDataset
-from torch.utils.data import DataLoader
-from scipy.signal import convolve2d
-import pandas as pd
 
+import numpy as np
+import pandas as pd
+import torch
+import torchvision
+from PIL import Image
+from scipy.signal import convolve2d
+from torch.utils.data import DataLoader
+
+from ..utils import ImageDataset
+from .base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -70,10 +71,7 @@ class GsvBase:
             df = pd.concat([df, tmp_df], ignore_index=True)
 
         # keep only places depicted by at least min_img_per_place images
-        res = df[
-            df.groupby("place_id")["place_id"].transform("size")
-            >= self.min_img_per_place
-        ]
+        res = df[df.groupby("place_id")["place_id"].transform("size") >= self.min_img_per_place]
         return res.set_index("place_id")
 
     def get_img_name(self, row):
@@ -85,9 +83,7 @@ class GsvBase:
         # now remove the two digit we added to the id
         # they are superficially added to make ids different
         # for different cities
-        pl_id = (
-            row.name % 10**5
-        )  # row.name is the index of the row, not to be confused with image name
+        pl_id = row.name % 10**5  # row.name is the index of the row, not to be confused with image name
         pl_id = str(pl_id).zfill(7)
 
         panoid = row["panoid"]
@@ -95,24 +91,7 @@ class GsvBase:
         month = str(row["month"]).zfill(2)
         northdeg = str(row["northdeg"]).zfill(3)
         lat, lon = str(row["lat"]), str(row["lon"])
-        name = (
-            city
-            + "_"
-            + pl_id
-            + "_"
-            + year
-            + "_"
-            + month
-            + "_"
-            + northdeg
-            + "_"
-            + lat
-            + "_"
-            + lon
-            + "_"
-            + panoid
-            + ".jpg"
-        )
+        name = city + "_" + pl_id + "_" + year + "_" + month + "_" + northdeg + "_" + lat + "_" + lon + "_" + panoid + ".jpg"
         return self.root + "Images/" + city + "/" + name
 
     def get_paths(self, df):
@@ -190,13 +169,9 @@ class GsvCities(BaseDataset, GsvBase):
         paths = self.query_partition(partition)
 
         if preprocess == None:
-            return np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in paths]
-            )
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
         else:
-            imgs = np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in paths]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def map_images(
@@ -205,13 +180,9 @@ class GsvCities(BaseDataset, GsvBase):
         preprocess: torchvision.transforms.transforms.Compose = None,
     ) -> torch.Tensor:
         if preprocess == None:
-            return np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths]
-            )
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
         else:
-            imgs = np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def query_images_loader(

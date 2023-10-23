@@ -1,13 +1,14 @@
-import numpy as np
-from tqdm import tqdm
-from .base_method import BaseFunctionality
+import os
+import pickle
 from typing import Tuple
+
+import numpy as np
 import torch
 from torchvision import transforms
 from torchvision.models import AlexNet_Weights
-import pickle
-import os
 from tqdm import tqdm
+
+from .base_method import BaseFunctionality
 
 alexnet_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -45,9 +46,7 @@ class AlexNet(BaseFunctionality):
             [
                 transforms.ToTensor(),
                 transforms.Resize([224, 244], antialias=True),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
         )
 
@@ -71,9 +70,7 @@ class AlexNet(BaseFunctionality):
             all_desc = Ds
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing AlexNet Query Desc", disable=not pbar
-            ):
+            for batch in tqdm(dataloader, desc="Computing AlexNet Query Desc", disable=not pbar):
                 desc = self.model(batch.to(self.device)).detach().cpu().numpy()
                 Ds = desc.reshape([batch.shape[0], -1])  # flatten
                 rng = np.random.default_rng(seed=0)
@@ -105,9 +102,7 @@ class AlexNet(BaseFunctionality):
             all_desc = Ds
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing AlexNet Map Desc", disable=not pbar
-            ):
+            for batch in tqdm(dataloader, desc="Computing AlexNet Map Desc", disable=not pbar):
                 desc = self.model(batch.to(self.device)).detach().cpu().numpy()
                 Ds = desc.reshape([batch.shape[0], -1])  # flatten
                 rng = np.random.default_rng(seed=0)

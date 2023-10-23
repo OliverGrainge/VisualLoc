@@ -1,5 +1,0 @@
-DROPBOX_ACCESS_TOKEN = "sl.BkHnyLCdOZZv79EVkw0qGJU9zD19ebkAtBdahiW0WNTOo02trgwTLhEmZn1OjLnmwbP3afVjIIj7fjrCD9CdW8aL5ULPexD8-6xbUt3jOwzsiMIDoIfEoAzRKz7Ne2fRkjCEhq06in4ugZ6qaqzFk90"
-APP_KEY = "twbg92bo7xz5a5e"
-SECRET_APP_KEY = "9u5kvi9yxhhisnk"
-
-

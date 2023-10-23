@@ -1,19 +1,18 @@
-from .base_method import BaseFunctionality
-import torch
-import sklearn
-from sklearn.neighbors import NearestNeighbors
-from sklearn.metrics.pairwise import cosine_similarity
-from torchvision import transforms
-import numpy as np
-from typing import Tuple
-import torch
-import cv2
 import os
-from os import path
-from tqdm import tqdm
 import pickle
-import os
+from os import path
+from typing import Tuple
 
+import cv2
+import numpy as np
+import sklearn
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
+from torchvision import transforms
+from tqdm import tqdm
+
+from .base_method import BaseFunctionality
 
 hog_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -24,9 +23,7 @@ magic_height = 512
 cell_size = 16  # HOG cell-size
 bin_size = 8  # HOG bin size
 image_frames = 1  # 1 for grayscale, 3 for RGB
-descriptor_depth = (
-    bin_size * 4 * image_frames
-)  # x4 is here for block normalization due to nature of HOG
+descriptor_depth = bin_size * 4 * image_frames  # x4 is here for block normalization due to nature of HOG
 ET = 0.4  # Entropy threshold, vary between 0-1.
 
 total_no_of_regions = int((magic_width / cell_size - 1) * (magic_width / cell_size - 1))
@@ -63,9 +60,7 @@ def largest_indices(ary, n):
 
 
 # @jit(nopython=False)
-def conv_match_dotproduct(
-    d1, d2, regional_gd, total_no_of_regions
-):  # Assumed aspect 1:1 here
+def conv_match_dotproduct(d1, d2, regional_gd, total_no_of_regions):  # Assumed aspect 1:1 here
     global d1d2dot_matrix
     global d1d2matches_maxpooled
     global d1d2matches_regionallyweighted
@@ -73,17 +68,11 @@ def conv_match_dotproduct(
 
     np.dot(d1, d2, out=d1d2dot_matrix)
 
-    np.max(
-        d1d2dot_matrix, axis=1, out=d1d2matches_maxpooled
-    )  # Select best matched ref region for every query region
+    np.max(d1d2dot_matrix, axis=1, out=d1d2matches_maxpooled)  # Select best matched ref region for every query region
 
-    np.multiply(
-        d1d2matches_maxpooled, regional_gd, out=d1d2matches_regionallyweighted
-    )  # Weighting regional matches with regional goodness
+    np.multiply(d1d2matches_maxpooled, regional_gd, out=d1d2matches_regionallyweighted)  # Weighting regional matches with regional goodness
 
-    score = np.sum(d1d2matches_regionallyweighted) / np.sum(
-        regional_gd
-    )  # compute final match score
+    score = np.sum(d1d2matches_regionallyweighted) / np.sum(regional_gd)  # compute final match score
 
     return score
 
@@ -138,9 +127,7 @@ class HOG(BaseFunctionality):
             all_desc = np.array(ref_desc_list).astype(np.float32)
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing HOG Query Desc", disable=not pbar
-            ):
+            for batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
                 batch = list(np.array(batch).transpose(0, 2, 3, 1))
                 ref_desc_list = []
                 for ref_image in batch:
@@ -181,9 +168,7 @@ class HOG(BaseFunctionality):
             all_desc = np.array(ref_desc_list).astype(np.float32)
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing HOG Query Desc", disable=not pbar
-            ):
+            for batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
                 batch = list(np.array(batch).transpose(0, 2, 3, 1))
                 ref_desc_list = []
                 for ref_image in batch:

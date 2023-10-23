@@ -1,15 +1,16 @@
-import zipfile
 import os
-import numpy as np
-from .base_dataset import BaseDataset
-import torchvision
-import torch
+import zipfile
 from glob import glob
-from PIL import Image
-from ..utils import ImageDataset, s3_bucket_download
-from torch.utils.data import DataLoader
-from scipy.signal import convolve2d
 
+import numpy as np
+import torch
+import torchvision
+from PIL import Image
+from scipy.signal import convolve2d
+from torch.utils.data import DataLoader
+
+from ..utils import ImageDataset, s3_bucket_download
+from .base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -17,23 +18,14 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class ESSEX3IN1(BaseDataset):
     def __init__(self):
         if not os.path.isdir(package_directory + "/raw_images/ESSEX3IN1"):
-            s3_bucket_download("placerecdata/datasets/ESSEX3IN1.zip",
-                package_directory + "/raw_images/ESSEX3IN1.zip")
+            s3_bucket_download("placerecdata/datasets/ESSEX3IN1.zip", package_directory + "/raw_images/ESSEX3IN1.zip")
 
-            with zipfile.ZipFile(
-                package_directory + "/raw_images/ESSEX3IN1.zip", "r"
-            ) as zip_ref:
+            with zipfile.ZipFile(package_directory + "/raw_images/ESSEX3IN1.zip", "r") as zip_ref:
                 os.makedirs(package_directory + "/raw_images/ESSEX3IN1")
                 zip_ref.extractall(package_directory + "/raw_images/")
 
-        self.query_paths = np.array(
-            sorted(glob(package_directory + "/raw_images/ESSEX3IN1/query_combined/*"))
-        )
-        self.map_paths = np.array(
-            sorted(
-                glob(package_directory + "/raw_images/ESSEX3IN1/reference_combined/*")
-            )
-        )
+        self.query_paths = np.array(sorted(glob(package_directory + "/raw_images/ESSEX3IN1/query_combined/*")))
+        self.map_paths = np.array(sorted(glob(package_directory + "/raw_images/ESSEX3IN1/reference_combined/*")))
 
         self.name = "essex3in1"
 
@@ -57,13 +49,9 @@ class ESSEX3IN1(BaseDataset):
             raise Exception("Partition must be 'train', 'val' or 'all'")
 
         if preprocess == None:
-            return np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in paths]
-            )
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
         else:
-            imgs = np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in paths]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def map_images(
@@ -72,13 +60,9 @@ class ESSEX3IN1(BaseDataset):
         preprocess: torchvision.transforms.transforms.Compose = None,
     ) -> torch.Tensor:
         if preprocess == None:
-            return np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths]
-            )
+            return np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
         else:
-            imgs = np.array(
-                [np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths]
-            )
+            imgs = np.array([np.array(Image.open(pth).resize((720, 720))) for pth in self.map_paths])
             return torch.stack([preprocess(q) for q in imgs])
 
     def query_images_loader(

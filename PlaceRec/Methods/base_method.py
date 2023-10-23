@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-import numpy as np
 from typing import Tuple
+
+import numpy as np
 import torch
 
 
@@ -108,9 +109,7 @@ class BaseTechnique(ABC):
         pass
 
     @abstractmethod
-    def similarity_matrix(
-        self, query_descriptors: np.ndarray, map_descriptors: np.ndarray
-    ) -> np.ndarray:
+    def similarity_matrix(self, query_descriptors: np.ndarray, map_descriptors: np.ndarray) -> np.ndarray:
         """
         computes the similarity matrix using the cosine similarity metric. It returns
         a numpy matrix M. where M[i, j] determines how similar query i is to map image j.
@@ -148,11 +147,12 @@ class BaseTechnique(ABC):
         pass
 
 
+import os
 import pickle
+
 import sklearn
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
-import os
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -172,8 +172,6 @@ class BaseFunctionality(BaseTechnique):
 
         if torch.cuda.is_available():
             self.device = "cuda"
-        elif torch.backends.mps.is_available():
-            self.device = "mps"
         else:
             self.device = "cpu"
 
@@ -191,9 +189,7 @@ class BaseFunctionality(BaseTechnique):
         except:
             # faiss is not available on unix or windows systems. In this case
             # implement with scikit-learn
-            self.map = NearestNeighbors(
-                n_neighbors=10, algorithm="auto", metric="cosine"
-            ).fit(map_descriptors["map_descriptors"])
+            self.map = NearestNeighbors(n_neighbors=10, algorithm="auto", metric="cosine").fit(map_descriptors["map_descriptors"])
 
     def place_recognise(
         self,
@@ -211,33 +207,19 @@ class BaseFunctionality(BaseTechnique):
             dist, idx = self.map.search(desc["query_descriptors"], top_n)
             return idx, dist
 
-    def similarity_matrix(
-        self, query_descriptors: dict, map_descriptors: dict
-    ) -> np.ndarray:
-        return cosine_similarity(
-            map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]
-        ).astype(np.float32)
+    def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
+        return cosine_similarity(map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]).astype(np.float32)
 
     def save_descriptors(self, dataset_name: str) -> None:
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             os.makedirs(package_directory + "/descriptors/" + dataset_name)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_query.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
             "wb",
         ) as f:
             pickle.dump(self.query_desc, f)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_map.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
             "wb",
         ) as f:
             pickle.dump(self.map_desc, f)
@@ -246,22 +228,12 @@ class BaseFunctionality(BaseTechnique):
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             raise Exception("Descriptor not yet computed for: " + dataset_name)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_query.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
             "rb",
         ) as f:
             self.query_desc = pickle.load(f)
         with open(
-            package_directory
-            + "/descriptors/"
-            + dataset_name
-            + "/"
-            + self.name
-            + "_map.pkl",
+            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
             "rb",
         ) as f:
             self.map_desc = pickle.load(f)

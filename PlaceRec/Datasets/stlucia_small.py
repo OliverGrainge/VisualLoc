@@ -1,15 +1,16 @@
-import zipfile
-import os
-import numpy as np
-from .base_dataset import BaseDataset
-import torchvision
-import torch
 import glob
+import os
+import zipfile
+
+import numpy as np
+import torch
+import torchvision
 from PIL import Image
-from ..utils import ImageDataset
-from torch.utils.data import DataLoader
 from scipy.signal import convolve2d
-from ..utils import s3_bucket_download
+from torch.utils.data import DataLoader
+
+from ..utils import ImageDataset, s3_bucket_download
+from .base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -19,30 +20,15 @@ class StLucia_small(BaseDataset):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/StLucia_small"):
             # download dataset as zip file
-            s3_bucket_download("placerecdata/datasets/StLucia_small.zip",
-                                package_directory + "/raw_images/StLucia_small.zip")
+            s3_bucket_download("placerecdata/datasets/StLucia_small.zip", package_directory + "/raw_images/StLucia_small.zip")
             # unzip the dataset
-            with zipfile.ZipFile(
-                package_directory + "/raw_images/StLucia_small.zip", "r"
-            ) as zip_ref:
+            with zipfile.ZipFile(package_directory + "/raw_images/StLucia_small.zip", "r") as zip_ref:
                 os.makedirs(package_directory + "/raw_images/StLucia_small")
                 zip_ref.extractall(package_directory + "/raw_images/")
 
         # load images
-        self.map_paths = np.array(
-            sorted(
-                glob.glob(
-                    package_directory + "/raw_images/StLucia_small/180809_1545/*.jpg"
-                )
-            )
-        )
-        self.query_paths = np.array(
-            sorted(
-                glob.glob(
-                    package_directory + "/raw_images/StLucia_small/100909_0845/*.jpg"
-                )
-            )
-        )
+        self.map_paths = np.array(sorted(glob.glob(package_directory + "/raw_images/StLucia_small/180809_1545/*.jpg")))
+        self.query_paths = np.array(sorted(glob.glob(package_directory + "/raw_images/StLucia_small/100909_0845/*.jpg")))
 
         self.name = "stlucia_small"
 

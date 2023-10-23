@@ -1,32 +1,29 @@
-import torch
-import torchvision
-from torchvision import transforms
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-import pytorch_lightning as pl
-import cv2
-import random
-import numpy as np
-import torch.nn.functional as F
 import os
-from pytorch_lightning.loggers import TensorBoardLogger
+import pickle
+import random
+from glob import glob
+from typing import Tuple
+
+import cv2
+import numpy as np
+import pytorch_lightning as pl
+import sklearn
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+from PIL import Image
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
-from glob import glob
-from PIL import Image
-from .base_method import BaseFunctionality
-from typing import Tuple
-from tqdm import tqdm
-from sklearn.neighbors import NearestNeighbors
+from pytorch_lightning.loggers import TensorBoardLogger
 from sklearn.metrics.pairwise import cosine_similarity
-import pickle
-import sklearn
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-import numpy as np
-import cv2
-from PIL import Image
-from ..utils import s3_bucket_download
+from tqdm import tqdm
 
+from ..utils import s3_bucket_download
+from .base_method import BaseFunctionality
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -79,9 +76,9 @@ class ConvertToYUVandEqualizeHist:
 
 class CALC(BaseFunctionality):
     def __init__(self):
-        super().__init__()  
+        super().__init__()
 
-        if not os.path.exists(package_directory + '/weights/calc.caffemodel.pt'):
+        if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
             s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
 
         # calc layers not implemented on metal
@@ -115,12 +112,8 @@ class CALC(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing CALC Query Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing CALC Query Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
 
         query_desc = {"query_descriptors": all_desc / np.linalg.norm(all_desc, axis=0)}
@@ -137,12 +130,8 @@ class CALC(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing CALC Map Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing CALC Map Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("can only pass 'images' or 'dataloader'")

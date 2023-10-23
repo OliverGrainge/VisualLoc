@@ -1,19 +1,18 @@
-import torch
-import torch.nn as nn
-import torchvision
-import torch.nn.functional as F
-import torch.nn as nn
+import os
+import pickle
+from typing import Tuple
+
 import numpy as np
 import pytorch_lightning as pl
 import torch
-import os
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
 from torchvision import transforms
 from tqdm import tqdm
-from .base_method import BaseFunctionality
-import pickle
-from typing import Tuple
-from ..utils import s3_bucket_download
 
+from ..utils import s3_bucket_download
+from .base_method import BaseFunctionality
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -52,9 +51,7 @@ class ResNet(nn.Module):
 
         if "swsl" in model_name or "ssl" in model_name:
             # These are the semi supervised and weakly semi supervised weights from Facebook
-            self.model = torch.hub.load(
-                "facebookresearch/semi-supervised-ImageNet1K-models", model_name
-            )
+            self.model = torch.hub.load("facebookresearch/semi-supervised-ImageNet1K-models", model_name)
         else:
             if "resnext50" in model_name:
                 self.model = torchvision.models.resnext50_32x4d(weights=weights)
@@ -99,12 +96,8 @@ class ResNet(nn.Module):
         if "34" in model_name or "18" in model_name:
             out_channels = 512
 
-        self.out_channels = (
-            out_channels // 2 if self.model.layer4 is None else out_channels
-        )
-        self.out_channels = (
-            self.out_channels // 2 if self.model.layer3 is None else self.out_channels
-        )
+        self.out_channels = out_channels // 2 if self.model.layer4 is None else out_channels
+        self.out_channels = self.out_channels // 2 if self.model.layer3 is None else self.out_channels
 
     def forward(self, x):
         x = self.model.conv1(x)
@@ -132,9 +125,7 @@ class ConvAP(nn.Module):
 
     def __init__(self, in_channels, out_channels=512, s1=2, s2=2):
         super(ConvAP, self).__init__()
-        self.channel_pool = nn.Conv2d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True
-        )
+        self.channel_pool = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True)
         self.AAP = nn.AdaptiveAvgPool2d((s1, s2))
 
     def forward(self, x):
@@ -247,17 +238,13 @@ class VPRModel(pl.LightningModule):
 
         self.save_hyperparameters()  # write hyperparams into a file
 
-        self.batch_acc = (
-            []
-        )  # we will keep track of the % of trivial pairs/triplets at the loss level
+        self.batch_acc = []  # we will keep track of the % of trivial pairs/triplets at the loss level
 
         self.faiss_gpu = faiss_gpu
 
         # ----------------------------------
         # get the backbone and the aggregator
-        self.backbone = get_backbone(
-            backbone_arch, pretrained, layers_to_freeze, layers_to_crop
-        )
+        self.backbone = get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
         self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
@@ -278,16 +265,16 @@ class CONVAP(BaseFunctionality):
         if self.device == "mps":
             self.device = "cpu"
 
-        # download the weights 
+        # download the weights
         if not os.path.exists(weights_path):
             s3_bucket_download("placerecdata/weights/resnet50_ConvAP_1024_2x2.ckpt", package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
 
         # read in the state dict
         if self.device == "mps" or self.device == "cpu":
             state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
-        else: 
+        else:
             state_dict = torch.load(weights_path)
-       
+
         # Note that images must be resized to 320x320
         self.model = VPRModel(
             backbone_arch="resnet50",
@@ -309,9 +296,7 @@ class CONVAP(BaseFunctionality):
                     interpolation=transforms.InterpolationMode.BILINEAR,
                     antialias=True,
                 ),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
             ]
         )
 
@@ -325,12 +310,8 @@ class CONVAP(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing ConvAP Query Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing ConvAP Query Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")
@@ -349,12 +330,8 @@ class CONVAP(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing ConvAP Map Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing ConvAP Map Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")

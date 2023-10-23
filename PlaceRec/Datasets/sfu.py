@@ -1,15 +1,15 @@
-import zipfile
 import os
-import numpy as np
-from .base_dataset import BaseDataset
-import torchvision
-import torch
+import zipfile
 from glob import glob
+
+import numpy as np
+import torch
+import torchvision
 from PIL import Image
-from ..utils import ImageDataset, s3_bucket_download
 from torch.utils.data import DataLoader
 
-
+from ..utils import ImageDataset, s3_bucket_download
+from .base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -19,22 +19,15 @@ class SFU(BaseDataset):
         # check to see if dataset is downloaded
         if not os.path.isdir(package_directory + "/raw_images/SFU"):
             # download dataset as zip file
-            s3_bucket_download("placerecdata/datasets/SFU.zip",
-                    package_directory + "/raw_images/SFU.zip")
+            s3_bucket_download("placerecdata/datasets/SFU.zip", package_directory + "/raw_images/SFU.zip")
             # unzip the dataset
-            with zipfile.ZipFile(
-                package_directory + "/raw_images/SFU.zip", "r"
-            ) as zip_ref:
+            with zipfile.ZipFile(package_directory + "/raw_images/SFU.zip", "r") as zip_ref:
                 os.makedirs(package_directory + "/raw_images/SFU")
                 zip_ref.extractall(package_directory + "/raw_images/")
 
         # load images
-        self.map_paths = np.array(
-            sorted(glob(package_directory + "/raw_images/SFU/dry/*.jpg"))
-        )
-        self.query_paths = np.array(
-            sorted(glob(package_directory + "/raw_images/SFU/jan/*.jpg"))
-        )
+        self.map_paths = np.array(sorted(glob(package_directory + "/raw_images/SFU/dry/*.jpg")))
+        self.query_paths = np.array(sorted(glob(package_directory + "/raw_images/SFU/jan/*.jpg")))
 
         self.name = "sfu"
 

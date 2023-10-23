@@ -2,11 +2,13 @@ import sys
 
 sys.path.append("/Users/olivergrainge/Documents/github/VisualLoc")
 
+import unittest
+
+import numpy as np
+from torchvision import transforms
+
 from PlaceRec.Datasets import GardensPointWalking
 from PlaceRec.Methods import NetVLAD
-import numpy as np
-import unittest
-from torchvision import transforms
 
 
 class setup_test(unittest.TestCase):
@@ -22,16 +24,12 @@ class GenericMethodTest(setup_test):
         assert self.method.name.islower()
 
     def test_query_desc(self):
-        Q = self.ds.query_images("test", preprocess=self.method.preprocess)[
-            : self.sample_size
-        ]
+        Q = self.ds.query_images("test", preprocess=self.method.preprocess)[: self.sample_size]
         res = self.method.compute_query_desc(images=Q, pbar=False)
         assert isinstance(res, dict)
 
     def test_map_desc(self):
-        M = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[
-            : self.sample_size
-        ]
+        M = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[: self.sample_size]
         res = self.method.compute_map_desc(images=M, pbar=False)
         assert isinstance(res, dict)
 
@@ -54,12 +52,8 @@ class GenericMethodTest(setup_test):
         assert isinstance(res, dict)
 
     def test_similarity_matrix(self):
-        query_images = self.ds.query_images(
-            partition="test", preprocess=self.method.preprocess
-        )[: self.sample_size]
-        map_images = self.ds.map_images("test", preprocess=self.method.preprocess)[
-            : self.sample_size
-        ]
+        query_images = self.ds.query_images(partition="test", preprocess=self.method.preprocess)[: self.sample_size]
+        map_images = self.ds.map_images("test", preprocess=self.method.preprocess)[: self.sample_size]
         query_desc = self.method.compute_query_desc(images=query_images)
         map_desc = self.method.compute_map_desc(images=map_images)
         S = self.method.similarity_matrix(query_desc, map_desc)
@@ -73,9 +67,7 @@ class GenericMethodTest(setup_test):
     """ Next Test set_map """
 
     def test_set_map(self):
-        map_images = self.ds.map_images(
-            partition="test", preprocess=self.method.preprocess
-        )[: self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[: self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         self.method.set_map(map_desc)
         assert self.method.map is not None
@@ -83,12 +75,8 @@ class GenericMethodTest(setup_test):
     """ Next Test place_recognise """
 
     def test_place_recognise(self):
-        query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[
-            : self.sample_size
-        ]
-        map_images = self.ds.map_images(
-            partition="test", preprocess=self.method.preprocess
-        )[: self.sample_size]
+        query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[: self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[: self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         self.method.set_map(map_desc)
         idx, score = self.method.place_recognise(images=query_images, top_n=3)
@@ -104,12 +92,8 @@ class GenericMethodTest(setup_test):
         assert score.max() <= 1.0
 
     def test_save_and_load(self):
-        query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[
-            : self.sample_size
-        ]
-        map_images = self.ds.map_images(
-            partition="test", preprocess=self.method.preprocess
-        )[: self.sample_size]
+        query_images = self.ds.query_images("test", preprocess=self.method.preprocess)[: self.sample_size]
+        map_images = self.ds.map_images(partition="test", preprocess=self.method.preprocess)[: self.sample_size]
         map_desc = self.method.compute_map_desc(images=map_images)
         query_desc = self.method.compute_query_desc(images=query_images)
         self.method.set_map(map_desc)

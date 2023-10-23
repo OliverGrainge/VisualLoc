@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-import numpy as np
-import torchvision
 from typing import Tuple
+
+import numpy as np
 import torch
+import torchvision
 
 
 class BaseDataset(ABC):

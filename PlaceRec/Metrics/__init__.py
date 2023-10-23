@@ -1,2 +1,2 @@
-from .curves import pr_curve, plot_pr_curve, plot_pr_curve, plot_metric, plot_dataset_sample
-from .metrics import recallatk, precision, recall, count_flops, count_params
+from .curves import plot_dataset_sample, plot_metric, plot_pr_curve, pr_curve
+from .metrics import count_flops, count_params, precision, recall, recallatk

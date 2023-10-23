@@ -1,5 +1,5 @@
 from PlaceRec.Datasets import GardensPointWalking
-from PlaceRec.Methods import NetVLAD 
+from PlaceRec.Methods import NetVLAD
 
 method = NetVLAD()
 dataset = GardensPointWalking()
@@ -15,5 +15,7 @@ map_desc = method.compute_map_desc(dataloader=map_loader)
 # to compute the similarity matrix
 similarity_matrix = method.similarity_matrix(query_desc, map_desc)
 
-# to perform place recognition 
-idx, scores = method.place_recognition(dataloader=query_loader)
+# to perform place recognition
+idx, scores = method.place_recognise(dataloader=query_loader)
+
+print(scores)

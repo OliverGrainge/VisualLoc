@@ -1,16 +1,18 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
-import os
 import itertools
-from skimage.measure import regionprops, label
-import numpy as np
-from .base_method import BaseFunctionality
+import os
 import pickle
+from typing import Tuple
+
+import numpy as np
+import torch
+import torch.nn.functional as F
+from skimage.measure import label, regionprops
+from torch import nn
 from torchvision import transforms
 from tqdm import tqdm
-from typing import Tuple
+
 from ..utils import s3_bucket_download
+from .base_method import BaseFunctionality
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,9 +23,7 @@ def getROIs(imgConvFeat, imgLocalConvFeat, img):
     allROI_Box = []
 
     for featuremap in imgConvFeat:
-        clusters = regionprops(
-            label(featuremap), intensity_image=featuremap, cache=False
-        )
+        clusters = regionprops(label(featuremap), intensity_image=featuremap, cache=False)
         clustersBoxes.append(list(cluster.bbox for cluster in clusters))
         clustersEnergies_Ej.append(list(cluster.mean_intensity for cluster in clusters))
     # Make a list of ROIs with their bounded boxes
@@ -130,8 +130,7 @@ class RegionVLAD(BaseFunctionality):
         super().__init__()
         self.name = "regionvlad"
 
-
-        # download the required data 
+        # download the required data
         if not os.path.exists(package_directory + "/weights/alexnet_places365.caffemodel.pt"):
             s3_bucket_download("placerecdata/weights/alexnet_places365.caffemodel.pt", package_directory + "/weights/alexnet_places365.caffemodel.pt")
         if not os.path.exists(package_directory + "/weights/regionvlad_mean_image.npy"):
@@ -140,9 +139,7 @@ class RegionVLAD(BaseFunctionality):
             s3_bucket_download("placerecdata/weights/regionvlad_vocab_400.pkl", package_directory + "/weights/regionvlad_vocab_400.pkl")
 
         self.model = AlexnetPlaces365()
-        self.model.load_state_dict(
-            torch.load(package_directory + "/weights/alexnet_places365.caffemodel.pt")
-        )
+        self.model.load_state_dict(torch.load(package_directory + "/weights/alexnet_places365.caffemodel.pt"))
         self.model.eval()
         self.model.to(self.device)
 
@@ -153,17 +150,13 @@ class RegionVLAD(BaseFunctionality):
         self.vocab = pickle.load(file)
         file.close()
 
-        self.mean_image = np.load(
-            package_directory + "/weights/regionvlad_mean_image.npy"
-        )
+        self.mean_image = np.load(package_directory + "/weights/regionvlad_mean_image.npy")
 
         self.preprocess = transforms.Compose(
             [
                 transforms.ToTensor(),
                 transforms.Resize((227, 227), antialias=True),
-                transforms.Normalize(
-                    mean=self.mean_image.mean(1).mean(1) / 255, std=[1, 1, 1]
-                ),
+                transforms.Normalize(mean=self.mean_image.mean(1).mean(1) / 255, std=[1, 1, 1]),
                 transforms.Lambda(lambda x: x * 255.0),
             ]
         )
@@ -184,25 +177,15 @@ class RegionVLAD(BaseFunctionality):
     ) -> dict:
         if images is not None and dataloader is None:
             all_features = self.model(images.to(self.device)).detach().cpu().numpy()
-            vlads = [
-                self.desc_features(all_features[i], images[i])
-                for i in range(images.shape[0])
-            ]
+            vlads = [self.desc_features(all_features[i], images[i]) for i in range(images.shape[0])]
             self.query_desc = {"query_descriptors": vlads}
             return self.query_desc
 
         elif dataloader is not None and images is None:
             vlads = []
-            for batch in tqdm(
-                dataloader, desc="Computing RegionVLAD Query Desc", disable=not pbar
-            ):
-                batch_features = (
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
-                vlads += [
-                    self.desc_features(batch_features[i], batch[i])
-                    for i in range(batch.shape[0])
-                ]
+            for batch in tqdm(dataloader, desc="Computing RegionVLAD Query Desc", disable=not pbar):
+                batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
             self.query_desc = {"query_descriptors": vlads}
             return self.query_desc
         else:
@@ -216,33 +199,21 @@ class RegionVLAD(BaseFunctionality):
     ) -> dict:
         if images is not None and dataloader is None:
             all_features = self.model(images.to(self.device)).detach().cpu().numpy()
-            vlads = [
-                self.desc_features(all_features[i], images[i])
-                for i in range(images.shape[0])
-            ]
+            vlads = [self.desc_features(all_features[i], images[i]) for i in range(images.shape[0])]
             self.map_desc = {"map_descriptors": vlads}
             return self.map_desc
 
         elif dataloader is not None and images is None:
             vlads = []
-            for batch in tqdm(
-                dataloader, desc="Computing RegionVLAD Map Desc", disable=not pbar
-            ):
-                batch_features = (
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
-                vlads += [
-                    self.desc_features(batch_features[i], batch[i])
-                    for i in range(batch.shape[0])
-                ]
+            for batch in tqdm(dataloader, desc="Computing RegionVLAD Map Desc", disable=not pbar):
+                batch_features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                vlads += [self.desc_features(batch_features[i], batch[i]) for i in range(batch.shape[0])]
             self.map_desc = {"map_descriptors": vlads}
             return self.map_desc
         else:
             raise Exception("Must either pass a Dataloader OR Images")
 
-    def similarity_matrix(
-        self, query_descriptors: dict, map_descriptors: dict
-    ) -> np.ndarray:
+    def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
         similarity = np.zeros(
             (
                 len(map_descriptors["map_descriptors"]),
@@ -271,9 +242,7 @@ class RegionVLAD(BaseFunctionality):
         # this is a single threaded brute force approach
         # will be very slow
         if self.map_desc is None:
-            raise Exception(
-                "Please Compute the map features with 'compute_map_desc' before performing vpr"
-            )
+            raise Exception("Please Compute the map features with 'compute_map_desc' before performing vpr")
 
         if images is not None and dataloader is None:
             q_desc = self.compute_query_desc(images=images)
@@ -282,9 +251,7 @@ class RegionVLAD(BaseFunctionality):
         else:
             raise Exception("Can only pass images OR dataloader")
 
-        scores = np.zeros(
-            (len(self.map_desc["map_descriptors"]), len(q_desc["query_descriptors"]))
-        )
+        scores = np.zeros((len(self.map_desc["map_descriptors"]), len(q_desc["query_descriptors"])))
         for i in range(len(self.map_desc["map_descriptors"])):
             for j in range(len(q_desc["query_descriptors"])):
                 scores[i, j] = np.sum(

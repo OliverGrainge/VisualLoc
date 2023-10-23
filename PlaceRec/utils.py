@@ -1,25 +1,15 @@
-import torch
-import numpy as np
-from torch.utils.data import Dataset
-from PIL import Image
-import pathlib
-import boto3
 import os
-from tqdm import tqdm
+import pathlib
 
 import boto3
 import botocore
-
-
-
-
-
-
+import numpy as np
+import torch
+from PIL import Image
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
 # Download the file
-
-
-
 
 
 class ImageDataset(Dataset):
@@ -43,25 +33,28 @@ class ImageDataset(Dataset):
 
 # ============== S3 Bucket ===========================================================================
 
+
 class ProgressPercentage(tqdm):
     def __init__(self, client, bucket, filename):
         self._size = client.head_object(Bucket=bucket, Key=filename)["ContentLength"]
-        super(ProgressPercentage, self).__init__(total=self._size, unit='B', unit_scale=True, desc="Downloading " + filename.split('/')[-1])
+        super(ProgressPercentage, self).__init__(total=self._size, unit="B", unit_scale=True, desc="Downloading " + filename.split("/")[-1])
 
     def __call__(self, bytes_amount):
         self.update(bytes_amount)
 
+
 def s3_bucket_download(remote_path: str, local_path: str):
-    s3 = boto3.client('s3', region_name="eu-north-1", config=boto3.session.Config(signature_version=botocore.UNSIGNED))
-    
+    s3 = boto3.client("s3", region_name="eu-north-1", config=boto3.session.Config(signature_version=botocore.UNSIGNED))
+
     # Define the bucket name and the datasets to download
-    bucket_name = 'visuallocbucket'
-    
+    bucket_name = "visuallocbucket"
+
     # Download each dataset
     progress = ProgressPercentage(s3, bucket_name, remote_path)
     s3.download_file(bucket_name, remote_path, local_path, Callback=progress)
-    
+
     return None
+
 
 # ==========================================================================================================
 

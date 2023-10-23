@@ -1,19 +1,19 @@
+import os
+import pickle
+from typing import List, Tuple
+
+import numpy as np
+import sklearn
+import torch
 import torch.nn as nn
 import torch.nn.init as init
-import torch
-from .base_method import BaseFunctionality
-from torchvision import transforms
-import pickle
-import os
-from tqdm import tqdm
-from sklearn.neighbors import NearestNeighbors
-import sklearn
-from typing import Tuple, List
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import numpy as np
-from ..utils import s3_bucket_download
+from sklearn.neighbors import NearestNeighbors
+from torchvision import transforms
+from tqdm import tqdm
 
+from ..utils import s3_bucket_download
+from .base_method import BaseFunctionality
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,9 +64,7 @@ class HybridNetModel(nn.Module):
         self.pool6 = nn.MaxPool2d(kernel_size=3, stride=2)
 
         # FC7
-        self.fc7_new = nn.Linear(
-            256 * 6 * 6, 4096
-        )  # Assuming the spatial size is 6x6 after the pooling layers
+        self.fc7_new = nn.Linear(256 * 6 * 6, 4096)  # Assuming the spatial size is 6x6 after the pooling layers
         init.normal_(self.fc7_new.weight, std=0.005)
         init.constant_(self.fc7_new.bias, 1)
         self.relu7 = nn.ReLU(inplace=True)
@@ -152,29 +150,21 @@ class HybridNet(BaseFunctionality):
         super().__init__()
 
         if not os.path.exists(package_directory + "/weights/HybridNet.caffemodel.pt"):
-            s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt",
-                                package_directory + "/weights/HybridNet.caffemodel.pt")
+            s3_bucket_download("placerecdata/weights/HybridNet.caffemodel.pt", package_directory + "/weights/HybridNet.caffemodel.pt")
 
         if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
-            s3_bucket_download("placerecdata/weights/hybridnet_mean.npy",
-                                package_directory + "/weights/hybridnet_mean.npy")
-        
+            s3_bucket_download("placerecdata/weights/hybridnet_mean.npy", package_directory + "/weights/hybridnet_mean.npy")
 
         # hybridnet layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
 
-
         self.model = HybridNetModel()
-        self.model.load_state_dict(
-            torch.load(package_directory + "/weights/HybridNet.caffemodel.pt")
-        )
+        self.model.load_state_dict(torch.load(package_directory + "/weights/HybridNet.caffemodel.pt"))
         self.model.to(self.device)
         self.model.eval()
 
-        self.mean_image = torch.Tensor(
-            np.load(package_directory + "/weights/hybridnet_mean.npy")
-        )
+        self.mean_image = torch.Tensor(np.load(package_directory + "/weights/hybridnet_mean.npy"))
 
         self.preprocess = transforms.Compose(
             [
@@ -202,12 +192,8 @@ class HybridNet(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing HybridNet Query Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing HybridNet Query Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
 
         query_desc = {"query_descriptors": all_desc}
@@ -224,12 +210,8 @@ class HybridNet(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing HybridNet Map Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing HybridNet Map Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("can only pass 'images' or 'dataloader'")

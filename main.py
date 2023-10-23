@@ -1,10 +1,11 @@
 import argparse
+
 from PlaceRec.Metrics import (
-    plot_pr_curve,
-    plot_dataset_sample,
     count_flops,
     count_params,
+    plot_dataset_sample,
     plot_metric,
+    plot_pr_curve,
     recallatk,
 )
 from PlaceRec.utils import get_dataset, get_method
@@ -52,9 +53,7 @@ parser.add_argument(
     default="hog",
     nargs="+",
 )
-parser.add_argument(
-    "--batchsize", type=int, default=10, help="Choose the Batchsize for VPR processing"
-)
+parser.add_argument("--batchsize", type=int, default=10, help="Choose the Batchsize for VPR processing")
 parser.add_argument(
     "--partition",
     type=str,
@@ -112,9 +111,7 @@ elif args.mode == "evaluate":
             similarity = method.similarity_matrix(method.query_desc, method.map_desc)
             all_similarity[method.name] = similarity
             ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
-            ground_truth_soft = ds.ground_truth(
-                partition=args.partition, gt_type="soft"
-            )
+            ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
 
             if "count_flops" in args.metrics:
                 all_flops[method.name] = count_flops(method)

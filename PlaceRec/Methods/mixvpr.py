@@ -1,29 +1,25 @@
 import os
-
-from sklearn.metrics.pairwise import cosine_similarity
-from torch.utils.data import DataLoader
-import torch
-from torchvision.models import ResNet50_Weights
-from PIL import Image
-import tqdm
-import torchvision.transforms as transforms
-import numpy as np
-from tqdm import tqdm
 import pickle
+from typing import Tuple
+
+import numpy as np
+import pytorch_lightning as pl
+import sklearn
 import torch
 import torch.nn as nn
-import torchvision
-import pytorch_lightning as pl
 import torch.nn.functional as F
-import torch.nn as nn
-import numpy as np
-from typing import Tuple
-from .base_method import BaseFunctionality
+import torchvision
+import torchvision.transforms as transforms
+import tqdm
+from PIL import Image
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
-import sklearn
+from torch.utils.data import DataLoader
+from torchvision.models import ResNet50_Weights
+from tqdm import tqdm
+
 from ..utils import s3_bucket_download
-
-
+from .base_method import BaseFunctionality
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -62,9 +58,7 @@ class ResNet(nn.Module):
 
         if "swsl" in model_name or "ssl" in model_name:
             # These are the semi supervised and weakly semi supervised weights from Facebook
-            self.model = torch.hub.load(
-                "facebookresearch/semi-supervised-ImageNet1K-models", model_name
-            )
+            self.model = torch.hub.load("facebookresearch/semi-supervised-ImageNet1K-models", model_name)
         else:
             if "resnext50" in model_name:
                 self.model = torchvision.models.resnext50_32x4d(weights=weights)
@@ -109,12 +103,8 @@ class ResNet(nn.Module):
         if "34" in model_name or "18" in model_name:
             out_channels = 512
 
-        self.out_channels = (
-            out_channels // 2 if self.model.layer4 is None else out_channels
-        )
-        self.out_channels = (
-            self.out_channels // 2 if self.model.layer3 is None else self.out_channels
-        )
+        self.out_channels = out_channels // 2 if self.model.layer4 is None else out_channels
+        self.out_channels = self.out_channels // 2 if self.model.layer3 is None else self.out_channels
 
     def forward(self, x):
         x = self.model.conv1(x)
@@ -171,17 +161,10 @@ class MixVPR_AGG(nn.Module):
         self.out_rows = out_rows  # row wise projection dimesion
 
         self.mix_depth = mix_depth  # L the number of stacked FeatureMixers
-        self.mlp_ratio = (
-            mlp_ratio  # ratio of the mid projection layer in the mixer block
-        )
+        self.mlp_ratio = mlp_ratio  # ratio of the mid projection layer in the mixer block
 
         hw = in_h * in_w
-        self.mix = nn.Sequential(
-            *[
-                FeatureMixerLayer(in_dim=hw, mlp_ratio=mlp_ratio)
-                for _ in range(self.mix_depth)
-            ]
-        )
+        self.mix = nn.Sequential(*[FeatureMixerLayer(in_dim=hw, mlp_ratio=mlp_ratio) for _ in range(self.mix_depth)])
         self.channel_proj = nn.Linear(in_channels, out_channels)
         self.row_proj = nn.Linear(hw, out_rows)
 
@@ -311,17 +294,13 @@ class VPRModel(pl.LightningModule):
 
         self.save_hyperparameters()  # write hyperparams into a file
 
-        self.batch_acc = (
-            []
-        )  # we will keep track of the % of trivial pairs/triplets at the loss level
+        self.batch_acc = []  # we will keep track of the % of trivial pairs/triplets at the loss level
 
         self.faiss_gpu = faiss_gpu
 
         # ----------------------------------
         # get the backbone and the aggregator
-        self.backbone = get_backbone(
-            backbone_arch, pretrained, layers_to_freeze, layers_to_crop
-        )
+        self.backbone = get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
         self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
@@ -339,14 +318,13 @@ class MixVPR(BaseFunctionality):
         super().__init__()
         self.name = "mixpvr"
 
-        weight_pth = (
-            package_directory
-            + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
-        )
+        weight_pth = package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
 
         if not os.path.exists(weight_pth):
-            s3_bucket_download("placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-                                package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt")
+            s3_bucket_download(
+                "placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+                package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
+            )
 
         if self.device == "cuda":
             state_dict = torch.load(weight_pth)
@@ -377,9 +355,7 @@ class MixVPR(BaseFunctionality):
                 transforms.ToTensor(),
                 transforms.Resize(256, antialias=True),
                 transforms.CenterCrop(224),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
                 transforms.Resize(320, antialias=True),
             ]
         )
@@ -394,12 +370,8 @@ class MixVPR(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing MixVPR Query Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing MixVPR Query Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")
@@ -418,12 +390,8 @@ class MixVPR(BaseFunctionality):
             all_desc = self.model(images.to(self.device)).detach().cpu().numpy()
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(
-                dataloader, desc="Computing MixVPR Map Desc", disable=not pbar
-            ):
-                all_desc.append(
-                    self.model(batch.to(self.device)).detach().cpu().numpy()
-                )
+            for batch in tqdm(dataloader, desc="Computing MixVPR Map Desc", disable=not pbar):
+                all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
             all_desc = np.vstack(all_desc)
         else:
             raise Exception("Can only pass 'images' or 'dataloader'")
