@@ -284,10 +284,49 @@ class BaseFunctionality(BaseTechnique):
         ) as f:
             self.map_desc = pickle.load(f)
             # self.set_map(self.map_desc)
+    
+    def set_device(self, device: str) -> None: 
+        """
+        Set the device for the model.
+
+        This method assigns the specified device to the model instance
+        and moves the model to that device.
+
+        Args:
+            device (str): The device to which the model should be moved. 
+                        Common values are 'cpu', 'cuda:0', etc.
+
+        Returns:
+            None
+        """
+        self.device = device
+        self.model.to(device)
 
 
 class BaseModelWrapper(BaseFunctionality):
+    """
+    A wrapper for models that provides methods to compute query and map descriptors.
+    
+    This class inherits from `BaseFunctionality` and provides an interface
+    to set up a model, preprocess its inputs, and compute descriptors for given data.
+    
+    Attributes:
+        name (str): A name or identifier for the model.
+        model (torch.nn.Module): The PyTorch model instance.
+        preprocess (callable): A function or callable to preprocess input data.
+        device (str): The device on which the model runs (inherited from `BaseFunctionality`).
+    """
+
     def __init__(self, model, preprocess, name):
+        """
+        Initializes a BaseModelWrapper instance.
+
+        Args:
+            model (torch.nn.Module): The PyTorch model to be wrapped.
+            preprocess (callable): A function or callable to preprocess the input data.
+            name (str): A name or identifier for the model.
+        """
+
         super().__init__()
         self.name = name
         self.model = model
@@ -300,6 +339,17 @@ class BaseModelWrapper(BaseFunctionality):
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
+        """
+        Compute the query descriptors for the given data.
+
+        Args:
+            dataloader (torch.utils.data.dataloader.DataLoader, optional): DataLoader providing the data.
+            pbar (bool, optional): If True, display a progress bar. Defaults to True.
+
+        Returns:
+            dict: A dictionary containing the computed query descriptors.
+        """
+
         all_desc = []
         for batch in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
             all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
@@ -315,6 +365,17 @@ class BaseModelWrapper(BaseFunctionality):
         dataloader: torch.utils.data.dataloader.DataLoader = None,
         pbar: bool = True,
     ) -> dict:
+        """
+        Compute the map descriptors for the given data.
+
+        Args:
+            dataloader (torch.utils.data.dataloader.DataLoader, optional): DataLoader providing the data.
+            pbar (bool, optional): If True, display a progress bar. Defaults to True.
+
+        Returns:
+            dict: A dictionary containing the computed map descriptors.
+        """
+        
         all_desc = []
         for batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
             all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())

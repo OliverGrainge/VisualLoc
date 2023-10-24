@@ -1,6 +1,7 @@
 import argparse
 
 import pandas as pd
+import yaml
 
 from PlaceRec.Metrics import (
     average_precision,
@@ -16,6 +17,10 @@ from PlaceRec.Metrics import (
 )
 from PlaceRec.utils import get_dataset, get_method
 
+
+with open('config.yaml', 'r') as file:
+    config = yaml.safe_load(file)
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
@@ -30,34 +35,22 @@ parser.add_argument(
     ),
     help="specify one of the datasets from PlaceRec.Datasets",
     type=str,
-    default=["stlucia_small"],
+    default=config["eval"]["datasets"],
     nargs="+",
 )
 
 parser.add_argument(
     "--methods",
-    choices=(
-        "regionvlad",
-        "mixvpr",
-        "convap",
-        "amosnet",
-        "hybridnet",
-        "netvlad",
-        "hog",
-        "cosplace",
-        "calc",
-        "alexnet",
-    ),
     help="specify one of the techniques from vpr/vpr_tecniques",
     type=str,
-    default="hog",
+    default=config["eval"]["methods"],
     nargs="+",
 )
 
 parser.add_argument(
     "--partition",
     type=str,
-    default="test",
+    default=config["eval"]["partition"],
     help="choose from 'train', 'val', 'test' or 'all'",
 )
 
