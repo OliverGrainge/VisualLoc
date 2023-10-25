@@ -130,3 +130,7 @@ def get_method(name: str = None):
     else:
         raise Exception("Method not implemented")
     return method
+
+
+def get_loss_function(model, args):
+    raise NotImplementedError

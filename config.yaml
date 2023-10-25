@@ -1,8 +1,5 @@
 
 
-
-
-
 eval: 
   datasets: 
     - "gardenspointwalking"
@@ -27,6 +24,7 @@ run:
 train: 
   method_architecture: "netvlad"
   training_type: "contrastive" # either contrastive or supervised
+  negative_mining: "partial"
   dataset: "msls"
   learning_rate: 0.0001
   early_stopping_patience: 3

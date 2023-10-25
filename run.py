@@ -1,9 +1,10 @@
 import argparse
 
-from PlaceRec.utils import get_dataset, get_method
-import yaml 
+import yaml
 
-with open('config.yaml', 'r') as file:
+from PlaceRec.utils import get_dataset, get_method
+
+with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 parser = argparse.ArgumentParser()
@@ -62,11 +63,7 @@ parser.add_argument(
     help="Choose the number of processing the threads for the dataloader",
 )
 
-parser.add_argument("--pin_memory",
-    type=bool,
-    default=config["run"]["pin_memory"],
-    help="Choose whether to pin memory in GPU"
-)
+parser.add_argument("--pin_memory", type=bool, default=config["run"]["pin_memory"], help="Choose whether to pin memory in GPU")
 
 args = parser.parse_args()
 

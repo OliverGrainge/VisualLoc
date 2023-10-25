@@ -17,8 +17,7 @@ from PlaceRec.Metrics import (
 )
 from PlaceRec.utils import get_dataset, get_method
 
-
-with open('config.yaml', 'r') as file:
+with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
 
 parser = argparse.ArgumentParser()

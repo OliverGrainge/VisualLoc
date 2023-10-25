@@ -284,8 +284,8 @@ class BaseFunctionality(BaseTechnique):
         ) as f:
             self.map_desc = pickle.load(f)
             # self.set_map(self.map_desc)
-    
-    def set_device(self, device: str) -> None: 
+
+    def set_device(self, device: str) -> None:
         """
         Set the device for the model.
 
@@ -293,7 +293,7 @@ class BaseFunctionality(BaseTechnique):
         and moves the model to that device.
 
         Args:
-            device (str): The device to which the model should be moved. 
+            device (str): The device to which the model should be moved.
                         Common values are 'cpu', 'cuda:0', etc.
 
         Returns:
@@ -306,10 +306,10 @@ class BaseFunctionality(BaseTechnique):
 class BaseModelWrapper(BaseFunctionality):
     """
     A wrapper for models that provides methods to compute query and map descriptors.
-    
+
     This class inherits from `BaseFunctionality` and provides an interface
     to set up a model, preprocess its inputs, and compute descriptors for given data.
-    
+
     Attributes:
         name (str): A name or identifier for the model.
         model (torch.nn.Module): The PyTorch model instance.
@@ -375,7 +375,7 @@ class BaseModelWrapper(BaseFunctionality):
         Returns:
             dict: A dictionary containing the computed map descriptors.
         """
-        
+
         all_desc = []
         for batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
             all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
