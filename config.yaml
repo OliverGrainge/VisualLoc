@@ -22,15 +22,41 @@ run:
 
 
 train: 
-  method_architecture: "netvlad"
-  training_type: "contrastive" # either contrastive or supervised
-  negative_mining: "partial"
-  dataset: "msls"
-  learning_rate: 0.0001
-  early_stopping_patience: 3
-  loss_function: "triplet" # either triplet, sare, cross_entropy
-  optimizer: "adam" # either adam, sgd 
-
+  method: "netvlad"
+  seed: 0
+  train_batch_size: 2
+  infer_batch_size: 1
+  criterion: "triplet", # either triplet, sare_ind, sare_joint 
+  margin: 0.1
+  epochs_num: 1000
+  patience: 3
+  lr: 0.00001 # learning rate
+  optim: adam", #either adam or sgd 
+  cache_refresh_rate: 1000
+  queries_per_epoch: 5000
+  negs_num_per_query: 10
+  neg_samples_num: 1000
+  mining: "partial" # either partial full random or msls_weighted
+  resume: None #path to load checkpoint from 
+  device: "cpu" # either cpu or cuda 
+  num_workers: 0 # number of workers for the dataloader
+  resize: [480, 640] # image resolution 
+  test_method: "hard_resize" # post processing method for prediction refinement
+  val_positive_dist_threshold: 25
+  train_positive_dist_threshold: 25
+  recall_values: [1, 5, 10, 20] # recalls to be computed
+  
+  brightness: 0
+  contrast: 0
+  saturation: 0
+  hue: 0
+  rand_perspective: 0
+  horizontal_flip: None 
+  random_resized_crop: 0
+  random_rotation: 0
+  datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  dataset_name: "pitts30k"
+  save_dir: "default"
 
 
 
