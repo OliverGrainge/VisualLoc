@@ -103,7 +103,7 @@ parser.add_argument(
 parser.add_argument(
     "--test_method",
     type=str,
-    default=train_args["hard_resize"],
+    default=train_args["test_method"],
     choices=[
         "hard_resize",
         "single_query",
@@ -156,3 +156,6 @@ parser.add_argument(
     help="Folder name of the current run (saved in ./logs/)",
 )
 args = parser.parse_args()
+
+
+

@@ -26,7 +26,7 @@ train:
   seed: 0
   train_batch_size: 2
   infer_batch_size: 1
-  criterion: "triplet", # either triplet, sare_ind, sare_joint 
+  criterion: "triplet" # either triplet, sare_ind, sare_joint 
   margin: 0.1
   epochs_num: 1000
   patience: 3
@@ -43,7 +43,7 @@ train:
   resize: [480, 640] # image resolution 
   test_method: "hard_resize" # post processing method for prediction refinement
   val_positive_dist_threshold: 25
-  train_positive_dist_threshold: 25
+  train_positives_dist_threshold: 25
   recall_values: [1, 5, 10, 20] # recalls to be computed
   
   brightness: 0
