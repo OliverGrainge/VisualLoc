@@ -1,9 +1,11 @@
 import argparse
-import yaml
-from PlaceRec.utils import get_method
-from PlaceRec.Training import ConstrastiveTrainer
 
-with open('config.yaml', 'r') as file:
+import yaml
+
+from PlaceRec.Training import ConstrastiveTrainer
+from PlaceRec.utils import get_method
+
+with open("config.yaml", "r") as file:
     args = yaml.safe_load(file)
 
 train_args = args["train"]
@@ -41,37 +43,15 @@ parser.add_argument(
     choices=["triplet", "sare_ind", "sare_joint"],
 )
 
-parser.add_argument(
-    "--margin",
-    type=float,
-    default=train_args["margin"], 
-    help="margin for the triplet loss"
-)
+parser.add_argument("--margin", type=float, default=train_args["margin"], help="margin for the triplet loss")
 
-parser.add_argument(
-    "--epochs_num", 
-    type=int, 
-    default=train_args["epochs_num"], 
-    help="number of epochs to train for"
-)
+parser.add_argument("--epochs_num", type=int, default=train_args["epochs_num"], help="number of epochs to train for")
 
-parser.add_argument("--patience", 
-    type=int, 
-    default=train_args["patience"]
-)
+parser.add_argument("--patience", type=int, default=train_args["patience"])
 
-parser.add_argument("--lr", 
-    type=float, 
-    default=train_args["lr"], 
-    help="_"
-)
+parser.add_argument("--lr", type=float, default=train_args["lr"], help="_")
 
-parser.add_argument(
-    "--optim", 
-    type=str, 
-    default=train_args["optim"], 
-    help="_", choices=["adam", "sgd"]
-)
+parser.add_argument("--optim", type=str, default=train_args["optim"], help="_", choices=["adam", "sgd"])
 
 parser.add_argument(
     "--cache_refresh_rate",
@@ -109,10 +89,7 @@ parser.add_argument(
 )
 
 # Initialization parameters
-parser.add_argument("--seed", 
-    type=int, 
-    default=train_args["seed"]
-)
+parser.add_argument("--seed", type=int, default=train_args["seed"])
 
 parser.add_argument(
     "--resume",
@@ -121,18 +98,9 @@ parser.add_argument(
     help="Path to load checkpoint from, for resuming training or testing.",
 )
 # Other parameters
-parser.add_argument("--device", 
-    type=str, 
-    default=train_args["device"], 
-    choices=["cuda", "cpu"]
-)
+parser.add_argument("--device", type=str, default=train_args["device"], choices=["cuda", "cpu"])
 
-parser.add_argument(
-    "--num_workers", 
-    type=int, 
-    default=train_args["num_workers"], 
-    help="num_workers for all dataloaders"
-)
+parser.add_argument("--num_workers", type=int, default=train_args["num_workers"], help="num_workers for all dataloaders")
 
 parser.add_argument(
     "--resize",
@@ -157,18 +125,9 @@ parser.add_argument(
     help="This includes pre/post-processing methods and prediction refinement",
 )
 
-parser.add_argument("--val_positive_dist_threshold", 
-    type=int, 
-    default=train_args["val_positive_dist_threshold"], 
-    help="_"
-)
+parser.add_argument("--val_positive_dist_threshold", type=int, default=train_args["val_positive_dist_threshold"], help="_")
 
-parser.add_argument(
-    "--train_positives_dist_threshold", 
-    type=int, 
-    default=train_args["train_positives_dist_threshold"], 
-    help="_"
-)
+parser.add_argument("--train_positives_dist_threshold", type=int, default=train_args["train_positives_dist_threshold"], help="_")
 
 parser.add_argument(
     "--recall_values",
