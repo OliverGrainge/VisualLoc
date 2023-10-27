@@ -79,9 +79,15 @@ def plot_pr_curve(
 
 def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str, show: bool = True, metric_name="no_name_given"):
     fig, ax = plt.subplots()
-    ax.bar(methods, scores)
+    bars = ax.bar(methods, scores)
     plt.xticks(rotation=45)
     ax.set_title(title, fontsize="16")
+    
+    # Add legend as text annotation to each bar
+    for bar, method, score in zip(bars, methods, scores):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width() / 2, height + 0.02, f'{method}={score:.2f}', ha='center', va='bottom', rotation=0, fontsize=8)
+    
     pth = os.getcwd() + "/Plots/PlaceRec/" + metric_name
     if not os.path.exists(pth):
         os.makedirs(pth)

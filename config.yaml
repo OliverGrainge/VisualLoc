@@ -6,20 +6,23 @@ eval:
   methods: 
     - "netvlad"
   partition: "test"
-  device: None
-
-
+  device: "cpu"
+  input_size: [480, 640, 3]
+  
 run: 
   datasets: 
     - "gardenspointwalking"
   methods: 
     - "netvlad"
+    - "cosplace"
+    - "amosnet"
+    - "hybridnet" 
+    - "mixvpr"
+    - "calc"
   partition: "test"
   num_workers: 0
   pin_memory: True
   device: None
-
-
 
 train: 
   method: "netvlad"
@@ -58,11 +61,5 @@ train:
   dataset_name: "pitts30k"
   save_dir: "default"
 
-
-
-########## Training Datasets ###########
-datasets:
-  msls_directory: " "
-  sanfrancisco_directory: " "
 
 

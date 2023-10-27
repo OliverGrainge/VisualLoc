@@ -11,7 +11,7 @@ from thop import profile
 from PlaceRec.Datasets import GardensPointWalking
 
 
-def measure_memory(args, model, jit=True):
+def measure_memory(args, method, jit=True):
     """
     Measures the size (in bytes) of a given PyTorch model when saved to disk.
 
@@ -24,22 +24,29 @@ def measure_memory(args, model, jit=True):
         Default is True.
 
     Returns:
-    - int: Size of the saved model in bytes.
+    - int: Size of the saved model in mega bytes.
 
     Note:
     - This function temporarily saves the model to 'tmp_model.pt' on disk to measure its size.
         The temporary file is deleted after size measurement.
     """
+    model = method.model.to(args.device)
+    model.eval()
     if jit:
+        if isinstance(model, nn.Module):
+            example_input = torch.randn(args.input_size).numpy().astype(np.float32)
+            example_input = method.preprocess(example_input).to(args.device)
+            traced_model = torch.jit.trace(model, example_input[None,:])
+            model = torch.jit.script(traced_model)
         torch.jit.save(model, "tmp_model.pt")
         size_in_bytes = os.path.getsize("tmp_model.pt")
         os.remove("tmp_model.pt")
-        return size_in_bytes
+        return size_in_bytes / 1000000
     else:
         torch.save(model.state_dict(), "tmp_model.pt")
         size_in_bytes = os.path.getsize("tmp_model.pt")
         os.remove("tmp_model.pt")
-        return size_in_bytes
+        return size_in_bytes / 1000000
 
 
 def benchmark_latency_cpu(method, num_runs=100):
@@ -120,7 +127,7 @@ def count_params(method) -> int:
     - int: Total number of parameters.
     """
 
-    assert isinstance(method.model, nn.module)
+    assert isinstance(method.model, nn.Module)
     if method.model is not None:
         total_params = sum(p.numel() for p in method.model.parameters())
         return int(total_params)
@@ -144,7 +151,7 @@ def count_flops(method) -> int:
     method.model.eval()
     ds = GardensPointWalking()
     loader = ds.query_images_loader("test", preprocess=method.preprocess)
-    assert isinstance(method.module, nn.module)
+    assert isinstance(method.model, nn.Module)
     if method.model is not None:
         for batch in loader:
             input = batch[0][None, :].to(method.device)  # get one input item

@@ -9,6 +9,7 @@ from PlaceRec.Metrics import (
     benchmark_latency_gpu,
     count_flops,
     count_params,
+    measure_memory,
     plot_dataset_sample,
     plot_metric,
     plot_pr_curve,
@@ -53,6 +54,21 @@ parser.add_argument(
     help="choose from 'train', 'val', 'test' or 'all'",
 )
 
+parser.add_argument(
+    "--input_size",
+    type=int,
+    default=config["eval"]["input_size"],
+    nargs=2,
+    help="Resizing shape for images (HxW).",
+)
+
+parser.add_argument(
+    "--device",
+    type=str,
+    default=config["eval"]["device"],
+    help="choose the device to benchmark inference",
+)
+
 parser.add_argument("--metrics", type=str, default="prcurve", nargs="+")
 
 
@@ -72,6 +88,7 @@ for dataset_name in args.datasets:
     recallat100p = {}
     latency_cpu = {}
     latency_gpu = {}
+    memory = {}
     aupr = {}
 
     try:
@@ -93,6 +110,7 @@ for dataset_name in args.datasets:
                 "recall@10",
                 "recall@100p",
                 "average_precision",
+                "memory"
             ]
         )
 
@@ -121,6 +139,10 @@ for dataset_name in args.datasets:
         if "gpu_latency" in args.metrics:
             latency_gpu[method.name] = benchmark_latency_gpu(method)
             table_data["gpu_latency"] = latency_gpu[method.name]
+
+        if "measure_memory" in args.metrics:
+            memory[method.name] = measure_memory(args, method, jit=True)
+            table_data["memory"] = memory[method.name]
 
         if "cpu_latency" in args.metrics:
             latency_cpu[method.name] = benchmark_latency_cpu(method)
@@ -181,6 +203,17 @@ for dataset_name in args.datasets:
             title="PR Curve for " + ds.name + " partition: " + args.partition,
             dataset_name=ds.name,
         )
+
+    if "measure_memory" in args.metrics:
+        plot_metric(
+            methods=list(memory.keys()),
+            scores=list(memory.values()),
+            show=False,
+            metric_name="memory_consumption",
+            title="Disk Memory Consumption (Mb)",
+            dataset_name=ds.name,
+        )
+
     if "average_precision" in args.metrics:
         plot_metric(
             methods=list(aupr.keys()),
