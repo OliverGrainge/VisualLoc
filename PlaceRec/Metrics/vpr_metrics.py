@@ -16,50 +16,16 @@ from PlaceRec.Datasets import GardensPointWalking
 from .curves import pr_curve
 
 
-def recallatk(ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None, k: int = 1) -> float:
-    """
-    Computes the recall at rank k for given similarity matrix and ground truth.
-
-    Parameters:
-    - ground_truth (np.ndarray): Binary matrix representing the ground truth.
-    - similarity (np.ndarray): Similarity matrix with same shape as ground_truth.
-    - ground_truth_soft (np.ndarray, optional): Soft ground truth matrix. If given, its shape must match ground_truth.
-    - k (int, optional): Rank at which recall is computed. Default is 1.
-
-    Returns:
-    - float: Recall at rank k.
-
-    Raises:
-    - AssertionError: If the shapes of the matrices don't match or if other constraints are not satisfied.
-    """
-    assert similarity.shape == ground_truth.shape, "S_in and GThard must have the same shape"
-    if ground_truth_soft is not None:
-        assert similarity.shape == ground_truth_soft.shape, "S_in and GTsoft must have the same shape"
-    assert similarity.ndim == 2, "S_in, GThard and GTsoft must be two-dimensional"
-    assert k >= 1, "K must be >=1"
-
-    S = similarity.copy()
-    if ground_truth_soft is not None:
-        ground_truth_soft = ground_truth_soft.astype("bool")
-        S[ground_truth_soft & ~ground_truth] = S.min()
-
-    ground_truth = ground_truth.astype("bool")
-    j = ground_truth.sum(0) > 0  # columns with matches
-    S = S[:, j]  # select columns with a match
-    ground_truth = ground_truth[:, j]  # select columns with a match
-    i = S.argsort(0)[-k:, :]
-    j = np.tile(np.arange(i.shape[1]), [k, 1])
-    ground_truth = ground_truth[i, j]
-    RatK = np.sum(ground_truth.sum(0) > 0) / ground_truth.shape[1]
-    return RatK
+def recallatk(method, ground_truth: list, k: int = 1) -> float:
+    preds, _ = method.place_recognise(query_desc=method.query_desc, k=k)
+    result = [1 if set(p).intersection(set(gt)) else 0 for p, gt in zip(preds, ground_truth)]
+    return np.mean(result)
 
 
 def recall_at_100p(
-    ground_truth: np.ndarray,
-    similarity: np.ndarray,
-    ground_truth_soft: Union[None, np.ndarray] = None,
+    method,
+    ground_truth: list,
     k: int = 1,
-    matching: str = "single",
     n_thresh: int = 100,
 ) -> float:
     """
@@ -80,14 +46,9 @@ def recall_at_100p(
     - AssertionError: If the shapes of the matrices don't match or if other constraints are not satisfied.
     """
 
-    assert similarity.shape == ground_truth.shape, "S_in and GThard must have the same shape"
-    if ground_truth_soft is not None:
-        assert similarity.shape == ground_truth_soft.shape, "S_in and GTsoft must have the same shape"
-    assert similarity.ndim == 2, "S_in, GThard and GTsoft must be two-dimensional"
-    assert n_thresh > 1, "n_thresh must be >1"
 
     # get precision-recall curve
-    P, R = pr_curve(similarity=similarity, ground_truth=ground_truth, ground_truth_soft=ground_truth_soft, matching=matching, n_thresh=n_thresh)
+    P, R = pr_curve(method=method, ground_truth=ground_truth, n_thresh=n_thresh)
     P = np.array(P)
     R = np.array(R)
     R = R[P == 1]
@@ -95,61 +56,8 @@ def recall_at_100p(
     return R
 
 
-def precision(ground_truth: np.ndarray, preds: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None) -> float:
-    """
-    Computes the precision for given predictions and ground truth.
 
-    Parameters:
-    - ground_truth (np.ndarray): Binary matrix representing the ground truth.
-    - preds (np.ndarray): Predictions matrix.
-    - ground_truth_soft (np.ndarray, optional): Soft ground truth matrix.
-
-    Returns:
-    - float: Precision.
-
-    Raises:
-    - Exception: If there's a division by zero error.
-    """
-
-    if ground_truth_soft is not None:
-        preds[~ground_truth & ground_truth_soft] = False
-    preds = preds.astype(bool)
-    ground_truth = ground_truth.astype(bool)
-    TP = np.count_nonzero(ground_truth & preds)
-    FP = np.count_nonzero((~ground_truth) & preds)
-    if TP + FP == 0:
-        raise Exception("Divide by zero. TP: " + str(TP) + "  FP: " + str(FP))
-    return TP / (TP + FP)
-
-
-def recall(ground_truth: np.ndarray, preds: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None) -> float:
-    """
-    Computes the recall for given predictions and ground truth.
-
-    Parameters:
-    - ground_truth (np.ndarray): Binary matrix representing the ground truth.
-    - preds (np.ndarray): Predictions matrix.
-    - ground_truth_soft (np.ndarray, optional): Soft ground truth matrix.
-
-    Returns:
-    - float: Recall.
-
-    Raises:
-    - Exception: If there's a division by zero error.
-    """
-
-    if ground_truth_soft is not None:
-        preds[~ground_truth & ground_truth_soft] = False
-    preds = preds.astype(bool)
-    ground_truth = ground_truth.astype(bool)
-    TP = np.count_nonzero(ground_truth & preds)
-    GTP = np.count_nonzero(ground_truth)
-    if GTP == 0:
-        raise Exception("Divide by zero. GTP: 0")
-    return TP / GTP
-
-
-def average_precision(ground_truth: np.ndarray, similarity: np.ndarray, ground_truth_soft: Union[None, np.ndarray] = None) -> float:
+def average_precision(method, ground_truth: list, n_thresh: int=100) -> float:
     """
     Compute the average precision (AP) for the given ground truth and similarity scores.
 
@@ -170,7 +78,7 @@ def average_precision(ground_truth: np.ndarray, similarity: np.ndarray, ground_t
     - float: The average precision value, representing the area under the precision-recall curve.
 
     """
-    P, R = pr_curve(ground_truth=ground_truth, similarity=similarity, ground_truth_soft=ground_truth_soft)
+    P, R = pr_curve(method=method, ground_truth=ground_truth, n_thresh=n_thresh)
     # Ensure that recall is monotonically increasing
     for i in range(len(R) - 1, 0, -1):
         P[i - 1] = max(P[i - 1], P[i])

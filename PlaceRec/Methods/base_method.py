@@ -208,7 +208,8 @@ class BaseFunctionality(BaseTechnique):
     def place_recognise(
         self,
         dataloader: torch.utils.data.dataloader.DataLoader = None,
-        top_n: int = 1,
+        query_desc: np.ndarray = None,
+        k: int = 1,
         pbar: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -223,9 +224,10 @@ class BaseFunctionality(BaseTechnique):
         Returns:
             Tuple[np.ndarray, np.ndarray]: Indices and distances of recognized places.
         """
-        desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
-        faiss.normalize_L2(desc["query_descriptors"])
-        dist, idx = self.map.search(desc["query_descriptors"], top_n)
+        if query_desc == None and dataloader is not None:
+            query_desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
+        faiss.normalize_L2(query_desc["query_descriptors"])
+        dist, idx = self.map.search(query_desc["query_descriptors"], k)
         return idx, dist
 
     def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:

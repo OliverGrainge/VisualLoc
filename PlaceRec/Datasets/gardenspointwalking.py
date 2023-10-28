@@ -144,6 +144,9 @@ class GardensPointWalking(BaseDataset):
         query_images = self.query_partition(partition=partition)
         map_images = self.map_partition(partition)
 
+        query_images = [img.split('/')[-1] for img in query_images]
+        map_images = [img.split('/')[-1] for img in map_images]
+
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}
         for idx, img in enumerate(map_images):
@@ -151,33 +154,9 @@ class GardensPointWalking(BaseDataset):
 
         # Get the indices using the dictionary
         ground_truth = [map_dict.get(query, []) for query in query_images]
+        return ground_truth
 
 
-    def ground_truth(self, partition: str, gt_type: str) -> np.ndarray:
-        size = len(self.query_paths)
-
-        gt = np.eye(len(self.map_paths)).astype("bool")
-
-        # load the full grount truth matrix with the relevant form
-        if gt_type == "soft":
-            gt = convolve2d(gt.astype(int), np.ones((17, 1), "int"), mode="same").astype("bool")
-        elif gt_type == "hard":
-            pass
-        else:
-            raise Exception("gt_type must be either 'hard' or 'soft'")
-
-        # select the relevant part of the ground truth matrix
-        if partition == "train":
-            gt = gt[:, : int(size * 0.6)]
-        elif partition == "val":
-            gt = gt[:, int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            gt = gt[:, int(size * 0.8) :]
-        elif partition == "all":
-            pass
-        else:
-            raise Exception("partition must be either 'train', 'val', 'test' or 'all'")
-        return gt.astype(bool)
 
 
 if __name__ == "__main__":

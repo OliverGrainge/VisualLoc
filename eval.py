@@ -76,8 +76,8 @@ args = parser.parse_args()
 
 for dataset_name in args.datasets:
     ds = get_dataset(dataset_name)
-    gt_hard = ds.ground_truth(partition=args.partition, gt_type="hard")
-    gt_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+    ground_truth = ds.ground_truth(partition=args.partition)
+    all_methods = []
 
     all_similarity = {}
     all_flops = {}
@@ -115,16 +115,13 @@ for dataset_name in args.datasets:
         )
 
         df.set_index("id", inplace=True)
-
     for method_name in args.methods:
         table_data = {}
         results_id = method_name + "_" + dataset_name
         method = get_method(method_name)
         method.load_descriptors(ds.name)
-        similarity = method.similarity_matrix(method.query_desc, method.map_desc)
-        all_similarity[method.name] = similarity
-        ground_truth = ds.ground_truth(partition=args.partition, gt_type="hard")
-        ground_truth_soft = ds.ground_truth(partition=args.partition, gt_type="soft")
+        all_methods.append(method)
+        
         table_data["descriptor_bytes"] = method.query_desc["query_descriptors"].nbytes / method.query_desc["query_descriptors"].shape[0]
         table_data["descriptor_dim"] = method.query_desc["query_descriptors"].shape[1]
 
@@ -149,14 +146,13 @@ for dataset_name in args.datasets:
             table_data["cpu_latency"] = latency_cpu[method.name]
 
         if "average_precision" in args.metrics:
-            aupr[method.name] = average_precision(ground_truth=ground_truth, ground_truth_soft=ground_truth_soft, similarity=similarity)
+            aupr[method.name] = average_precision(method=method, ground_truth=ground_truth)
             table_data["average_precision"] = aupr[method.name]
 
         if "recall@1" in args.metrics:
             recallat1[method.name] = recallatk(
+                method=method,
                 ground_truth=ground_truth,
-                ground_truth_soft=ground_truth_soft,
-                similarity=similarity,
                 k=1,
             )
             table_data["recall@1"] = recallat1[method.name]
@@ -173,9 +169,8 @@ for dataset_name in args.datasets:
 
         if "recall@5" in args.metrics:
             recallat5[method.name] = recallatk(
+                method=method,
                 ground_truth=ground_truth,
-                ground_truth_soft=ground_truth_soft,
-                similarity=similarity,
                 k=5,
             )
 
@@ -183,9 +178,8 @@ for dataset_name in args.datasets:
 
         if "recall@10" in args.metrics:
             recallat10[method.name] = recallatk(
+                method=method,
                 ground_truth=ground_truth,
-                ground_truth_soft=ground_truth_soft,
-                similarity=similarity,
                 k=10,
             )
             table_data["recall@10"] = recallat10[method.name]
@@ -195,10 +189,8 @@ for dataset_name in args.datasets:
 
     if "prcurve" in args.metrics:
         plot_pr_curve(
-            ground_truth=gt_hard,
-            all_similarity=all_similarity,
-            ground_truth_soft=gt_soft,
-            matching="single",
+            methods=all_methods,
+            ground_truth=ground_truth
             show=False,
             title="PR Curve for " + ds.name + " partition: " + args.partition,
             dataset_name=ds.name,
@@ -252,9 +244,6 @@ for dataset_name in args.datasets:
             metric_name="cpu_latency",
             dataset_name=ds.name,
         )
-
-    if "dataset_sample" in args.metrics:
-        plot_dataset_sample(ds, gt_type="soft", show=False)
 
     if "count_flops" in args.metrics:
         plot_metric(
