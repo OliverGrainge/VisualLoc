@@ -187,7 +187,6 @@ for dataset_name in args.datasets:
         df.loc[results_id] = table_data
 
     if "prcurve" in args.metrics:
-        print("==================================", ds.name)
         plot_pr_curve(
             methods=all_methods,
             ground_truth=ground_truth,

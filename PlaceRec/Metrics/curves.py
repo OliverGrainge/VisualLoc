@@ -17,7 +17,8 @@ def pr_curve(method, ground_truth: list, n_thresh=100):
 
     similarity = similarity.copy()
     GTP = np.count_nonzero(ground_truth)
-    print(ground_truth)
+    if GTP == 0:
+        return np.zeros(10), np.linspace(0, 1, 10)
     R = [
         0,
     ]
