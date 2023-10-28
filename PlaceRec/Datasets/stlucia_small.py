@@ -32,6 +32,24 @@ class StLucia_small(BaseDataset):
 
         self.name = "stlucia_small"
 
+    def query_partition(self, partition: str) -> np.ndarray:
+        # get the required partition of the dataset
+        size = len(self.query_paths)
+        if partition == "train":
+            paths = self.query_paths[: int(size * 0.6)]
+        elif partition == "val":
+            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
+        elif partition == "test":
+            paths = self.query_paths[int(size * 0.8) :]
+        elif partition == "all":
+            paths = self.query_paths
+        else:
+            raise Exception("Partition must be 'train', 'val' or 'all'")
+        return paths
+
+    def map_partition(self, partition: str) -> np.ndarray:
+        return self.map_paths
+
     def query_images(
         self,
         partition: str,
@@ -122,31 +140,23 @@ class StLucia_small(BaseDataset):
         )
         return dataloader
 
-    def ground_truth(self, partition: str, gt_type: str) -> np.ndarray:
-        size = len(self.query_paths)
 
-        gt_data = np.load(package_directory + "/raw_images/StLucia_small/GT.npz")
+    def ground_truth(self, partition: str) -> np.ndarray:
+        query_images = self.query_partition(partition=partition)
+        map_images = self.map_partition(partition)
 
-        # load the full grount truth matrix with the relevant form
-        if gt_type == "hard":
-            gt = gt_data["GThard"].astype("bool").T
-        elif gt_type == "soft":
-            gt = gt_data["GTsoft"].astype("bool").T
-        else:
-            raise Exception("gt_type must be either 'hard' or 'soft'")
+        query_images = [img.split('/')[-1] for img in query_images]
+        map_images = [img.split('/')[-1] for img in map_images]
 
-        # select the relevant part of the ground truth matrix
-        if partition == "train":
-            gt = gt[:, : int(size * 0.6)]
-        elif partition == "val":
-            gt = gt[:, int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            gt = gt[:, int(size * 0.8) :]
-        elif partition == "all":
-            pass
-        else:
-            raise Exception("partition must be either 'train', 'val', 'test' or 'all'")
-        return gt.astype(bool)
+        # Create a dictionary mapping image names to a list of their indices in map_images
+        map_dict = {}
+        for idx, img in enumerate(map_images):
+            map_dict.setdefault(img, []).append(idx)
+
+        # Get the indices using the dictionary
+        ground_truth = [map_dict.get(query, []) for query in query_images]
+        return ground_truth
+
 
 
 if __name__ == "__main__":
