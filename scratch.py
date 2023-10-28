@@ -1,22 +1,17 @@
-from PlaceRec.Datasets import GardensPointWalking
-from PlaceRec.Methods import NetVLAD
 
-method = NetVLAD()
-dataset = GardensPointWalking()
+import numpy as np
 
-print(method.name)
-# get query and map loaders for batch inference on images
-query_loader = dataset.query_images_loader("train", preprocess=method.preprocess)
-map_loader = dataset.map_images_loader("train", preprocess=method.preprocess)
+# Example values
+query_images = np.array([str(i) for i in range(100000)])
+map_images = np.array([str(i) for i in range(100000)])
+import numpy as np
 
-# compute the image descriptors
-query_desc = method.compute_query_desc(dataloader=query_loader)
-map_desc = method.compute_map_desc(dataloader=map_loader)
+# Create a dictionary mapping image names to a list of their indices in map_images
+map_dict = {}
+for idx, img in enumerate(map_images):
+    map_dict.setdefault(img, []).append(idx)
 
-# to compute the similarity matrix
-similarity_matrix = method.similarity_matrix(query_desc, map_desc)
+# Get the indices using the dictionary
+ground_truth = [map_dict.get(query, []) for query in query_images]
 
-# to perform place recognition
-idx, scores = method.place_recognise(dataloader=query_loader)
-
-print(scores)
+print(ground_truth)

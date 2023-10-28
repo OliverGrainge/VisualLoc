@@ -29,6 +29,24 @@ class ESSEX3IN1(BaseDataset):
 
         self.name = "essex3in1"
 
+    def query_partition(self, partition: str) -> np.ndarray:
+        # get the required partition of the dataset
+        size = len(self.query_paths)
+        if partition == "train":
+            paths = self.query_paths[: int(size * 0.6)]
+        elif partition == "val":
+            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
+        elif partition == "test":
+            paths = self.query_paths[int(size * 0.8) :]
+        elif partition == "all":
+            paths = self.query_paths
+        else:
+            raise Exception("Partition must be 'train', 'val' or 'all'")
+        return paths
+
+    def map_partition(self, partition: str) -> np.ndarray:
+        return self.map_paths
+
     def query_images(
         self,
         partition: str,
