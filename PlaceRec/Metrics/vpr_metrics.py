@@ -19,13 +19,12 @@ from .curves import pr_curve
 def recallatk(method, ground_truth: list, k: int = 1) -> float:
     preds, _ = method.place_recognise(query_desc=method.query_desc, k=k)
     result = [1 if set(p).intersection(set(gt)) else 0 for p, gt in zip(preds, ground_truth)]
-    return np.mean(result)
+    return np.mean(result).astype(np.float32)
 
 
 def recall_at_100p(
     method,
     ground_truth: list,
-    k: int = 1,
     n_thresh: int = 100,
 ) -> float:
     """

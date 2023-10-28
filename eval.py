@@ -10,7 +10,6 @@ from PlaceRec.Metrics import (
     count_flops,
     count_params,
     measure_memory,
-    plot_dataset_sample,
     plot_metric,
     plot_pr_curve,
     recall_at_100p,
@@ -120,6 +119,7 @@ for dataset_name in args.datasets:
         results_id = method_name + "_" + dataset_name
         method = get_method(method_name)
         method.load_descriptors(ds.name)
+
         all_methods.append(method)
         
         table_data["descriptor_bytes"] = method.query_desc["query_descriptors"].nbytes / method.query_desc["query_descriptors"].shape[0]
@@ -184,13 +184,12 @@ for dataset_name in args.datasets:
             )
             table_data["recall@10"] = recallat10[method.name]
             table_data["dataset"] = dataset_name
-
         df.loc[results_id] = table_data
 
     if "prcurve" in args.metrics:
         plot_pr_curve(
             methods=all_methods,
-            ground_truth=ground_truth
+            ground_truth=ground_truth,
             show=False,
             title="PR Curve for " + ds.name + " partition: " + args.partition,
             dataset_name=ds.name,

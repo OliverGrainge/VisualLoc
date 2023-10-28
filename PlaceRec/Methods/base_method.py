@@ -285,7 +285,8 @@ class BaseFunctionality(BaseTechnique):
             "rb",
         ) as f:
             self.map_desc = pickle.load(f)
-            # self.set_map(self.map_desc)
+            self.set_map(self.map_desc)
+
 
     def set_device(self, device: str) -> None:
         """
