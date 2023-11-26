@@ -147,15 +147,18 @@ class Nordlands(BaseDataset):
         )
         return dataloader
 
-    def ground_truth(self, partition: str, gt_type: str) -> np.ndarray:
-        query_paths = self.query_partition(partition)
-        map_paths = self.map_partition(partition)
-        query_idx = np.array([image_idx(img) for img in query_paths])
-        map_idx = np.array([image_idx(img) for img in map_paths])
-        ground_truth = map_idx[:, np.newaxis] == query_idx
+    def ground_truth(self, partition: str) -> np.ndarray:
+        query_images = self.query_partition(partition=partition)
+        map_images = self.map_partition(partition)
 
-        # this if statement is very slow for the huge ground truth!
-        # maybe comment out if trying to run tests fast.
-        if gt_type == "soft":
-            ground_truth = convolve2d(ground_truth.astype(int), np.ones((15, 1), "int"), mode="same").astype("bool")
+        query_images = [img.split('/')[-1] for img in query_images]
+        map_images = [img.split('/')[-1] for img in map_images]
+
+        # Create a dictionary mapping image names to a list of their indices in map_images
+        map_dict = {}
+        for idx, img in enumerate(map_images):
+            map_dict.setdefault(img, []).append(idx)
+
+        # Get the indices using the dictionary
+        ground_truth = [map_dict.get(query, []) for query in query_images]
         return ground_truth
