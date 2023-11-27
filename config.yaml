@@ -1,5 +1,6 @@
 
 
+
 eval: 
   datasets: 
     - "gardenspointwalking"
@@ -57,7 +58,8 @@ train:
   horizontal_flip: None 
   random_resized_crop: 0
   random_rotation: 0
-  datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
   dataset_name: "pitts30k"
   save_dir: "default"
 

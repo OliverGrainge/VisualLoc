@@ -7,6 +7,17 @@ import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 
 
+from PlaceRec.Methods import NetVLAD 
+from PlaceRec.Datasets import Nordlands, ESSEX3IN1
+
+ds = Nordlands()
+
+dl = ds.query_images_loader("test")
+
+for batch in dl:
+    print(batch.shape)
+
+
 """
 # MNIST Data Module
 class MNISTDataModule(pl.LightningDataModule):

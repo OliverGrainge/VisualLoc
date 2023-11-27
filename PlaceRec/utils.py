@@ -61,6 +61,10 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import GardensPointWalking
 
         dataset = GardensPointWalking()
+    elif name == "pitts30k":
+        from PlaceRec.Datasets import Pitts30k
+
+        dataset = Pitts30k()
     elif name == "stlucia_small":
         from PlaceRec.Datasets import StLucia_small
 

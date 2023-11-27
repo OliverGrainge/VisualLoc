@@ -54,19 +54,9 @@ class SFU(BaseDataset):
         partition: str,
         preprocess: torchvision.transforms.transforms.Compose = None,
     ) -> np.ndarray:
-        size = len(self.query_paths)
 
         # get the required partition of the dataset
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in paths])
@@ -74,7 +64,7 @@ class SFU(BaseDataset):
             imgs = np.array([np.array(Image.open(pth)) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
 
-    def map_images(self, preprocess: torchvision.transforms.transforms.Compose = None):
+    def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None):
         if preprocess == None:
             return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
         else:
@@ -90,19 +80,8 @@ class SFU(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        size = len(self.query_paths)
 
-        # get the required partition of the dataset
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
+        paths = self.query_partition(partition)
 
         # build the dataloader
         dataset = ImageDataset(paths, preprocess=preprocess)
@@ -136,7 +115,7 @@ class SFU(BaseDataset):
         return dataloader
 
 
-    def ground_truth(self, partition: str) -> np.ndarray:
+    def ground_truth(self, partition: str) -> list:
         query_images = self.query_partition(partition=partition)
         map_images = self.map_partition(partition)
 
