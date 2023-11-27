@@ -6,3 +6,5 @@ from .nordlands import Nordlands
 from .sfu import SFU
 from .stlucia_small import StLucia_small
 from .pitts30k import Pitts30k
+from .msls import MSLS
+from .stlucia_large import StLucia_large

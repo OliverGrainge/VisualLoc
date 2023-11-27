@@ -65,6 +65,14 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import Pitts30k
 
         dataset = Pitts30k()
+    elif name == "msls":
+        from PlaceRec.Datasets import MSLS
+
+        dataset = MSLS()
+    elif name == "stlucia_large":
+        from PlaceRec.Datasets import StLucia_large
+
+        dataset = StLucia_large()
     elif name == "stlucia_small":
         from PlaceRec.Datasets import StLucia_small
 

@@ -20,6 +20,9 @@ parser.add_argument(
         "stlucia_small",
         "essex3in1",
         "nordlands",
+        "pitts30k",
+        "stlucia_large",
+        "msls"
     ),
     help="specify one of the datasets from PlaceRec.Datasets",
     type=str,
