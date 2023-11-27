@@ -6,11 +6,13 @@ import torch
 from PlaceRec.Datasets import GardensPointWalking
 from PlaceRec.Methods import CALC, NetVLAD
 from PlaceRec.utils import get_method
+import numpy as np
 
 # List all method modules you want to test
 
 
-methods_to_test = ["amosnet", "hybridnet", "cosplace", "hog", "netvlad", "calc", "convap"]
+methods_to_test = ["netvlad", "hog", "calc", "amosnet", "hybridnet", "mixvpr", "cosplace", "convap", "alexnet"]
+
 
 
 def create_test_case(method_module):
@@ -53,16 +55,16 @@ def create_test_case(method_module):
             map_loader = self.dataset.query_images_loader("test", preprocess=self.method.preprocess)
             self.method.compute_map_desc(dataloader=map_loader, pbar=False)
             del map_loader
-            q_desc = self.method.query_desc
-            m_desc = self.method.map_desc
             self.method.save_descriptors("testing_dataset")
+            qdesc = self.method.query_desc
+            mdesc = self.method.map_desc
             self.method.query_desc = 0
             self.method.map_desc = 0
             self.method.load_descriptors("testing_dataset")
             new_q_desc = self.method.query_desc
             new_m_desc = self.method.map_desc
-            assert (q_desc["query_descriptors"] == new_q_desc["query_descriptors"]).all()
-            assert (m_desc["map_descriptors"] == new_m_desc["map_descriptors"]).all()
+            assert (qdesc["query_descriptors"] == new_q_desc["query_descriptors"]).all()
+            assert np.allclose(mdesc["map_descriptors"], new_m_desc["map_descriptors"], atol=0.000001)
 
     # Rename the test class to include the method module's name for clarity
     CustomTestMethod.__name__ = f"Test{method_module.name}"

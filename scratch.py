@@ -7,15 +7,40 @@ import pytorch_lightning as pl
 from pytorch_lightning import Trainer
 
 
-from PlaceRec.Methods import NetVLAD 
-from PlaceRec.Datasets import Nordlands, ESSEX3IN1
+from PlaceRec.Methods import AmosNet 
+from PlaceRec.Datasets import StLucia_small
 
-ds = Nordlands()
+method = AmosNet()
+ds = StLucia_small()
+ql = ds.query_images_loader("test", preprocess=method.preprocess)
+ml = ds.map_images_loader("test", preprocess=method.preprocess)
 
-dl = ds.query_images_loader("test")
+method.compute_map_desc(dataloader=ml)
+method.compute_query_desc(dataloader=ql)
 
-for batch in dl:
-    print(batch.shape)
+method.save_descriptors("testing_dataset")
+print(method.map_desc["map_descriptors"][0])
+
+mdesc = method.map_desc
+method.map_desc = 0
+
+print(method.map_desc)
+method.load_descriptors("testing_dataset")
+
+print(method.map_desc["map_descriptors"][0])
+
+print((mdesc["map_descriptors"] == method.map_desc["map_descriptors"]))
+
+print("============")
+
+import numpy as np
+print(np.max(np.abs(mdesc["map_descriptors"] - method.map_desc["map_descriptors"])))
+
+print(np.allclose(mdesc["map_descriptors"], method.map_desc["map_descriptors"], atol=0.000001))
+
+assert (mdesc["map_descriptors"] == method.map_desc["map_descriptors"]).all()
+
+
 
 
 """

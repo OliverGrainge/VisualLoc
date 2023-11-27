@@ -15,6 +15,7 @@ alexnet_directory = os.path.dirname(os.path.abspath(__file__))
 
 class AlexNet(BaseFunctionality):
     def __init__(self):
+        super().__init__()
         # Name of technique
         self.name = "alexnet"
 
