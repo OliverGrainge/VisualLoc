@@ -1,125 +1,255 @@
-import torch
-import torch.nn.functional as F
-from torch.utils.data import DataLoader, random_split
-from torchvision.datasets import MNIST
-from torchvision import transforms
-import pytorch_lightning as pl
-from pytorch_lightning import Trainer
+import logging
+import os
+from glob import glob
+from os.path import join
 
-
-from PlaceRec.Methods import AmosNet 
-from PlaceRec.Datasets import StLucia_small
-
-method = AmosNet()
-ds = StLucia_small()
-ql = ds.query_images_loader("test", preprocess=method.preprocess)
-ml = ds.map_images_loader("test", preprocess=method.preprocess)
-
-method.compute_map_desc(dataloader=ml)
-method.compute_query_desc(dataloader=ql)
-
-method.save_descriptors("testing_dataset")
-print(method.map_desc["map_descriptors"][0])
-
-mdesc = method.map_desc
-method.map_desc = 0
-
-print(method.map_desc)
-method.load_descriptors("testing_dataset")
-
-print(method.map_desc["map_descriptors"][0])
-
-print((mdesc["map_descriptors"] == method.map_desc["map_descriptors"]))
-
-print("============")
-
+import faiss
 import numpy as np
-print(np.max(np.abs(mdesc["map_descriptors"] - method.map_desc["map_descriptors"])))
+import torch
+import torch.utils.data as data
+import torchvision.transforms as T
+from PIL import Image
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataset import Subset
+from tqdm import tqdm
+from PlaceRec.utils import ImageDataset
+from torchvision.transforms import v2
+import yaml
+import argparse
 
-print(np.allclose(mdesc["map_descriptors"], method.map_desc["map_descriptors"], atol=0.000001))
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
-assert (mdesc["map_descriptors"] == method.map_desc["map_descriptors"]).all()
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    "--resize",
+    type=tuple,
+    default=config["train"]["resize"],
+    help="Choose the number of processing the threads for the dataloader",
+)
 
 
 
+parser.add_argument(
+    "--dataset_name",
+    type=str,
+    default=config["train"]["dataset_name"],
+    help="Choose the number of processing the threads for the dataloader",
+)
 
-"""
-# MNIST Data Module
-class MNISTDataModule(pl.LightningDataModule):
-    def __init__(self, batch_size=64):
+parser.add_argument(
+    "--datasets_folder",
+    type=str,
+    default=config["train"]["datasets_folder"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--val_positive_dist_threshold",
+    type=int,
+    default=config["train"]["val_positive_dist_threshold"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--mining",
+    type=str,
+    default=config["train"]["mining"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+
+parser.add_argument(
+    "--neg_samples_num",
+    type=int,
+    default=config["train"]["neg_samples_num"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+parser.add_argument(
+    "--infer_batch_size",
+    type=int,
+    default=config["train"]["infer_batch_size"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--cache_refresh_rate",
+    type=int,
+    default=config["train"]["cache_refresh_rate"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+parser.add_argument(
+    "--device",
+    type=str,
+    default=config["train"]["device"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+parser.add_argument(
+    "--negs_num_per_query",
+    type=str,
+    default=config["train"]["negs_num_per_query"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+args = parser.parse_args()
+
+class BaseDataset(data.Dataset):
+    """Dataset with images from database and queries, used for inference (testing and building cache)."""
+
+    def __init__(self, args, split="train"):
         super().__init__()
-        self.batch_size = batch_size
-        self.transform = transforms.ToTensor()
+        self.args = args
+        self.dataset_name = args.dataset_name
 
-    def prepare_data(self):
-        # Download only once
-        MNIST('', train=True, download=True)
-        MNIST('', train=False, download=True)
+        self.test_preprocess = v2.Compose([
+            v2.ToImage(),
+            v2.ToDtype(torch.float32, scale=True),
+            v2.Resize(args.resize),
+            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
 
-    def setup(self, stage=None):
-        # Split and transform the dataset
-        if stage == 'fit' or stage is None:
-            mnist_full = MNIST('', train=True, transform=self.transform)
-            self.mnist_train, self.mnist_val = random_split(mnist_full, [55000, 5000])
-        if stage == 'test' or stage is None:
-            self.mnist_test = MNIST('', train=False, transform=self.transform)
+        self.dataset_folder = join(args.datasets_folder, args.dataset_name, "images", split)
+        if not os.path.exists(self.dataset_folder):
+            raise FileNotFoundError(f"Folder {self.dataset_folder} does not exist")
 
-    def train_dataloader(self):
-        return DataLoader(self.mnist_train, batch_size=self.batch_size)
+        self.resize = args.resize
 
-    def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size=self.batch_size)
+        #### Read paths and UTM coordinates for all images.
+        database_folder = join(self.dataset_folder, "database")
+        queries_folder = join(self.dataset_folder, "queries")
 
-    def test_dataloader(self):
-        return DataLoader(self.mnist_test, batch_size=self.batch_size)
+        if not os.path.exists(database_folder):
+            raise FileNotFoundError(f"Folder {database_folder} does not exist")
+        if not os.path.exists(queries_folder):
+            raise FileNotFoundError(f"Folder {queries_folder} does not exist")
 
-    def on_epoch_end(self):
-        # Call on_epoch_end of DataModule
-        #self.trainer.datamodule.on_epoch_end()
-        # Other actions for the end of epoch in the model
-        print("Epoch ended in Model")
-        raise Exception
+        self.database_paths = sorted(glob(join(database_folder, "**", "*.jpg"), recursive=True))
+        self.queries_paths = sorted(glob(join(queries_folder, "**", "*.jpg"), recursive=True))
 
-# Define the model
-class MNISTModel(pl.LightningModule):
-    def __init__(self):
-        super().__init__()
-        self.layer1 = torch.nn.Linear(28 * 28, 128)
-        self.layer2 = torch.nn.Linear(128, 256)
-        self.layer3 = torch.nn.Linear(256, 10)
+        # The format must be path/to/file/@utm_easting@utm_northing@...@.jpg
+        self.database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]).astype(float)
+        self.queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]).astype(float)
 
-    def forward(self, x):
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.layer1(x))
-        x = F.relu(self.layer2(x))
-        return F.log_softmax(self.layer3(x), dim=1)
+        # Find soft_positives_per_query, which are within val_positive_dist_threshold (deafult 25 meters)
+        knn = NearestNeighbors(n_jobs=-1)
+        knn.fit(self.database_utms)
+        self.soft_positives_per_query = knn.radius_neighbors(
+            self.queries_utms,
+            radius=args.val_positive_dist_threshold,
+            return_distance=False,
+        )
 
-    def training_step(self, batch, batch_idx):
-        x, y = batch
-        logits = self(x)
-        loss = F.nll_loss(logits, y)
-        return loss
+        self.all_images_paths = list(self.database_paths) + list(self.queries_paths)
+        self.queries_paths = list(self.queries_paths)
+        self.database_paths = list(self.database_paths)
+        self.database_num = len(self.database_paths)
+        self.queries_num = len(self.queries_paths)
 
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.parameters(), lr=1e-3)
+    def __len__(self):
+        return self.queries_num
 
-    def on_train_epoch_end(self):
-        # Call on_epoch_end of DataModule
-        #self.trainer.datamodule.on_epoch_end()
-        # Other actions for the end of epoch in the model
-        train_dataset = self.trainer.train_dataloader.dataset
-        print(f"Epoch ended in Model {train_dataset.__len__()}")
+    def __getitem__(self, idx):
+        return Image.open(self.queries_paths[idx]).convert("RGB"), idx
 
 
-# Use the DataModule
-batch_size = 64
-mnist_dm = MNISTDataModule(batch_size=batch_size)
 
-# Model
-model = MNISTModel()
+class TripletDataset(BaseDataset): 
+    def __init__(self, args, test_preprocess, train_preprocess, split="train"):
+        super().__init__(args, split=split)
 
-# Train
-trainer = pl.Trainer(max_epochs=5)
-trainer.fit(model, mnist_dm)
+        self.test_preprocess = test_preprocess
+        self.train_preprocess = train_preprocess
 
-"""
+        self.triplets = []
+        self.query_desc = []
+        self.map_desc = []
+
+    def __len__(self):
+        return len(self.triplet_cache)
+
+    def __getitem__(self, idx):
+        triplet = self.triplets[idx]
+        anchor = self.train_preprocess(Image.open(triplet[0]).convert("RGB"))
+        positive = self.train_preprocess(Image.open(triplet[1]).convert("RGB"))
+        negatives = [self.train_preprocess(Image.open(pth).convert("RGB")) for pth in triplet[2:]]
+        return anchor, positive, negatives
+
+    def mine_triplets(self, model):
+        if self.args.mining == "partial":
+            self.cache = self.partial_mine(model)
+        elif self.args.mining == "random":
+            self.cache = self.random_mine(model)
+        elif self.args.mining == "full":
+            raise NotImplementedError
+
+    def partial_mine(self, model):
+        model.eval()
+        model.to(self.args.device)
+        sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
+        sample_query_paths = [self.queries_paths[idx] for idx in sample_query_indexes]
+
+        soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
+        sample_negatives_per_query = [np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=10) for i in range(len(soft_positives_per_query))]
+        sample_negatives_per_query = np.array(sample_negatives_per_query).flatten()
+        sample_negatives_per_query_paths = [self.database_paths[idx] for idx in sample_negatives_per_query]
+        
+        negatives_dataset = ImageDataset(sample_negatives_per_query_paths, preprocess=self.test_preprocess)
+        negatives_dataloader = DataLoader(negatives_dataset, batch_size=self.args.infer_batch_size)
+        queries_dataset = ImageDataset(sample_query_paths, preprocess=self.test_preprocess)
+        queries_dataloader = DataLoader(queries_dataset, batch_size=self.args.infer_batch_size)
+
+        with torch.no_grad():
+            negatives_desc = torch.vstack([model(batch.to(self.args.device)).detach().cpu() for batch in negatives_dataloader]).numpy().astype(np.float32)
+            queries_desc = torch.vstack([model(batch.to(self.args.device)).detach().cpu() for batch in queries_dataloader]).numpy().astype(np.float32)
+        
+        faiss.normalize_L2(negatives_desc)
+        index = faiss.IndexFlatIP(negatives_desc.shape[1])
+        index.add(negatives_desc)
+        faiss.normalize_L2(queries_desc)
+        _, similarities = index.search(queries_desc, self.args.neg_samples_num)
+
+        hard_negative_sample_idxs = np.array([np.random.choice(np.arange(similarities.shape[1]), size=self.args.negs_num_per_query, replace=False) for _ in range(similarities.shape[0])])
+        hard_negatives = np.array([similarities[np.arange(similarities.shape[0]), hard_neg] for hard_neg in hard_negative_sample_idxs.transpose()]).transpose()
+
+        self.triplets = [[self.queries_paths[sample_query_indexes[i]],
+                          self.database_paths[soft_positives_per_query[i]]] + 
+                          [self.database_paths[hard_negatives[i, j]] for j in range(self.args.negs_num_per_query)] for i in range(self.args.cache_refresh_rate)]
+
+
+
+    def random_mine(self, model):
+        # sample a random subset of queries from the queries
+        sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
+        # sample a random 
+        soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
+        negatives = np.array([np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=self.args.negs_num_per_query) for i in range(len(soft_positives_per_query))])
+        self.triplets = [[self.queries_paths[sample_query_indexes[i]],
+                          self.database_paths[soft_positives_per_query[i]]] + 
+                          [self.database_paths[negatives[i][j]] for j in range(self.args.negs_num_per_query)] for i in range(self.args.cache_refresh_rate)]
+
+
+
+
+
+
+from PlaceRec.Methods import AmosNet
+method = AmosNet()
+model = method.model
+ds = TripletDataset(args, method.preprocess, method.preprocess, split="test")
+ds.random_mine(model)
+
+anchor, positive, negative = ds.__getitem__(2)
+
+print(type(negative))
+print(len(negative))
+

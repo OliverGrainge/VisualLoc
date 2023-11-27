@@ -1,1 +1,1 @@
-from .constrastive_trainer import ConstrastiveTrainer
+from .constrastive_module import ConstrastiveTrainer

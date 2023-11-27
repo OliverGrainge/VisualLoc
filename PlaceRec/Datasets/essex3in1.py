@@ -137,7 +137,7 @@ class ESSEX3IN1(BaseDataset):
         )
         return dataloader
 
-    def ground_truth(self, partition: str) -> np.ndarray:
+    def ground_truth(self, partition: str) -> list:
         query_images = self.query_partition(partition=partition)
         map_images = self.map_partition(partition)
 

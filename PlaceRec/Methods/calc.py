@@ -97,6 +97,6 @@ class CALC(BaseModelWrapper):
 
         if self.device == "mps":
             self.device = "cpu"
-
+        
         self.model.to(self.device)
         self.model.eval()

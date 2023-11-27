@@ -29,17 +29,16 @@ train:
   method: "netvlad"
   seed: 0
   train_batch_size: 2
-  infer_batch_size: 1
+  infer_batch_size: 24
   criterion: "triplet" # either triplet, sare_ind, sare_joint 
   margin: 0.1
   epochs_num: 1000
   patience: 3
   lr: 0.00001 # learning rate
   optim: adam", #either adam or sgd 
-  cache_refresh_rate: 1000
-  queries_per_epoch: 5000
-  negs_num_per_query: 10
-  neg_samples_num: 1000
+  cache_refresh_rate: 100
+  negs_num_per_query: 3
+  neg_samples_num: 250
   mining: "partial" # either partial full random or msls_weighted
   resume: None #path to load checkpoint from 
   device: "cpu" # either cpu or cuda 
@@ -49,7 +48,7 @@ train:
   val_positive_dist_threshold: 25
   train_positives_dist_threshold: 25
   recall_values: [1, 5, 10, 20] # recalls to be computed
-  
+  split: "test"
   brightness: 0
   contrast: 0
   saturation: 0
