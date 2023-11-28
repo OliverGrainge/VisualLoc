@@ -17,6 +17,9 @@ from PlaceRec.utils import ImageDataset
 from torchvision.transforms import v2
 import yaml
 import argparse
+import pytorch_lightning as pl
+from torch import optim
+import torch.nn as nn
 
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -95,8 +98,31 @@ parser.add_argument(
 
 parser.add_argument(
     "--negs_num_per_query",
-    type=str,
+    type=int,
     default=config["train"]["negs_num_per_query"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--margin",
+    type=float,
+    default=config["train"]["margin"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--train_batch_size",
+    type=int,
+    default=2,
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+parser.add_argument(
+    "--learning_rate",
+    type=float,
+    default=0.0001,
     help="Choose the number of processing the threads for the dataloader",
 )
 
@@ -174,8 +200,10 @@ class TripletDataset(BaseDataset):
         self.query_desc = []
         self.map_desc = []
 
+        self.random_mine(None)
+
     def __len__(self):
-        return len(self.triplet_cache)
+        return len(self.triplets)
 
     def __getitem__(self, idx):
         triplet = self.triplets[idx]
@@ -253,3 +281,104 @@ anchor, positive, negative = ds.__getitem__(2)
 print(type(negative))
 print(len(negative))
 
+
+
+class TripletDataModule(pl.LightningDataModule):
+    def __init__(self, args, test_transform, train_transform=None):
+        super().__init__()
+        self.args = args
+        self.test_transform = test_transform
+        if train_transform is not None:
+            self.train_transform = train_transform 
+        else:
+            self.train_transform = test_transform
+
+
+    def setup(self, stage=None):
+        # Split data into train, validate, and test sets
+        self.train_dataset = TripletDataset(args, self.test_transform, self.train_transform, split="train")
+        self.test_dataset = TripletDataset(args, self.test_transform, self.train_transform, split="test")
+
+    def train_dataloader(self):
+        return DataLoader(self.train_dataset, batch_size=self.args.train_batch_size)
+
+    def val_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size)
+
+    def test_dataloader(self):
+        return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size)
+
+
+
+
+class TripletModule(pl.LightningModule):
+    def __init__(self, args, model, datamodule):
+        super().__init__()
+        self.args = args
+        self.model = model
+        self.datamodule = datamodule
+        self.loss_fn = nn.TripletMarginLoss(args.margin)
+
+    def on_train_start(self):
+        self.datamodule.train_dataset.mine_triplets(self.model)
+        self.datamodule.test_dataset.mine_triplets(self.model)
+
+    def on_train_epoch_end(self):
+        self.datamodule.train_dataset.mine_triplets(self.model)
+
+    def forward(self, x):
+        return self.model(x)
+
+    def training_step(self, batch, batch_idx):
+        anchor, positive, negatives = batch 
+
+        all_images = torch.vstack([anchor] + [positive] + negatives)
+        all_desc = self.model(all_images)
+        anchor_desc = all_desc[0]
+        positive_desc = all_desc[1]
+        negatives_desc = all_desc[2:]
+
+        loss = 0
+        for negative in negatives_desc:
+            loss += self.loss_fn(anchor_desc, positive_desc, negative)
+        self.log("train_loss", loss)
+        return loss 
+
+    def validation_step(self, batch, batch_idx):
+        anchor, positive, negatives = batch 
+        all_images = torch.vstack([anchor] + [positive] + negatives)
+        all_desc = self.model(all_images)
+        anchor_desc = all_desc[0]
+        positive_desc = all_desc[1]
+        negatives_desc = all_desc[2:]
+
+        loss = 0
+        for negative in negatives_desc:
+            loss += self.loss_fn(anchor_desc, positive_desc, negative)
+        self.log("val_loss", loss)
+        return loss 
+
+    def test_tep(self, batch, batch_idx):
+        
+
+    def configure_optimizers(self):
+        optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate)
+
+
+
+
+if __name__ == "__main__":
+    method = AmosNet()
+    model = method.model
+    tripletdatamodule = TripletDataModule(args, method.preprocess)
+    tripletmodule = TripletModule(args, model, tripletdatamodule)
+
+    trainer = pl.Trainer(
+        max_epochs=10,
+        accelerator="cpu")
+
+    trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+
+
+
+    

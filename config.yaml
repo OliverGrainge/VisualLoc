@@ -44,19 +44,9 @@ train:
   device: "cpu" # either cpu or cuda 
   num_workers: 0 # number of workers for the dataloader
   resize: [480, 640] # image resolution 
-  test_method: "hard_resize" # post processing method for prediction refinement
   val_positive_dist_threshold: 25
   train_positives_dist_threshold: 25
-  recall_values: [1, 5, 10, 20] # recalls to be computed
   split: "test"
-  brightness: 0
-  contrast: 0
-  saturation: 0
-  hue: 0
-  rand_perspective: 0
-  horizontal_flip: None 
-  random_resized_crop: 0
-  random_rotation: 0
   #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
   datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
   dataset_name: "pitts30k"
