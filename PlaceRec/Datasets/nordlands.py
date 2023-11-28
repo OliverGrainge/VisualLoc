@@ -151,8 +151,8 @@ class Nordlands(BaseDataset):
         query_images = self.query_partition(partition=partition)
         map_images = self.map_partition(partition)
 
-        query_images = [img.split('/')[-1] for img in query_images]
-        map_images = [img.split('/')[-1] for img in map_images]
+        query_images = [img.split("/")[-1] for img in query_images]
+        map_images = [img.split("/")[-1] for img in map_images]
 
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}

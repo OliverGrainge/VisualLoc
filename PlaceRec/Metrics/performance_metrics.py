@@ -36,7 +36,7 @@ def measure_memory(args, method, jit=True):
         if isinstance(model, nn.Module):
             example_input = torch.randn(args.input_size).numpy().astype(np.float32)
             example_input = method.preprocess(example_input).to(args.device)
-            traced_model = torch.jit.trace(model, example_input[None,:])
+            traced_model = torch.jit.trace(model, example_input[None, :])
             model = torch.jit.script(traced_model)
         torch.jit.save(model, "tmp_model.pt")
         size_in_bytes = os.path.getsize("tmp_model.pt")

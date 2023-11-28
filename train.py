@@ -1,176 +1,175 @@
-import argparse
+import logging
+import os
+from glob import glob
+from os.path import join
 
+import faiss
+import numpy as np
+import torch
+import torch.utils.data as data
+import torchvision.transforms as T
+from PIL import Image
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataset import Subset
+from tqdm import tqdm
+from PlaceRec.utils import ImageDataset, get_method
+from torchvision.transforms import v2
 import yaml
-
-from PlaceRec.Training import ConstrastiveTrainer
-from PlaceRec.utils import get_method
+import argparse
+import pytorch_lightning as pl
+from torch import optim
+import torch.nn as nn
+from PlaceRec.Training import TripletModule, TripletDataModule
 
 with open("config.yaml", "r") as file:
-    args = yaml.safe_load(file)
+    config = yaml.safe_load(file)
 
-train_args = args["train"]
+parser = argparse.ArgumentParser()
 
-parser = argparse.ArgumentParser(
-    description="Training Visual Geolocalization",
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-)
+
 parser.add_argument(
-    "--method",
+    "--dataset_name",
     type=str,
-    default=train_args["train"]["method"],
-    help="The VPR method to train",
+    default=config["train"]["dataset_name"],
+    help="Choose the number of processing the threads for the dataloader",
 )
-# Training parameters
+
 parser.add_argument(
-    "--train_batch_size",
+    "--datasets_folder",
+    type=str,
+    default=config["train"]["datasets_folder"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--val_positive_dist_threshold",
     type=int,
-    default=train_args["train_batch_size"],
-    help="Number of triplets (query, pos, negs) in a batch. Each triplet consists of 12 images",
+    default=config["train"]["val_positive_dist_threshold"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--mining",
+    type=str,
+    default=config["train"]["mining"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+
+parser.add_argument(
+    "--neg_samples_num",
+    type=int,
+    default=config["train"]["neg_samples_num"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
 parser.add_argument(
     "--infer_batch_size",
     type=int,
-    default=train_args["infer_batch_size"],
-    help="Batch size for inference (caching and testing)",
+    default=config["train"]["infer_batch_size"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
-parser.add_argument(
-    "--criterion",
-    type=str,
-    default=train_args["criterion"],
-    help="loss to be used",
-    choices=["triplet", "sare_ind", "sare_joint"],
-)
-
-parser.add_argument("--margin", type=float, default=train_args["margin"], help="margin for the triplet loss")
-
-parser.add_argument("--epochs_num", type=int, default=train_args["epochs_num"], help="number of epochs to train for")
-
-parser.add_argument("--patience", type=int, default=train_args["patience"])
-
-parser.add_argument("--lr", type=float, default=train_args["lr"], help="_")
-
-parser.add_argument("--optim", type=str, default=train_args["optim"], help="_", choices=["adam", "sgd"])
 
 parser.add_argument(
     "--cache_refresh_rate",
     type=int,
-    default=train_args["cache_refresh_rate"],
-    help="How often to refresh cache, in number of queries",
+    default=config["train"]["cache_refresh_rate"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
 parser.add_argument(
-    "--queries_per_epoch",
-    type=int,
-    default=train_args["queries_per_epoch"],
-    help="How many queries to consider for one epoch. Must be multiple of cache_refresh_rate",
+    "--device",
+    type=str,
+    default=config["train"]["device"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
 parser.add_argument(
     "--negs_num_per_query",
     type=int,
-    default=train_args["negs_num_per_query"],
-    help="How many negatives to consider per each query in the loss",
+    default=config["train"]["negs_num_per_query"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
+
 parser.add_argument(
-    "--neg_samples_num",
+    "--margin",
+    type=float,
+    default=config["train"]["margin"],
+    help="Choose the number of processing the threads for the dataloader",
+)
+
+
+parser.add_argument(
+    "--train_batch_size",
     type=int,
-    default=train_args["neg_samples_num"],
-    help="How many negatives to use to compute the hardest ones",
+    default=config["train"]["train_batch_size"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
 parser.add_argument(
-    "--mining",
-    type=str,
-    default=train_args["mining"],
-    choices=["partial", "full", "random", "msls_weighted"],
+    "--learning_rate",
+    type=float,
+    default=config["train"]["learning_rate"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
-# Initialization parameters
-parser.add_argument("--seed", type=int, default=train_args["seed"])
-
 parser.add_argument(
-    "--resume",
-    type=str,
-    default=train_args["resume"],
-    help="Path to load checkpoint from, for resuming training or testing.",
-)
-# Other parameters
-parser.add_argument("--device", type=str, default=train_args["device"], choices=["cuda", "cpu"])
-
-parser.add_argument("--num_workers", type=int, default=train_args["num_workers"], help="num_workers for all dataloaders")
-
-parser.add_argument(
-    "--resize",
+    "--num_workers",
     type=int,
-    default=train_args["resize"],
-    nargs=2,
-    help="Resizing shape for images (HxW).",
+    default=config["train"]["num_workers"],
+    help="Choose the number of processing the threads for the dataloader",
 )
 
 parser.add_argument(
-    "--test_method",
-    type=str,
-    default=train_args["test_method"],
-    choices=[
-        "hard_resize",
-        "single_query",
-        "central_crop",
-        "five_crops",
-        "nearest_crop",
-        "maj_voting",
-    ],
-    help="This includes pre/post-processing methods and prediction refinement",
-)
-
-parser.add_argument("--val_positive_dist_threshold", type=int, default=train_args["val_positive_dist_threshold"], help="_")
-
-parser.add_argument("--train_positives_dist_threshold", type=int, default=train_args["train_positives_dist_threshold"], help="_")
-
-parser.add_argument(
-    "--recall_values",
+    "--patience",
     type=int,
-    default=train_args["recall_values"],
-    nargs="+",
-    help="Recalls to be computed, such as R@5.",
-)
-# Data augmentation parameters
-parser.add_argument("--brightness", type=float, default=train_args["brightness"], help="_")
-parser.add_argument("--contrast", type=float, default=train_args["contrast"], help="_")
-parser.add_argument("--saturation", type=float, default=train_args["saturation"], help="_")
-parser.add_argument("--hue", type=float, default=train_args["hue"], help="_")
-parser.add_argument("--rand_perspective", type=float, default=train_args["rand_perspective"], help="_")
-parser.add_argument("--horizontal_flip", action="store_true", help="_")
-parser.add_argument("--random_resized_crop", type=float, default=train_args["random_resized_crop"], help="_")
-parser.add_argument("--random_rotation", type=float, default=train_args["random_rotation"], help="_")
-# Paths parameters
+    default=config["train"]["patience"],
+    help="Choose the early stopping patience number"
+    )
+
 parser.add_argument(
-    "--datasets_folder",
-    type=str,
-    default=train_args["datasets_folder"],
-    help="Path with all datasets",
+    "--seed",
+    type=int,
+    default=config["train"]["seed"],
+    help="seed the training run"
 )
 
 parser.add_argument(
-    "--dataset_name",
+    "--training_type",
     type=str,
-    default=train_args["dataset_name"],
-    help="Relative path of the dataset",
+    default=config["train"]["training_type"],
+    help="seed the training run",
 )
 
 parser.add_argument(
-    "--save_dir",
+    "--method",
     type=str,
-    default=train_args["save_dir"],
-    help="Folder name of the current run (saved in ./logs/)",
+    default=config["train"]["method"],
+    help="seed the training run",
 )
 
 args = parser.parse_args()
 
-##################################### Training ###################
+pl.seed_everything(args.seed)
 
-method = get_method(args.method)
-trainer = ConstrastiveTrainer(args, method)
-trainer.fit()
+if __name__ == "__main__":
+    torch.set_float32_matmul_precision('medium')
+    method = get_method(args.method)
+    model = method.model
+    tripletdatamodule = TripletDataModule(args, method.preprocess)
+    tripletmodule = TripletModule(args, model, tripletdatamodule)
+
+    trainer = pl.Trainer(
+        max_epochs=2,
+        accelerator="gpu")
+    trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+    print("recall@5: ",tripletmodule.recallAtN(1))
+    #
+
+

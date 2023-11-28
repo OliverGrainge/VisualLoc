@@ -1,20 +1,19 @@
 import os
 import zipfile
+from glob import glob
+from os.path import join
 
 import numpy as np
 import torch
 import torchvision
+import yaml
 from PIL import Image
 from scipy.signal import convolve2d
-from torch.utils.data import DataLoader
-import yaml
 from sklearn.neighbors import NearestNeighbors
-from glob import glob
-from torch.utils.data import Dataset 
-from .base_dataset import BaseDataset
-from ..utils import ImageDataset
-from os.path import join
+from torch.utils.data import DataLoader, Dataset
 
+from ..utils import ImageDataset
+from .base_dataset import BaseDataset
 
 with open(join(os.getcwd(), "config.yaml"), "r") as file:
     config = yaml.safe_load(file)
@@ -66,16 +65,14 @@ class MSLS(BaseDataset):
         # get the required partition of the dataset
         if partition in ["val", "test"]:
             return self.test_queries_paths
-        else: 
+        else:
             raise Exception("partition must be val or test, train is too large")
-
 
     def query_images(
         self,
         partition: str,
         preprocess: torchvision.transforms.transforms.Compose = None,
     ) -> np.ndarray:
-
         # get the required partition of the dataset
         paths = self.query_partition(partition)
 
@@ -84,7 +81,6 @@ class MSLS(BaseDataset):
         else:
             imgs = np.array([np.array(Image.open(pth)) for pth in paths])
             return torch.stack([preprocess(q) for q in imgs])
-
 
     def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None):
         if partition == "train":
@@ -96,7 +92,6 @@ class MSLS(BaseDataset):
             else:
                 imgs = np.array([np.array(Image.open(pth)) for pth in self.test_database_paths])
                 return torch.stack([preprocess(q) for q in imgs])
-                
 
     def query_images_loader(
         self,
@@ -107,7 +102,6 @@ class MSLS(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
         # get the required partition of the dataset
         paths = self.query_partition(partition)
         # build the dataloader
@@ -120,7 +114,6 @@ class MSLS(BaseDataset):
             num_workers=num_workers,
         )
         return dataloader
-
 
     def map_images_loader(
         self,
@@ -136,9 +129,8 @@ class MSLS(BaseDataset):
             raise Exception("Only test of val partitions available")
         elif partition in ["test", "val"]:
             dataset = ImageDataset(self.test_database_paths, preprocess=preprocess)
-        else: 
+        else:
             raise Exception("partition must be train, test, val or all")
-
 
         dataloader = DataLoader(
             dataset,
@@ -148,7 +140,6 @@ class MSLS(BaseDataset):
             num_workers=num_workers,
         )
         return dataloader
-
 
     def ground_truth(self, partition: str) -> np.ndarray:
         if partition == "train":
@@ -163,6 +154,3 @@ class MSLS(BaseDataset):
 
 if __name__ == "__main__":
     ds = MSLS()
-
-
-

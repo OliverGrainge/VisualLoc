@@ -20,7 +20,6 @@ def create_test_case(dataset_module):
             self.ds = dataset_module
 
         def test_verify_both_setups_run(self):
-
             assert isinstance(self.ds.name, str)
             assert self.ds.name.islower()
 
@@ -103,7 +102,6 @@ def create_test_case(dataset_module):
             Qn = len(self.ds.query_images("val"))
             assert len(gt) == Qn
 
-
         def test_gt_test(self):
             gt = self.ds.ground_truth(partition="test")
             Qn = len(self.ds.query_images("test"))
@@ -113,7 +111,6 @@ def create_test_case(dataset_module):
             gt = self.ds.ground_truth(partition="all")
             Qn = len(self.ds.query_images("all"))
             assert len(gt) == Qn
-
 
         def test_gt_size0(self):
             gt = self.ds.ground_truth(partition="train")

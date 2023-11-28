@@ -45,7 +45,6 @@ def recall_at_100p(
     - AssertionError: If the shapes of the matrices don't match or if other constraints are not satisfied.
     """
 
-
     # get precision-recall curve
     P, R = pr_curve(method=method, ground_truth=ground_truth, n_thresh=n_thresh)
     P = np.array(P)
@@ -55,8 +54,7 @@ def recall_at_100p(
     return R
 
 
-
-def average_precision(method, ground_truth: list, n_thresh: int=100) -> float:
+def average_precision(method, ground_truth: list, n_thresh: int = 100) -> float:
     """
     Compute the average precision (AP) for the given ground truth and similarity scores.
 

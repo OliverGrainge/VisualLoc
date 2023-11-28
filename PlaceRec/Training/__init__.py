@@ -1,1 +1,1 @@
-from .constrastive_module import ConstrastiveTrainer
+from .contrastive import TripletDataModule, TripletModule

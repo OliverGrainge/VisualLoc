@@ -6,8 +6,4 @@ from .performance_metrics import (
     count_params,
     measure_memory,
 )
-from .vpr_metrics import (
-    average_precision,
-    recall_at_100p,
-    recallatk,
-)
+from .vpr_metrics import average_precision, recall_at_100p, recallatk

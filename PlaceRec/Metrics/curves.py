@@ -37,7 +37,7 @@ def pr_curve(method, ground_truth: list, n_thresh=100):
 
 
 def plot_pr_curve(
-    methods: list, 
+    methods: list,
     ground_truth: list,
     n_thresh: int = 100,
     title: str = None,
@@ -74,12 +74,12 @@ def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str
     bars = ax.bar(methods, scores)
     plt.xticks(rotation=45)
     ax.set_title(title, fontsize="16")
-    
+
     # Add legend as text annotation to each bar
     for bar, method, score in zip(bars, methods, scores):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height + 0.02, f'{method}={score:.2f}', ha='center', va='bottom', rotation=0, fontsize=8)
-    
+        ax.text(bar.get_x() + bar.get_width() / 2, height + 0.02, f"{method}={score:.2f}", ha="center", va="bottom", rotation=0, fontsize=8)
+
     pth = os.getcwd() + "/Plots/PlaceRec/" + metric_name
     if not os.path.exists(pth):
         os.makedirs(pth)

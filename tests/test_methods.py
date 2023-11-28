@@ -1,18 +1,17 @@
 import argparse
 import unittest
 
+import numpy as np
 import torch
 
 from PlaceRec.Datasets import GardensPointWalking
 from PlaceRec.Methods import CALC, NetVLAD
 from PlaceRec.utils import get_method
-import numpy as np
 
 # List all method modules you want to test
 
 
 methods_to_test = ["netvlad", "hog", "calc", "amosnet", "hybridnet", "mixvpr", "cosplace", "convap", "alexnet"]
-
 
 
 def create_test_case(method_module):

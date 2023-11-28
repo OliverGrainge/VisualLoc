@@ -287,7 +287,6 @@ class BaseFunctionality(BaseTechnique):
             self.map_desc = pickle.load(f)
             self.set_map(self.map_desc)
 
-
     def set_device(self, device: str) -> None:
         """
         Set the device for the model.

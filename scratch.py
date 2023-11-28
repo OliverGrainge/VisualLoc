@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os
 from glob import glob
@@ -5,21 +6,21 @@ from os.path import join
 
 import faiss
 import numpy as np
+import pytorch_lightning as pl
 import torch
+import torch.nn as nn
 import torch.utils.data as data
 import torchvision.transforms as T
+import yaml
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
+from torch import optim
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
-from tqdm import tqdm
-from PlaceRec.utils import ImageDataset
 from torchvision.transforms import v2
-import yaml
-import argparse
-import pytorch_lightning as pl
-from torch import optim
-import torch.nn as nn
+from tqdm import tqdm
+
+from PlaceRec.utils import ImageDataset, get_method
 
 with open("config.yaml", "r") as file:
     config = yaml.safe_load(file)
@@ -32,7 +33,6 @@ parser.add_argument(
     default=config["train"]["resize"],
     help="Choose the number of processing the threads for the dataloader",
 )
-
 
 
 parser.add_argument(
@@ -64,7 +64,6 @@ parser.add_argument(
     default=config["train"]["mining"],
     help="Choose the number of processing the threads for the dataloader",
 )
-
 
 
 parser.add_argument(
@@ -129,6 +128,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+
 class BaseDataset(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
 
@@ -137,12 +137,14 @@ class BaseDataset(data.Dataset):
         self.args = args
         self.dataset_name = args.dataset_name
 
-        self.test_preprocess = v2.Compose([
-            v2.ToImage(),
-            v2.ToDtype(torch.float32, scale=True),
-            v2.Resize(args.resize),
-            v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+        self.test_preprocess = v2.Compose(
+            [
+                v2.ToImage(),
+                v2.ToDtype(torch.float32, scale=True),
+                v2.Resize(args.resize),
+                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
 
         self.dataset_folder = join(args.datasets_folder, args.dataset_name, "images", split)
         if not os.path.exists(self.dataset_folder):
@@ -188,8 +190,7 @@ class BaseDataset(data.Dataset):
         return Image.open(self.queries_paths[idx]).convert("RGB"), idx
 
 
-
-class TripletDataset(BaseDataset): 
+class TripletDataset(BaseDataset):
     def __init__(self, args, test_preprocess, train_preprocess, split="train"):
         super().__init__(args, split=split)
 
@@ -227,60 +228,74 @@ class TripletDataset(BaseDataset):
         sample_query_paths = [self.queries_paths[idx] for idx in sample_query_indexes]
 
         soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
-        sample_negatives_per_query = [np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=10) for i in range(len(soft_positives_per_query))]
+        sample_negatives_per_query = [
+            np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=10)
+            for i in range(len(soft_positives_per_query))
+        ]
         sample_negatives_per_query = np.array(sample_negatives_per_query).flatten()
         sample_negatives_per_query_paths = [self.database_paths[idx] for idx in sample_negatives_per_query]
-        
+
         negatives_dataset = ImageDataset(sample_negatives_per_query_paths, preprocess=self.test_preprocess)
         negatives_dataloader = DataLoader(negatives_dataset, batch_size=self.args.infer_batch_size)
         queries_dataset = ImageDataset(sample_query_paths, preprocess=self.test_preprocess)
         queries_dataloader = DataLoader(queries_dataset, batch_size=self.args.infer_batch_size)
 
+        progress_bar = tqdm(total=len(negatives_dataloader) + len(queries_dataloader), desc="Mining Hard Negatives", leave=False)
         with torch.no_grad():
-            negatives_desc = torch.vstack([model(batch.to(self.args.device)).detach().cpu() for batch in negatives_dataloader]).numpy().astype(np.float32)
-            queries_desc = torch.vstack([model(batch.to(self.args.device)).detach().cpu() for batch in queries_dataloader]).numpy().astype(np.float32)
-        
+            negatives_desc_acc = []
+            queries_desc_acc = []
+            for batch in negatives_dataloader:
+                negatives_desc_acc.append(model(batch.to(self.args.device)).detach().cpu())
+                progress_bar.update(1)
+
+            negatives_desc = torch.vstack(negatives_desc_acc).numpy().astype(np.float32)
+
+            for batch in queries_dataloader:
+                queries_desc_acc.append(model(batch.to(self.args.device)).detach().cpu())
+                progress_bar.update(1)
+
+            queries_desc = torch.vstack(queries_desc_acc).numpy().astype(np.float32)
+
         faiss.normalize_L2(negatives_desc)
         index = faiss.IndexFlatIP(negatives_desc.shape[1])
         index.add(negatives_desc)
         faiss.normalize_L2(queries_desc)
         _, similarities = index.search(queries_desc, self.args.neg_samples_num)
 
-        hard_negative_sample_idxs = np.array([np.random.choice(np.arange(similarities.shape[1]), size=self.args.negs_num_per_query, replace=False) for _ in range(similarities.shape[0])])
-        hard_negatives = np.array([similarities[np.arange(similarities.shape[0]), hard_neg] for hard_neg in hard_negative_sample_idxs.transpose()]).transpose()
+        hard_negative_sample_idxs = np.array(
+            [
+                np.random.choice(np.arange(similarities.shape[1]), size=self.args.negs_num_per_query, replace=False)
+                for _ in range(similarities.shape[0])
+            ]
+        )
+        hard_negatives = np.array(
+            [similarities[np.arange(similarities.shape[0]), hard_neg] for hard_neg in hard_negative_sample_idxs.transpose()]
+        ).transpose()
 
-        self.triplets = [[self.queries_paths[sample_query_indexes[i]],
-                          self.database_paths[soft_positives_per_query[i]]] + 
-                          [self.database_paths[hard_negatives[i, j]] for j in range(self.args.negs_num_per_query)] for i in range(self.args.cache_refresh_rate)]
+        self.triplets = [
+            [self.queries_paths[sample_query_indexes[i]], self.database_paths[soft_positives_per_query[i]]]
+            + [self.database_paths[hard_negatives[i, j]] for j in range(self.args.negs_num_per_query)]
+            for i in range(self.args.cache_refresh_rate)
+        ]
 
-
+        progress_bar.close()
 
     def random_mine(self, model):
         # sample a random subset of queries from the queries
         sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
-        # sample a random 
+        # sample a random
         soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
-        negatives = np.array([np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=self.args.negs_num_per_query) for i in range(len(soft_positives_per_query))])
-        self.triplets = [[self.queries_paths[sample_query_indexes[i]],
-                          self.database_paths[soft_positives_per_query[i]]] + 
-                          [self.database_paths[negatives[i][j]] for j in range(self.args.negs_num_per_query)] for i in range(self.args.cache_refresh_rate)]
-
-
-
-
-
-
-from PlaceRec.Methods import AmosNet
-method = AmosNet()
-model = method.model
-ds = TripletDataset(args, method.preprocess, method.preprocess, split="test")
-ds.random_mine(model)
-
-anchor, positive, negative = ds.__getitem__(2)
-
-print(type(negative))
-print(len(negative))
-
+        negatives = np.array(
+            [
+                np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=self.args.negs_num_per_query)
+                for i in range(len(soft_positives_per_query))
+            ]
+        )
+        self.triplets = [
+            [self.queries_paths[sample_query_indexes[i]], self.database_paths[soft_positives_per_query[i]]]
+            + [self.database_paths[negatives[i][j]] for j in range(self.args.negs_num_per_query)]
+            for i in range(self.args.cache_refresh_rate)
+        ]
 
 
 class TripletDataModule(pl.LightningDataModule):
@@ -289,10 +304,9 @@ class TripletDataModule(pl.LightningDataModule):
         self.args = args
         self.test_transform = test_transform
         if train_transform is not None:
-            self.train_transform = train_transform 
+            self.train_transform = train_transform
         else:
             self.train_transform = test_transform
-
 
     def setup(self, stage=None):
         # Split data into train, validate, and test sets
@@ -308,7 +322,12 @@ class TripletDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size)
 
-
+    def recall_dataloader(self):
+        query_ds = ImageDataset(self.test_dataset.queries_paths, self.test_transform)
+        database_ds = ImageDataset(self.test_dataset.database_paths, self.test_transform)
+        query_dl = DataLoader(query_ds, batch_size=self.args.infer_batch_size)
+        database_dl = DataLoader(database_ds, batch_size=self.args.infer_batch_size)
+        return [query_dl, database_dl]
 
 
 class TripletModule(pl.LightningModule):
@@ -330,7 +349,7 @@ class TripletModule(pl.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        anchor, positive, negatives = batch 
+        anchor, positive, negatives = batch
 
         all_images = torch.vstack([anchor] + [positive] + negatives)
         all_desc = self.model(all_images)
@@ -342,10 +361,10 @@ class TripletModule(pl.LightningModule):
         for negative in negatives_desc:
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
         self.log("train_loss", loss)
-        return loss 
+        return loss
 
     def validation_step(self, batch, batch_idx):
-        anchor, positive, negatives = batch 
+        anchor, positive, negatives = batch
         all_images = torch.vstack([anchor] + [positive] + negatives)
         all_desc = self.model(all_images)
         anchor_desc = all_desc[0]
@@ -356,29 +375,68 @@ class TripletModule(pl.LightningModule):
         for negative in negatives_desc:
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
         self.log("val_loss", loss)
-        return loss 
+        return loss
 
-    def test_tep(self, batch, batch_idx):
-        
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
+        anchor, positive, negatives = batch
+        all_images = torch.vstack([anchor] + [positive] + negatives)
+        all_desc = self.model(all_images)
+        anchor_desc = all_desc[0]
+        positive_desc = all_desc[1]
+        negatives_desc = all_desc[2:]
+
+        loss = 0
+        for negative in negatives_desc:
+            loss += self.loss_fn(anchor_desc, positive_desc, negative)
+        self.log("val_loss", loss)
+        return loss
+
+    def recallAtN(self, N=5):
+        # self.model.eval().to(self.args.device)
+        query_loader, database_loader = self.datamodule.recall_dataloader()
+        with torch.no_grad():
+            database_desc_acc = []
+            query_desc_acc = []
+            progress_bar = tqdm(total=len(query_loader) + len(database_loader), desc="Computing Recall@N Descriptors", leave=False)
+            for batch in query_loader:
+                query_desc_acc.append(self.model(batch).detach().cpu())
+                progress_bar.update(1)
+
+            query_descs = torch.vstack(query_desc_acc).numpy().astype(np.float32)
+
+            for batch in database_loader:
+                database_desc_acc.append(self.model(batch).detach().cpu())
+                progress_bar.update(1)
+
+            database_descs = torch.vstack(database_desc_acc).numpy().astype(np.float32)
+
+        index = faiss.IndexFlatIP(query_descs.shape[1])
+        faiss.normalize_L2(query_descs)
+        faiss.normalize_L2(database_descs)
+        index.add(database_descs)
+
+        del database_descs
+
+        distances, predictions = index.search(query_descs, N)
+
+        recall_count = 0
+        for row1, row2 in zip(predictions, self.datamodule.test_dataset.soft_positives_per_query):
+            if np.any(np.isin(row1, row2)):
+                recall_count += 1
+
+        return recall_count / predictions.shape[0]
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate)
 
 
-
-
 if __name__ == "__main__":
-    method = AmosNet()
+    method = get_method("amosnet")
     model = method.model
     tripletdatamodule = TripletDataModule(args, method.preprocess)
     tripletmodule = TripletModule(args, model, tripletdatamodule)
 
-    trainer = pl.Trainer(
-        max_epochs=10,
-        accelerator="cpu")
-
+    trainer = pl.Trainer(max_epochs=2, accelerator="gpu")
     trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-
-
-
-    
+    print("recall@5: ", tripletmodule.recallAtN(1))
+    #

@@ -26,30 +26,26 @@ run:
   device: None
 
 train: 
-  method: "netvlad"
+  training_type: "contrastive"
+  method: "amosnet"
   seed: 0
   train_batch_size: 2
-  infer_batch_size: 24
-  criterion: "triplet" # either triplet, sare_ind, sare_joint 
+  infer_batch_size: 128
   margin: 0.1
   epochs_num: 1000
   patience: 3
-  lr: 0.00001 # learning rate
-  optim: adam", #either adam or sgd 
-  cache_refresh_rate: 100
-  negs_num_per_query: 3
+  learning_rate: 0.00001 # learning rate
+  cache_refresh_rate: 1000
+  negs_num_per_query: 5
   neg_samples_num: 250
   mining: "partial" # either partial full random or msls_weighted
-  resume: None #path to load checkpoint from 
-  device: "cpu" # either cpu or cuda 
-  num_workers: 0 # number of workers for the dataloader
-  resize: [480, 640] # image resolution 
+  device: "cuda" # either cpu or cuda 
+  num_workers: 15 # number of workers for the dataloader
   val_positive_dist_threshold: 25
-  train_positives_dist_threshold: 25
-  split: "test"
-  #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
-  datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
-  dataset_name: "pitts30k"
+  datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  #datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
+  dataset_name: "mapillary_sls"
+  patience: 5
   save_dir: "default"
 
 

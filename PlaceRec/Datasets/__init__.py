@@ -2,9 +2,9 @@ from .base_dataset import BaseDataset
 from .essex3in1 import ESSEX3IN1
 from .gardenspointwalking import GardensPointWalking
 from .gsvcities import GsvCities
-from .nordlands import Nordlands
-from .sfu import SFU
-from .stlucia_small import StLucia_small
-from .pitts30k import Pitts30k
 from .msls import MSLS
+from .nordlands import Nordlands
+from .pitts30k import Pitts30k
+from .sfu import SFU
 from .stlucia_large import StLucia_large
+from .stlucia_small import StLucia_small

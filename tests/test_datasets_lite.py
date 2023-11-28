@@ -20,7 +20,6 @@ def create_test_case(dataset_module):
             self.ds = dataset_module
 
         def test_verify_both_setups_run(self):
-
             assert isinstance(self.ds.name, str)
             assert self.ds.name.islower()
 

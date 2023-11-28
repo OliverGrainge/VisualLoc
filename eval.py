@@ -24,17 +24,7 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
     "--datasets",
-    choices=(
-        "gsvcities",
-        "sfu",
-        "gardenspointwalking",
-        "stlucia_small",
-        "essex3in1",
-        "nordlands",
-        "pitts30k",
-        "stlucia_large",
-        "msls"
-    ),
+    choices=("gsvcities", "sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "pitts30k", "stlucia_large", "msls"),
     help="specify one of the datasets from PlaceRec.Datasets",
     type=str,
     default=config["eval"]["datasets"],
@@ -112,7 +102,7 @@ for dataset_name in args.datasets:
                 "recall@10",
                 "recall@100p",
                 "average_precision",
-                "memory"
+                "memory",
             ]
         )
 
@@ -124,7 +114,7 @@ for dataset_name in args.datasets:
         method.load_descriptors(ds.name)
 
         all_methods.append(method)
-        
+
         table_data["descriptor_bytes"] = method.query_desc["query_descriptors"].nbytes / method.query_desc["query_descriptors"].shape[0]
         table_data["descriptor_dim"] = method.query_desc["query_descriptors"].shape[1]
 
