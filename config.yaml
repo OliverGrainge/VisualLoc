@@ -27,28 +27,30 @@ run:
 
 train: 
   training_type: "contrastive"
-  method: "amosnet"
+  method: "resnet18_gem"
   loss_distance: "l2" # either cosine or l2
   seed: 0
-  train_batch_size: 2
+  train_batch_size: 10
   infer_batch_size: 128
   margin: 0.1
   epochs_num: 1000
   patience: 3
   learning_rate: 0.00001 # learning rate
-  cache_refresh_rate: 100
-  negs_num_per_query: 2
-  neg_samples_num: 10
+  cache_refresh_rate: 1000
+  negs_num_per_query: 10
+  neg_samples_num: 1000
   mining: "partial" # either partial or random
-  device: "cpu" # either cpu or cuda 
-  num_workers: 0 # number of workers for the dataloader
+  device: "cuda" # either cpu or cuda 
+  num_workers: 16 # number of workers for the dataloader
   val_positive_dist_threshold: 25
-  #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
-  datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
-  dataset_name: "pitts30k"
+  train_positive_dist_threshold: 10
+  datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  #datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
+  dataset_name: "mapillary_sls"
   patience: 5
   save_dir: "default"
   max_epochs: 200
+  resize: [420, 640]
 
 
 

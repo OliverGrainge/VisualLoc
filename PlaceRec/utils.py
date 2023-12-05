@@ -103,43 +103,47 @@ def get_method(name: str = None, pretrained: bool = True):
     if name == "calc":
         from PlaceRec.Methods import CALC
 
-        method = CALC(pretrained=True)
+        method = CALC(pretrained=pretrained)
     elif name == "netvlad":
         from PlaceRec.Methods import NetVLAD
 
-        method = NetVLAD(pretrained=True)
+        method = NetVLAD(pretrained=pretrained)
     elif name == "hog":
         from PlaceRec.Methods import HOG
 
-        method = HOG(pretrained=True)
+        method = HOG(pretrained=pretrained)
     elif name == "cosplace":
         from PlaceRec.Methods import CosPlace
 
-        method = CosPlace(pretrained=True)
+        method = CosPlace(pretrained=pretrained)
     elif name == "alexnet":
         from PlaceRec.Methods import AlexNet
 
-        method = AlexNet(pretrained=True)
+        method = AlexNet(pretrained=pretrained)
     elif name == "hybridnet":
         from PlaceRec.Methods import HybridNet
 
-        method = HybridNet(pretrained=True)
+        method = HybridNet(pretrained=pretrained)
     elif name == "amosnet":
         from PlaceRec.Methods import AmosNet
 
-        method = AmosNet(pretrained=True)
+        method = AmosNet(pretrained=pretrained)
     elif name == "convap":
         from PlaceRec.Methods import ConvAP
 
-        method = ConvAP(pretrained=True)
+        method = ConvAP(pretrained=pretrained)
     elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 
-        method = MixVPR(pretrained=True)
+        method = MixVPR(pretrained=pretrained)
     elif name == "regionvlad":
         from PlaceRec.Methods import RegionVLAD
 
-        method = RegionVLAD(pretrained=True)
+        method = RegionVLAD(pretrained=pretrained)
+    elif name == "resnet18_gem":
+        from PlaceRec.Methods import ResNet18GeM
+
+        method = ResNet18GeM(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method
