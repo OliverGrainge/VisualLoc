@@ -28,6 +28,24 @@ class ImageDataset(Dataset):
         img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
         return img
 
+class ImageIdxDataset(Dataset):
+    def __init__(self, img_paths, preprocess=None):
+        self.img_paths = img_paths
+        self.preprocess = preprocess
+
+    def __len__(self):
+        return len(self.img_paths)
+
+    def __getitem__(self, idx):
+        if self.preprocess is not None:
+            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
+            img = Image.fromarray(img)
+            img = self.preprocess(img)
+            return img
+
+        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
+        return img, idx
+
 
 # ============== S3 Bucket ===========================================================================
 

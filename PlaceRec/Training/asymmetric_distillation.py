@@ -4,6 +4,7 @@ from glob import glob
 from os.path import join
 
 import faiss
+import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -19,10 +20,8 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 from PlaceRec.utils import ImageDataset, get_loss_function, get_method
-
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -66,29 +65,21 @@ class BaseTrainingDataset(data.Dataset):
 
         knn = NearestNeighbors(n_jobs=-1)
         knn.fit(self.database_utms)
-        self.hard_positives_per_query = list(knn.radius_neighbors(self.queries_utms,
-                                             radius=args.train_positive_dist_threshold,  # 10 meters
-                                             return_distance=False))
-
+        self.hard_positives_per_query = list(
+            knn.radius_neighbors(self.queries_utms, radius=args.train_positive_dist_threshold, return_distance=False)  # 10 meters
+        )
 
         queries_without_any_hard_positive = np.where(np.array([len(p) for p in self.hard_positives_per_query], dtype=object) == 0)[0]
         if len(queries_without_any_hard_positive) != 0:
-            print(f"There are {len(queries_without_any_hard_positive)} queries without any positives " +
-                         "within the training set. They won't be considered as they're useless for training.")
-            
+            print(
+                f"There are {len(queries_without_any_hard_positive)} queries without any positives "
+                + "within the training set. They won't be considered as they're useless for training."
+            )
+
         # Remove queries without positives
-        self.hard_positives_per_query = [
-            arr
-            for i, arr in enumerate(self.hard_positives_per_query)
-            if i not in queries_without_any_hard_positive
-        ]
+        self.hard_positives_per_query = [arr for i, arr in enumerate(self.hard_positives_per_query) if i not in queries_without_any_hard_positive]
 
-
-        self.queries_paths = [
-            arr
-            for i, arr in enumerate(self.queries_paths)
-            if i not in queries_without_any_hard_positive
-        ]
+        self.queries_paths = [arr for i, arr in enumerate(self.queries_paths) if i not in queries_without_any_hard_positive]
 
         self.all_images_paths = list(self.database_paths) + list(self.queries_paths)
         self.queries_paths = list(self.queries_paths)
@@ -103,7 +94,6 @@ class BaseTrainingDataset(data.Dataset):
         return Image.open(self.all_images_paths[idx]).convert("RGB"), idx
 
 
-
 class DistillationDataset(data.Dataset):
     def __init__(self, cache, preprocess):
         super().__init__()
@@ -112,13 +102,6 @@ class DistillationDataset(data.Dataset):
 
     def __len__(self):
         return self.cache.size(0)
-    
-
-    
-    
-
-
-
 
 
 class DistilationDataModule(pl.LightningDataModule):
@@ -142,7 +125,7 @@ class DistilationDataModule(pl.LightningDataModule):
         # Split data into train, validate, and test sets
         self.train_dataset = BaseTrainingDataset(self.args, self.test_transform, self.train_transform, split="train")
         self.test_dataset = BaseTrainingDataset(self.args, self.test_transform, self.train_transform, split="test")
-        if self.reload == True: 
+        if self.reload == True:
             try:
                 self.train_cache = torch.load(package_directory + "/utils/train_teacher_features.pth")
                 self.val_cache = torch.load(package_directory + "/utils/val_teacher_features.pth")
@@ -150,7 +133,7 @@ class DistilationDataModule(pl.LightningDataModule):
                 print("Failed To Load Features")
                 self.train_cache = self.compute_teacher_cache("train")
                 self.val_cache = self.compute_teacher_cache("val")
-        else: 
+        else:
             self.train_cache = self.compute_teacher_cache("train")
             self.val_cache = self.compute_teacher_cache("val")
 
@@ -165,14 +148,14 @@ class DistilationDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
 
-    def compute_teacher_cache(self, partition):   
-        if partition == "train":         
+    def compute_teacher_cache(self, partition):
+        if partition == "train":
             dl = self.train_dataloader()
         elif partition == "val":
             dl = self.val_dataloader()
         with torch.no_grad():
             cache = []
-            for batch in tqdm(dl, desc=f'Extracting teacher {partition} features'):
+            for batch in tqdm(dl, desc=f"Extracting teacher {partition} features"):
                 cache.append(self.teacher(batch.to(self.args.device)).detach().cpu())
             cache = torch.vstack(cache)
         return cache

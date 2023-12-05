@@ -1,9 +1,11 @@
 import argparse
+import logging
 import os
 from glob import glob
 from os.path import join
 
 import faiss
+import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -15,74 +17,47 @@ from IPython.display import display
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 from torch import optim
+from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-import matplotlib.pyplot as plt
 
-from PlaceRec.utils import ImageDataset, get_loss_function, get_method
-from .geobench_contrastive import GeoBaseDataset
+from PlaceRec.utils import ImageDataset, get_loss_function, get_method, ImageIdxDataset
 
 
 
-import faiss
-import torch
-import logging
-import numpy as np
-from tqdm import tqdm
-from torch.utils.data import DataLoader
-from torch.utils.data.dataset import Subset
-
-
-
-def test(args, eval_ds, model, test_method="hard_resize", pca=None):
-    """Compute features of the given dataset and compute the recalls."""
-    
-    assert test_method in ["hard_resize", "single_query", "central_crop", "five_crops",
-                           "nearest_crop", "maj_voting"], f"test_method can't be {test_method}"
-    
+def test(args, eval_ds, model, preprocess):
     model = model.eval()
     with torch.no_grad():
-        logging.debug("Extracting database features for evaluation/testing")
-        # For database use "hard_resize", although it usually has no effect because database images have same resolution
-        eval_ds.test_method = "hard_resize"
-        database_subset_ds = Subset(eval_ds, list(range(eval_ds.database_num)))
-        database_dataloader = DataLoader(dataset=database_subset_ds, num_workers=args.num_workers,
-                                         batch_size=args.infer_batch_size, pin_memory=(args.device == "cuda"))
-        
-    
-        all_features = np.empty((len(eval_ds), args.features_dim), dtype="float32")
+        database_descs = np.empty((eval_ds.database_num, args.features_dim), dtype="float32")
+        database_ds = ImageIdxDataset(eval_ds.database_paths, preprocess)
+        database_dl = DataLoader(database_ds, num_workers=args.num_workers, batch_size=args.infer_batch_size, pin_memory=(args.device == "cuda"))
+        for inputs, indicies in tqdm(database_dl):
+            features = model(inputs.to(args.device)).cpu().numpy()
+            database_descs[indicies.numpy(), :] = features
 
-        for inputs, indices in tqdm(database_dataloader, ncols=100):
-            features = model(inputs.to(args.device))
-            features = features.cpu().numpy()
-            if pca is not None:
-                features = pca.transform(features)
-            all_features[indices.numpy(), :] = features
+        queries_descs = np.empty((eval_ds.queries_num, args.features_dim), dtype="float32")
+        queries_ds = ImageIdxDataset(eval_ds, eval_ds.queries_paths, preprocess)
+        queries_dl = DataLoader(queries_ds(queries_ds, num_workers=args.num_workers, batch_size=args.infer_batch_size, pin_memory=(args.device == "cuda")))
+        for inputs, indicies in tqdm(queries_dl):
+            features = model(inputs.to(args.device)).cpu().numpy()
+            queries_descs[indicies.numpy(), :] = features
         
-        queries_infer_batch_size = 1 if test_method == "single_query" else args.infer_batch_size
-        eval_ds.test_method = test_method
-        queries_subset_ds = Subset(eval_ds, list(range(eval_ds.database_num, eval_ds.database_num+eval_ds.queries_num)))
-        queries_dataloader = DataLoader(dataset=queries_subset_ds, num_workers=args.num_workers,
-                                        batch_size=queries_infer_batch_size, pin_memory=(args.device == "cuda"))
-        for inputs, indices in tqdm(queries_dataloader, ncols=100):
-            features = model(inputs.to(args.device))
-            features = features.cpu().numpy()            
-            all_features[indices.numpy(), :] = features
-    
-    queries_features = all_features[eval_ds.database_num:]
-    database_features = all_features[:eval_ds.database_num]
-    
-    faiss_index = faiss.IndexFlatL2(args.features_dim)
-    faiss_index.add(database_features)
-    del database_features, all_features
-    
-    distances, predictions = faiss_index.search(queries_features, max(args.recall_values))
-    
+        if args.loss_distance == "cosine":
+            faiss.normalize_L2(database_descs)
+            index = faiss.IndexFlatIP(args.features_dim)
+            index.add(database_descs)
+            faiss.normalize_L2(queries_descs)
+            del database_descs
+        elif args.loss_distance == "l2":
+            index = faiss.IndexFlatL2(args.features_dim)
+            index.add(database_descs)
+            del database_descs
 
+    distances, predictions = index.search(queries_descs, max(args.recall_values))
     #### For each query, check if the predictions are correct
-    positives_per_query = eval_ds.get_positives()
+    positives_per_query = eval_ds.soft_positives_per_query
     # args.recall_values by default is [1, 5, 10, 20]
     recalls = np.zeros(len(args.recall_values))
     for query_index, pred in enumerate(predictions):
@@ -96,22 +71,13 @@ def test(args, eval_ds, model, test_method="hard_resize", pca=None):
     return recalls, recalls_str
 
 
+
 class BaseTrainingDataset(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
-
     def __init__(self, args, split="train"):
         super().__init__()
         self.args = args
         self.dataset_name = args.dataset_name
-
-        self.test_preprocess = v2.Compose(
-            [
-                v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
-                v2.Resize((480, 640)),
-                v2.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ]
-        )
 
         self.dataset_folder = join(args.datasets_folder, args.dataset_name, "images", split)
         if not os.path.exists(self.dataset_folder):
@@ -144,29 +110,19 @@ class BaseTrainingDataset(data.Dataset):
 
         knn = NearestNeighbors(n_jobs=-1)
         knn.fit(self.database_utms)
-        self.hard_positives_per_query = list(knn.radius_neighbors(self.queries_utms,
-                                             radius=args.train_positive_dist_threshold,  # 10 meters
-                                             return_distance=False))
-
+        self.hard_positives_per_query = list(
+            knn.radius_neighbors(self.queries_utms, radius=args.train_positive_dist_threshold, return_distance=False)  # 10 meters
+        )
 
         queries_without_any_hard_positive = np.where(np.array([len(p) for p in self.hard_positives_per_query], dtype=object) == 0)[0]
         if len(queries_without_any_hard_positive) != 0:
-            print(f"There are {len(queries_without_any_hard_positive)} queries without any positives " +
-                         "within the training set. They won't be considered as they're useless for training.")
+            print(
+                f"There are {len(queries_without_any_hard_positive)} queries without any positives "
+                + "within the training set. They won't be considered as they're useless for training."
+            )
         # Remove queries without positives
-
-        self.hard_positives_per_query = [
-            arr
-            for i, arr in enumerate(self.hard_positives_per_query)
-            if i not in queries_without_any_hard_positive
-        ]
-
-
-        self.queries_paths = [
-            arr
-            for i, arr in enumerate(self.queries_paths)
-            if i not in queries_without_any_hard_positive
-        ]
+        self.hard_positives_per_query = [arr for i, arr in enumerate(self.hard_positives_per_query) if i not in queries_without_any_hard_positive]
+        self.queries_paths = [arr for i, arr in enumerate(self.queries_paths) if i not in queries_without_any_hard_positive]
 
         self.all_images_paths = list(self.database_paths) + list(self.queries_paths)
         self.queries_paths = list(self.queries_paths)
@@ -194,7 +150,6 @@ class TripletDataset(BaseTrainingDataset):
 
         self.random_mine(None)
 
-
     def __len__(self):
         return len(self.triplets)
 
@@ -203,9 +158,8 @@ class TripletDataset(BaseTrainingDataset):
         anchor = self.train_preprocess(Image.open(triplet[0]).convert("RGB"))
         positive = self.train_preprocess(Image.open(triplet[1]).convert("RGB"))
         negatives = [self.train_preprocess(Image.open(pth).convert("RGB")) for pth in triplet[2:]]
-
         return anchor, positive, negatives
-    
+
     def view_triplets(self, sample_size=5):
         if len(self.triplets) == 0:
             self.mine_triplets()
@@ -214,21 +168,17 @@ class TripletDataset(BaseTrainingDataset):
         for idx in idxs:
             print(idx)
             triplet = self.triplets[idx]
-
             fig, ax = plt.subplots(3)
-           
             ax[0].imshow(Image.open(triplet[0]))
             ax[0].set_title("Anchor")
             ax[1].imshow(Image.open(triplet[1]))
             ax[1].set_title("Positive")
             ax[2].imshow(Image.open(triplet[2]))
             ax[2].set_title("Negative")
-            ax[0].axis('off')
-            ax[1].axis('off')
-            ax[2].axis('off')
+            ax[0].axis("off")
+            ax[1].axis("off")
+            ax[2].axis("off")
         plt.show()
-
-        
 
     def mine_triplets(self, model):
         if self.args.mining == "partial":
@@ -254,18 +204,20 @@ class TripletDataset(BaseTrainingDataset):
         sample_negatives_per_query_paths = [self.database_paths[idx] for idx in sample_negatives_per_query]
 
         pin_memory = True if self.args.device == "cuda" else False
-        mining_ds = ImageDataset(np.concatenate((sample_query_paths, sample_negatives_per_query_paths)), preprocess=self.test_preprocess)
-        mining_loader = DataLoader(mining_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory, shuffle=False)
+        mining_ds = ImageIdxDataset(np.concatenate((sample_query_paths, sample_negatives_per_query_paths)), preprocess=self.test_preprocess)
+        mining_loader = DataLoader(
+            mining_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory, shuffle=False
+        )
 
         all_desc = []
         progress_bar = tqdm(total=len(mining_loader), desc="Mining Hard Negatives", leave=False)
         with torch.no_grad():
-            for batch in mining_loader:
+            for batch, _ in mining_loader:
                 all_desc.append(model(batch.to(self.args.device)).detach().cpu())
                 progress_bar.update(1)
 
         all_desc = torch.vstack(all_desc).numpy().astype(np.float32)
-        queries_desc, negatives_desc = all_desc[:len(sample_query_paths)], all_desc[len(sample_query_paths):]
+        queries_desc, negatives_desc = all_desc[: len(sample_query_paths)], all_desc[len(sample_query_paths) :]
 
         if self.args.loss_distance == "cosine":
             faiss.normalize_L2(negatives_desc)
@@ -279,7 +231,6 @@ class TripletDataset(BaseTrainingDataset):
             _, similarities = index.search(queries_desc, self.args.neg_samples_num)
         else:
             raise Exception(self.args.loss_distance + "distance partial mining not implemented")
-
 
         self.triplets = [
             [self.queries_paths[sample_query_indexes[i]], self.database_paths[hard_positives_per_query[i]]]
@@ -334,10 +285,14 @@ class TripletDataModule(pl.LightningDataModule):
         return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
 
     def recall_dataloader(self):
-        query_ds = ImageDataset(self.test_dataset.queries_paths, self.test_transform)
-        database_ds = ImageDataset(self.test_dataset.database_paths, self.test_transform)
-        query_dl = DataLoader(query_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False)
-        database_dl = DataLoader(database_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False)
+        query_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_transform)
+        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_transform)
+        query_dl = DataLoader(
+            query_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False
+        )
+        database_dl = DataLoader(
+            database_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False
+        )
         return [query_dl, database_dl]
 
 
@@ -349,7 +304,6 @@ class TripletModule(pl.LightningModule):
         self.datamodule = datamodule
         self.loss_fn = get_loss_function(args)
         self.save_hyperparameters()
-
 
     def features_size(self):
         dl, _ = self.datamodule.recall_dataloader()
@@ -369,7 +323,6 @@ class TripletModule(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         anchor, positive, negatives = batch
-
         all_images = torch.vstack([anchor] + [positive] + negatives)
         all_desc = self.model(all_images)
         anchor_desc = all_desc[0]
@@ -389,7 +342,7 @@ class TripletModule(pl.LightningModule):
         self.log("val_loss", recalls[1])
         return recalls[1]
 
-    def test_step(self, batch, batch_idx, dataloader_idx=0):
+    def on_test_epoch_end(self, batch, batch_idx, dataloader_idx=0):
         anchor, positive, negatives = batch
         all_images = torch.vstack([anchor] + [positive] + negatives)
         all_desc = self.model(all_images)
@@ -403,7 +356,6 @@ class TripletModule(pl.LightningModule):
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
         self.log("test_loss", loss)
         return loss
-
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)

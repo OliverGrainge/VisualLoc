@@ -24,7 +24,6 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-from os.path import join
 
 import wandb
 from PlaceRec.Training import TripletDataModule, TripletModule
@@ -35,8 +34,7 @@ with open("config.yaml", "r") as file:
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--recall_values', type=int, default=[1, 5, 10, 20], nargs="+",
-                    help="Recalls to be computed, such as R@5.")
+parser.add_argument("--recall_values", type=int, default=[1, 5, 10, 20], nargs="+", help="Recalls to be computed, such as R@5.")
 
 parser.add_argument(
     "--dataset_name",
@@ -169,11 +167,15 @@ parser.add_argument(
     help="Resizing shape for images (HxW).",
 )
 
-parser.add_argument("--efficient_ram_testing", action='store_true', help="_")
+parser.add_argument("--efficient_ram_testing", action="store_true", help="_")
 
-parser.add_argument('--test_method', type=str, default="hard_resize",
-                    choices=["hard_resize", "single_query", "central_crop", "five_crops", "nearest_crop", "maj_voting"],
-                    help="This includes pre/post-processing methods and prediction refinement")
+parser.add_argument(
+    "--test_method",
+    type=str,
+    default="hard_resize",
+    choices=["hard_resize", "single_query", "central_crop", "five_crops", "nearest_crop", "maj_voting"],
+    help="This includes pre/post-processing methods and prediction refinement",
+)
 
 
 parser.add_argument("--max_epochs", type=int, default=config["train"]["max_epochs"])
@@ -182,7 +184,7 @@ parser.add_argument("--loss_distance", type=str, default=config["train"]["loss_d
 
 args = parser.parse_args()
 
-#pl.seed_everything(args.seed)
+# pl.seed_everything(args.seed)
 
 if __name__ == "__main__":
     torch.set_float32_matmul_precision("medium")
@@ -221,4 +223,4 @@ if __name__ == "__main__":
     )
 
     trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-
+    #trainer.test(tripletmodule, datamodule=tripletdatamodule)
