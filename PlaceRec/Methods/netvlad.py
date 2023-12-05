@@ -136,13 +136,6 @@ class ResNet_NetVLAD(nn.Module):
 
 model = ResNet_NetVLAD()
 
-try:
-    model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
-except:
-    s3_bucket_download("placerecdata/weights/msls_r18l3_netvlad_partial.pth", netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth")
-
-    model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
-
 
 preprocess = transforms.Compose(
     [
@@ -155,5 +148,15 @@ preprocess = transforms.Compose(
 
 
 class NetVLAD(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if pretrained:
+            try:
+                model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
+            except:
+                s3_bucket_download(
+                    "placerecdata/weights/msls_r18l3_netvlad_partial.pth", netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"
+                )
+
+                model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
+
         super().__init__(model=model, preprocess=preprocess, name="netvlad")

@@ -146,7 +146,7 @@ if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
     s3_bucket_download("placerecdata/weights/amosnet_mean.npy", package_directory + "/weights/amosnet_mean.npy")
 
 model = AmosNetModel()
-model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
+
 mean_image = torch.Tensor(np.load(package_directory + "/weights/amosnet_mean.npy"))
 
 preprocess = transforms.Compose(
@@ -162,7 +162,10 @@ preprocess = transforms.Compose(
 
 
 class AmosNet(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = False):
+        if pretrained:
+            model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
+
         super().__init__(model=model, preprocess=preprocess, name="amosnet")
         # some layers not implemented on metal
         if self.device == "mps":

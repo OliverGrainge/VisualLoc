@@ -344,8 +344,6 @@ model = VPRModel(
     },
 )
 
-model.load_state_dict(state_dict)
-
 
 preprocess = transforms.Compose(
     [
@@ -359,5 +357,7 @@ preprocess = transforms.Compose(
 
 
 class MixVPR(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if pretrained:
+            model.load_state_dict(state_dict)
         super().__init__(model=model, preprocess=preprocess, name="mixvpr")

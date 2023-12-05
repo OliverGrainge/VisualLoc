@@ -126,7 +126,7 @@ class AlexnetPlaces365(nn.Module):
 
 
 class RegionVLAD(BaseFunctionality):
-    def __init__(self, vocab_size: str = "small"):
+    def __init__(self, pretrained: bool = True, vocab_size: str = "small"):
         super().__init__()
         self.name = "regionvlad"
 
@@ -139,7 +139,8 @@ class RegionVLAD(BaseFunctionality):
             s3_bucket_download("placerecdata/weights/regionvlad_vocab_400.pkl", package_directory + "/weights/regionvlad_vocab_400.pkl")
 
         self.model = AlexnetPlaces365()
-        self.model.load_state_dict(torch.load(package_directory + "/weights/alexnet_places365.caffemodel.pt"))
+        if pretrained:
+            self.model.load_state_dict(torch.load(package_directory + "/weights/alexnet_places365.caffemodel.pt"))
         self.model.eval()
         self.model.to(self.device)
 

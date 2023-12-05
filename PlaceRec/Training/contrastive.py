@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.utils.data as data
 import torchvision.transforms as T
 import yaml
+from IPython.display import display
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 from torch import optim
@@ -19,10 +20,10 @@ from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
 
-from PlaceRec.utils import ImageDataset, get_method
+from PlaceRec.utils import ImageDataset, get_loss_function, get_method
 
 
-class BaseDataset(data.Dataset):
+class BaseTrainingDataset(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
 
     def __init__(self, args, split="train"):
@@ -42,7 +43,7 @@ class BaseDataset(data.Dataset):
         self.dataset_folder = join(args.datasets_folder, args.dataset_name, "images", split)
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(f"Folder {self.dataset_folder} does not exist")
-        
+
         #### Read paths and UTM coordinates for all images.
         database_folder = join(self.dataset_folder, "database")
         queries_folder = join(self.dataset_folder, "queries")
@@ -55,9 +56,6 @@ class BaseDataset(data.Dataset):
         self.database_paths = sorted(glob(join(database_folder, "**", "*.jpg"), recursive=True))
         self.queries_paths = sorted(glob(join(queries_folder, "**", "*.jpg"), recursive=True))
 
-        print("=====================================================================================================================================")
-        print(len(self.database_paths))
-        print(len(self.queries_paths))
         # The format must be path/to/file/@utm_easting@utm_northing@...@.jpg
         self.database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]).astype(float)
         self.queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]).astype(float)
@@ -84,7 +82,7 @@ class BaseDataset(data.Dataset):
         return Image.open(self.queries_paths[idx]).convert("RGB"), idx
 
 
-class TripletDataset(BaseDataset):
+class TripletDataset(BaseTrainingDataset):
     def __init__(self, args, test_preprocess, train_preprocess, split="train"):
         super().__init__(args, split=split)
 
@@ -105,6 +103,7 @@ class TripletDataset(BaseDataset):
         anchor = self.train_preprocess(Image.open(triplet[0]).convert("RGB"))
         positive = self.train_preprocess(Image.open(triplet[1]).convert("RGB"))
         negatives = [self.train_preprocess(Image.open(pth).convert("RGB")) for pth in triplet[2:]]
+
         return anchor, positive, negatives
 
     def mine_triplets(self, model):
@@ -118,10 +117,11 @@ class TripletDataset(BaseDataset):
     def partial_mine(self, model):
         model.eval()
         model.to(self.args.device)
-        sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
+        sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate, replace=False)
         sample_query_paths = [self.queries_paths[idx] for idx in sample_query_indexes]
 
         soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
+
         sample_negatives_per_query = [
             np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=10)
             for i in range(len(soft_positives_per_query))
@@ -132,9 +132,13 @@ class TripletDataset(BaseDataset):
         pin_memory = True if self.args.device == "cuda" else False
 
         negatives_dataset = ImageDataset(sample_negatives_per_query_paths, preprocess=self.test_preprocess)
-        negatives_dataloader = DataLoader(negatives_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory)
+        negatives_dataloader = DataLoader(
+            negatives_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory
+        )
         queries_dataset = ImageDataset(sample_query_paths, preprocess=self.test_preprocess)
-        queries_dataloader = DataLoader(queries_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory)
+        queries_dataloader = DataLoader(
+            queries_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory
+        )
 
         progress_bar = tqdm(total=len(negatives_dataloader) + len(queries_dataloader), desc="Mining Hard Negatives", leave=False)
         with torch.no_grad():
@@ -152,11 +156,18 @@ class TripletDataset(BaseDataset):
 
             queries_desc = torch.vstack(queries_desc_acc).numpy().astype(np.float32)
 
-        faiss.normalize_L2(negatives_desc)
-        index = faiss.IndexFlatIP(negatives_desc.shape[1])
-        index.add(negatives_desc)
-        faiss.normalize_L2(queries_desc)
-        _, similarities = index.search(queries_desc, self.args.neg_samples_num)
+        if self.args.loss_distance == "cosine":
+            faiss.normalize_L2(negatives_desc)
+            index = faiss.IndexFlatIP(negatives_desc.shape[1])
+            index.add(negatives_desc)
+            faiss.normalize_L2(queries_desc)
+            _, similarities = index.search(queries_desc, self.args.neg_samples_num)
+        elif self.args.loss_distance == "l2":
+            index = faiss.IndexFlatL2(negatives_desc.shape[1])
+            index.add(negatives_desc)
+            _, similarities = index.search(queries_desc, self.args.neg_samples_num)
+        else:
+            raise Exception(self.args.loss_distance + "distance partial mining not implemented")
 
         hard_negative_sample_idxs = np.array(
             [
@@ -173,27 +184,23 @@ class TripletDataset(BaseDataset):
             + [self.database_paths[hard_negatives[i, j]] for j in range(self.args.negs_num_per_query)]
             for i in range(self.args.cache_refresh_rate)
         ]
-
         progress_bar.close()
 
     def random_mine(self, model):
-        # sample a random subset of queries from the queries
-        sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
+        query_idxs = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
         # sample a random
-        raise Exception("Need to Remove the Queries in the Dataset without Any Positives")
+        # raise Exception("Need to Remove the Queries in the Dataset without Any Positives")
 
-        soft_positives_per_query = [np.random.choice(self.soft_positives_per_query[idx]) for idx in sample_query_indexes]
-        negatives = np.array(
-            [
-                np.random.choice(np.setdiff1d(np.arange(self.database_num), soft_positives_per_query[i]), size=self.args.negs_num_per_query)
-                for i in range(len(soft_positives_per_query))
-            ]
+        positive_idxs = np.array([np.random.choice(self.soft_positives_per_query[v]) for v in query_idxs])
+        neg_idxs = np.array(
+            [np.random.choice(np.setdiff1d(np.arange(self.database_num), pos_idx), size=self.args.negs_num_per_query) for pos_idx in positive_idxs]
         )
-        self.triplets = [
-            [self.queries_paths[sample_query_indexes[i]], self.database_paths[soft_positives_per_query[i]]]
-            + [self.database_paths[negatives[i][j]] for j in range(self.args.negs_num_per_query)]
-            for i in range(self.args.cache_refresh_rate)
-        ]
+        self.triplets = []
+        for i in range(len(query_idxs)):
+            anchor_path = self.queries_paths[query_idxs[i]]
+            positive_path = self.database_paths[positive_idxs[i]]
+            negatives_paths = [self.database_paths[idx] for idx in neg_idxs[i]]
+            self.triplets.append([anchor_path, positive_path] + negatives_paths)
 
 
 class TripletDataModule(pl.LightningDataModule):
@@ -214,7 +221,9 @@ class TripletDataModule(pl.LightningDataModule):
         self.test_dataset = TripletDataset(self.args, self.test_transform, self.train_transform, split="test")
 
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
+        return DataLoader(
+            self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=True
+        )
 
     def val_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
@@ -236,7 +245,8 @@ class TripletModule(pl.LightningModule):
         self.args = args
         self.model = model
         self.datamodule = datamodule
-        self.loss_fn = nn.TripletMarginLoss(args.margin)
+        self.loss_fn = get_loss_function(args)
+        self.save_hyperparameters()
 
     def on_train_start(self):
         self.datamodule.train_dataset.mine_triplets(self.model)
@@ -288,7 +298,7 @@ class TripletModule(pl.LightningModule):
         loss = 0
         for negative in negatives_desc:
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
-        self.log("val_loss", loss)
+        self.log("test_loss", loss)
         return loss
 
     def recallAtN(self, N=5):
@@ -310,10 +320,16 @@ class TripletModule(pl.LightningModule):
 
             database_descs = torch.vstack(database_desc_acc).numpy().astype(np.float32)
 
-        index = faiss.IndexFlatIP(query_descs.shape[1])
-        faiss.normalize_L2(query_descs)
-        faiss.normalize_L2(database_descs)
-        index.add(database_descs)
+        if self.args.loss_distance == "cosine":
+            index = faiss.IndexFlatIP(query_descs.shape[1])
+            faiss.normalize_L2(query_descs)
+            faiss.normalize_L2(database_descs)
+            index.add(database_descs)
+        elif self.args.loss_distance == "l2":
+            index = faiss.IndexFlatL2(query_descs.shape[1])
+            index.add(database_descs)
+        else:
+            raise Exception(self.args.loss_distance + "training is not implemented")
 
         del database_descs
 

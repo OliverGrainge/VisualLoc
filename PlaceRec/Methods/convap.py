@@ -269,14 +269,6 @@ else:
 
 
 # Note that images must be resized to 320x320
-model = VPRModel(
-    backbone_arch="resnet50",
-    pretrained=True,
-    layers_to_freeze=2,
-    layers_to_crop=[],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
-    agg_arch="ConvAP",
-    agg_config={"in_channels": 2048, "out_channels": 1024, "s1": 2, "s2": 2},
-)
 
 
 preprocess = transforms.Compose(
@@ -293,7 +285,26 @@ preprocess = transforms.Compose(
 
 
 class ConvAP(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if pretrained:
+            model = VPRModel(
+                backbone_arch="resnet50",
+                pretrained=True,
+                layers_to_freeze=2,
+                layers_to_crop=[],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
+                agg_arch="ConvAP",
+                agg_config={"in_channels": 2048, "out_channels": 1024, "s1": 2, "s2": 2},
+            )
+        else:
+            model = VPRModel(
+                backbone_arch="resnet50",
+                pretrained=False,
+                layers_to_freeze=2,
+                layers_to_crop=[],  # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
+                agg_arch="ConvAP",
+                agg_config={"in_channels": 2048, "out_channels": 1024, "s1": 2, "s2": 2},
+            )
+
         super().__init__(model=model, preprocess=preprocess, name="convap")
 
         # some layers not implemented on metal

@@ -14,17 +14,25 @@ alexnet_directory = os.path.dirname(os.path.abspath(__file__))
 
 
 class AlexNet(BaseFunctionality):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
         super().__init__()
         # Name of technique
         self.name = "alexnet"
+        if pretrained:
+            self.model = torch.hub.load(
+                "pytorch/vision:v0.10.0",
+                "alexnet",
+                weights=AlexNet_Weights.DEFAULT,
+                verbose=False,
+            )
+        else:
+            self.model = torch.hub.load(
+                "pytorch/vision:v0.10.0",
+                "alexnet",
+                weights=False,
+                verbose=False,
+            )
 
-        self.model = torch.hub.load(
-            "pytorch/vision:v0.10.0",
-            "alexnet",
-            weights=AlexNet_Weights.DEFAULT,
-            verbose=False,
-        )
         self.model = self.model.features[:7]
         # Dimensions to project into
         self.nDims = 4096

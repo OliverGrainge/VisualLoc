@@ -81,7 +81,7 @@ def conv_match_dotproduct(d1, d2, regional_gd, total_no_of_regions):  # Assumed 
 
 
 class HOG(BaseFunctionality):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
         self.device = "cpu"
         # preprocess images for method (None required)
         self.preprocess = transforms.ToTensor()

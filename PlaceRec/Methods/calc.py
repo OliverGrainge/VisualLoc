@@ -88,11 +88,13 @@ preprocess = transforms.Compose(
 if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
     s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
 
-model = CalcModel(pretrained=True)
-
 
 class CALC(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if pretrained:
+            model = CalcModel(pretrained=True)
+        else:
+            model = CalcModel(pretrained=False)
         super().__init__(model=model, preprocess=preprocess, name="calc")
 
         if self.device == "mps":

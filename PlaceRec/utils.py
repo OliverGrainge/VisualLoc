@@ -4,6 +4,7 @@ import pathlib
 import boto3
 import botocore
 import numpy as np
+import torch.nn as nn
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -98,51 +99,61 @@ def get_dataset(name: str = None):
     return dataset
 
 
-def get_method(name: str = None):
+def get_method(name: str = None, pretrained: bool = True):
     if name == "calc":
         from PlaceRec.Methods import CALC
 
-        method = CALC()
+        method = CALC(pretrained=True)
     elif name == "netvlad":
         from PlaceRec.Methods import NetVLAD
 
-        method = NetVLAD()
+        method = NetVLAD(pretrained=True)
     elif name == "hog":
         from PlaceRec.Methods import HOG
 
-        method = HOG()
+        method = HOG(pretrained=True)
     elif name == "cosplace":
         from PlaceRec.Methods import CosPlace
 
-        method = CosPlace()
+        method = CosPlace(pretrained=True)
     elif name == "alexnet":
         from PlaceRec.Methods import AlexNet
 
-        method = AlexNet()
+        method = AlexNet(pretrained=True)
     elif name == "hybridnet":
         from PlaceRec.Methods import HybridNet
 
-        method = HybridNet()
+        method = HybridNet(pretrained=True)
     elif name == "amosnet":
         from PlaceRec.Methods import AmosNet
 
-        method = AmosNet()
+        method = AmosNet(pretrained=True)
     elif name == "convap":
         from PlaceRec.Methods import ConvAP
 
-        method = ConvAP()
+        method = ConvAP(pretrained=True)
     elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 
-        method = MixVPR()
+        method = MixVPR(pretrained=True)
     elif name == "regionvlad":
         from PlaceRec.Methods import RegionVLAD
 
-        method = RegionVLAD()
+        method = RegionVLAD(pretrained=True)
     else:
         raise Exception("Method not implemented")
     return method
 
 
-def get_loss_function(model, args):
-    raise NotImplementedError
+def cosine_distance(x1, x2):
+    # Cosine similarity ranges from -1 to 1, so we add 1 to make it non-negative
+    # and then normalize it to range from 0 to 1
+    cosine_sim = nn.CosineSimilarity(dim=0)(x1, x2)
+    return 1 - cosine_sim
+
+
+def get_loss_function(args):
+    if args.loss_distance == "l2":
+        return nn.TripletMarginLoss(args.margin)
+    elif args.loss_distance == "cosine":
+        return nn.TripletMarginWithDistanceLoss(distance_function=cosine_distance, margin=args.margin)

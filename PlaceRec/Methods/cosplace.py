@@ -37,5 +37,7 @@ preprocess = transforms.Compose(
 
 
 class CosPlace(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if not pretrained:
+            raise Warning("Cosplace model cannot be loaded untrained")
         super().__init__(model=model, preprocess=preprocess, name="cosplace")

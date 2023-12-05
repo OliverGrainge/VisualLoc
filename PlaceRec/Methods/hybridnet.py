@@ -154,7 +154,7 @@ if not os.path.exists(package_directory + "/weights/hybridnet_mean.npy"):
 
 
 model = HybridNetModel()
-model.load_state_dict(torch.load(package_directory + "/weights/HybridNet.caffemodel.pt"))
+
 
 mean_image = torch.Tensor(np.load(package_directory + "/weights/hybridnet_mean.npy"))
 
@@ -171,7 +171,9 @@ preprocess = transforms.Compose(
 
 
 class HybridNet(BaseModelWrapper):
-    def __init__(self):
+    def __init__(self, pretrained: bool = True):
+        if pretrained:
+            model.load_state_dict(torch.load(package_directory + "/weights/HybridNet.caffemodel.pt"))
         super().__init__(model=model, preprocess=preprocess, name="hybridnet")
         # hybridnet layers not implemented on metal
         if self.device == "mps":
