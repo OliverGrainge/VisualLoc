@@ -29,13 +29,14 @@ run:
 train: 
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
-  training_type: "contrastive" # training type
+  training_type: "asymmetric_distillation" # training type either contrastive or asymmetric distillation
+  dataset_name: "pitts30k" # Dataset to train on
+
   method: "resnet18_gem" # method to train
-  dataset_name: "pitts30k" # Dataset to train on 
-  train_batch_size: 10 # training batch size
+  train_batch_size: 75 # training batch size
   infer_batch_size: 128 # inference batch size 
   learning_rate: 0.00001 # learning rate
-  device: "cpu" # either cpu or cuda for acceleration
+  device: "mps" # either cpu or cuda for acceleration
   num_workers: 0 # number of workers for the dataloader
   max_epochs: 200 # maximum number of allowable epochs
   patience: 5 # patience for early stopping
@@ -52,6 +53,11 @@ train:
   loss_distance: "l2" # either cosine or l2
   margin: 0.1 # margin of the triplet loss
   val_check_interval: 5 # how many epochs before performing validation
+
+  ###################### Asymmetric Training Configuration ############################
+  student_method: "resnet18_gem"
+  teacher_method: "resnet18_gem"
+  reload: True # whether to reload the teacher's supervision features or compute new ones 
 
 
 

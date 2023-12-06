@@ -242,11 +242,37 @@ def train_arguments():
         help="This includes pre/post-processing methods and prediction refinement",
     )
 
-    parser.add_argument("--max_epochs", type=int, default=config["train"]["max_epochs"])
+    parser.add_argument(
+        "--max_epochs", 
+        type=int, 
+        default=config["train"]["max_epochs"])
 
-    parser.add_argument("--loss_distance", type=str, default=config["train"]["loss_distance"])
+    parser.add_argument(
+        "--loss_distance", 
+        type=str, 
+        default=config["train"]["loss_distance"])
 
-    parser.add_argument("--val_check_interval", type=int, default=config["train"]["val_check_interval"])
+    parser.add_argument(
+        "--val_check_interval", 
+        type=int, 
+        default=config["train"]["val_check_interval"])
 
+    parser.add_argument(
+        "--teacher_method",
+        type=str, 
+        default=config["train"]["teacher_method"]
+    )
+
+    parser.add_argument(
+        "--student_method",
+        type=str,
+        default=config["train"]["teacher_method"]
+    )
+
+    parser.add_argument(
+        "--reload",
+        type=bool,
+        default=config["train"]["reload"]
+    )
     args = parser.parse_args()
     return args

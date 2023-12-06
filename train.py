@@ -29,6 +29,7 @@ import wandb
 from parsers import train_arguments
 from PlaceRec.Training import TripletDataModule, TripletModule
 from PlaceRec.utils import ImageDataset, get_config, get_method
+from PlaceRec.Training import DistillationDataModule, DistillationModule
 
 config = get_config()
 args = train_arguments()
@@ -37,10 +38,12 @@ args = train_arguments()
 if __name__ == "__main__":
     pl.seed_everything(args.seed)
     torch.set_float32_matmul_precision("medium")
-    method = get_method(args.method, pretrained=False)
-    model = method.model.to(args.device)
+  
 
+    ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
+        method = get_method(args.method, pretrained=False)
+        model = method.model.to(args.device)
         # Early Stopping CallBack
         early_stop_callback = EarlyStopping(
             monitor="Recall@" + str(args.recall_values[1]),
@@ -74,10 +77,57 @@ if __name__ == "__main__":
         trainer = pl.Trainer(
             val_check_interval=args.val_check_interval,
             max_epochs=args.max_epochs,
-            accelerator=args.device,
+            accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
             callbacks=[early_stop_callback, checkpoint_callback],
         )
 
         # Initiate Training
         trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+
+
+    ###################### Asymmetric Distillation Training #######################
+    elif args.training_type == "asymmetric_distillation":
+        student_method = get_method(args.student_method, pretrained=False)
+        teacher_method = get_method(args.teacher_method, pretrained=False)
+        # Early Stopping CallBack
+        early_stop_callback = EarlyStopping(
+            monitor="val_loss",
+            min_delta=0.00,
+            patience=args.patience,
+            verbose=False,
+            mode="min",
+        )
+
+        # Checkpointing the Model
+        checkpoint_callback = ModelCheckpoint(
+            monitor="val_loss",
+            filename=join(
+                os.getcwd(), "PlaceRec/Training/checkpoints/", args.training_type, student_method.name, student_method.name + "-{epoch:02d}-{recallat1:.2f}"
+            ),
+            save_top_k=1,
+            verbose=False,
+            mode="min",
+        )
+
+        logger = WandbLogger(project="asymmetric distillation")  # need to login to a WandB account
+        logger.experiment.config.update(config["train"])  # Log the training configuration
+
+        # Build the Datamodule
+        distillationdatamodule = DistillationDataModule(args, teacher_method, teacher_method.preprocess, reload=args.reload)
+        # Build the Training Module
+        distillationmodule = DistillationModule(args, student_method)
+
+
+        # Build the Training Class
+        trainer = pl.Trainer(
+            val_check_interval=args.val_check_interval,
+            max_epochs=args.max_epochs,
+            accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
+            logger=logger,
+            callbacks=[early_stop_callback, checkpoint_callback],
+        )
+
+        # Initiate Training
+        trainer.fit(distillationmodule, datamodule=distillationdatamodule)
+

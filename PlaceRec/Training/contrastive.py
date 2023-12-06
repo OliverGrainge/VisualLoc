@@ -420,7 +420,7 @@ class TripletModule(pl.LightningModule):
             self.log("recallat" + str(self.args.recall_values[i]), recall)
         return recalls[1]
 
-    def on_test_epoch_end(self, batch, batch_idx, dataloader_idx=0):
+    def on_test_epoch_end(self, batch, batch_idx):
         self.args.features_dim = self.features_size()
         recalls, recalls_str = test(self.args, self.datamodule.test_dataset, self.model, self.datamodule.test_transform)
         print(recalls_str)

@@ -1,1 +1,2 @@
 from .contrastive import TripletDataModule, TripletModule
+from .asymmetric_distillation import DistillationDataModule, DistillationModule
