@@ -1,65 +1,13 @@
 import argparse
 
 import yaml
+from parsers import run_arguments
 
-from PlaceRec.utils import get_dataset, get_method
+from PlaceRec.utils import get_dataset, get_method, get_config
 
-with open("config.yaml", "r") as file:
-    config = yaml.safe_load(file)
 
-parser = argparse.ArgumentParser()
-
-######################################### Arguments ######################################
-
-parser.add_argument(
-    "--datasets",
-    choices=("gsvcities", "sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "pitts30k", "stlucia_large", "msls"),
-    help="specify one of the datasets from PlaceRec.Datasets",
-    type=str,
-    default=config["run"]["datasets"],
-    nargs="+",
-)
-
-parser.add_argument(
-    "--methods",
-    choices=(
-        "regionvlad",
-        "mixvpr",
-        "convap",
-        "amosnet",
-        "hybridnet",
-        "netvlad",
-        "hog",
-        "cosplace",
-        "calc",
-        "alexnet",
-    ),
-    help="specify one of the techniques from vpr/vpr_tecniques",
-    type=str,
-    default=config["run"]["methods"],
-    nargs="+",
-)
-
-parser.add_argument("--batchsize", type=int, default=10, help="Choose the Batchsize for VPR processing")
-
-parser.add_argument(
-    "--partition",
-    type=str,
-    default=config["run"]["partition"],
-    help="choose from 'train', 'val', 'test' or 'all'",
-)
-
-parser.add_argument(
-    "--num_workers",
-    type=int,
-    default=config["run"]["num_workers"],
-    help="Choose the number of processing the threads for the dataloader",
-)
-
-parser.add_argument("--pin_memory", type=bool, default=config["run"]["pin_memory"], help="Choose whether to pin memory in GPU")
-
-args = parser.parse_args()
-
+config = get_config()
+args = run_arguments()
 
 #################################### Computing Descriptors ###########################################
 

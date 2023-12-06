@@ -8,7 +8,7 @@ import torch.nn as nn
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+import yaml
 
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -41,7 +41,7 @@ class ImageIdxDataset(Dataset):
             img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
             img = Image.fromarray(img)
             img = self.preprocess(img)
-            return img
+            return img, idx
 
         img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
         return img, idx
@@ -179,3 +179,9 @@ def get_loss_function(args):
         return nn.TripletMarginLoss(args.margin)
     elif args.loss_distance == "cosine":
         return nn.TripletMarginWithDistanceLoss(distance_function=cosine_distance, margin=args.margin)
+
+
+def get_config():
+    with open("config.yaml", "r") as file:
+        config = yaml.safe_load(file)
+    return config

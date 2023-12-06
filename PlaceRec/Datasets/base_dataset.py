@@ -5,7 +5,6 @@ import numpy as np
 import torch
 import torchvision
 
-
 class BaseDataset(ABC):
     """
     This is an abstract class that serves as a template for implementing

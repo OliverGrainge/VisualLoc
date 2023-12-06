@@ -2,6 +2,7 @@ import argparse
 
 import pandas as pd
 import yaml
+from parsers import eval_arguments
 
 from PlaceRec.Metrics import (
     average_precision,
@@ -17,54 +18,8 @@ from PlaceRec.Metrics import (
 )
 from PlaceRec.utils import get_dataset, get_method
 
-with open("config.yaml", "r") as file:
-    config = yaml.safe_load(file)
+args = eval_arguments()
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--datasets",
-    choices=("gsvcities", "sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "pitts30k", "stlucia_large", "msls"),
-    help="specify one of the datasets from PlaceRec.Datasets",
-    type=str,
-    default=config["eval"]["datasets"],
-    nargs="+",
-)
-
-parser.add_argument(
-    "--methods",
-    help="specify one of the techniques from vpr/vpr_tecniques",
-    type=str,
-    default=config["eval"]["methods"],
-    nargs="+",
-)
-
-parser.add_argument(
-    "--partition",
-    type=str,
-    default=config["eval"]["partition"],
-    help="choose from 'train', 'val', 'test' or 'all'",
-)
-
-parser.add_argument(
-    "--input_size",
-    type=int,
-    default=config["eval"]["input_size"],
-    nargs=2,
-    help="Resizing shape for images (HxW).",
-)
-
-parser.add_argument(
-    "--device",
-    type=str,
-    default=config["eval"]["device"],
-    help="choose the device to benchmark inference",
-)
-
-parser.add_argument("--metrics", type=str, default="prcurve", nargs="+")
-
-
-args = parser.parse_args()
 
 for dataset_name in args.datasets:
     ds = get_dataset(dataset_name)

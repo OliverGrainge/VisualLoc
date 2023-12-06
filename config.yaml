@@ -23,34 +23,31 @@ run:
   partition: "test"
   num_workers: 0
   pin_memory: True
+  batch_size: 10
   device: None
 
 train: 
-  training_type: "contrastive"
-  method: "resnet18_gem"
+  training_type: "contrastive" # training type
+  method: "resnet18_gem" # method to train
   loss_distance: "l2" # either cosine or l2
-  seed: 0
-  train_batch_size: 10
-  infer_batch_size: 128
-  margin: 0.1
-  epochs_num: 1000
-  patience: 3
+  seed: 0 # random seed
+  train_batch_size: 10 # training batch size
+  infer_batch_size: 128 # inference batch size 
+  margin: 0.1 # margin of the triplet loss
   learning_rate: 0.00001 # learning rate
-  cache_refresh_rate: 1000
-  negs_num_per_query: 10
-  neg_samples_num: 1000
-  mining: "partial" # either partial or random
+  cache_refresh_rate: 1000 # number of triplets per epoch
+  neg_num_per_query: 10 # number of negative images per triplet
+  mining: "random" # either partial or random. Partial mines the hardest negatives, random mines random negatives. 
   device: "cpu" # either cpu or cuda 
-  num_workers: 16 # number of workers for the dataloader
+  num_workers: 0 # number of workers for the dataloader
   val_positive_dist_threshold: 25
   train_positive_dist_threshold: 10
   #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
   datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
-  dataset_name: "mapillary_sls"
-  patience: 5
-  save_dir: "default"
-  max_epochs: 200
-  resize: [480, 640]
+  dataset_name: "mapillary_sls" # Dataset to train on 
+  patience: 5 # patience for early stopping
+  max_epochs: 200 # maximum number of allowable epochs
+  val_check_interval: 5 # how many epochs before performing validation
 
 
 
