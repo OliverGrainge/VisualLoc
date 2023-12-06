@@ -107,11 +107,8 @@ for dataset_name in args.datasets:
 
         if "recall@100p" in args.metrics:
             recallat100p[method.name] = recall_at_100p(
+                method=method,
                 ground_truth=ground_truth,
-                ground_truth_soft=ground_truth_soft,
-                similarity=similarity,
-                k=1,
-                matching="single",
             )
             table_data["recall@100p"] = recallat100p[method.name]
 
@@ -170,6 +167,7 @@ for dataset_name in args.datasets:
             show=False,
             metric_name="recall@100p",
             dataset_name=ds.name,
+            scores=list(recallat100p.values())
         )
 
     if "gpu_latency" in args.metrics:
