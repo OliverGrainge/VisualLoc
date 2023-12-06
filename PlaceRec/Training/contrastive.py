@@ -343,19 +343,6 @@ class TripletDataModule(pl.LightningDataModule):
             self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=True
         )
 
-    def test_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
-
-    def recall_dataloader(self):
-        query_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_preprocess)
-        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_preprocess)
-        query_dl = DataLoader(
-            query_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False
-        )
-        database_dl = DataLoader(
-            database_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False
-        )
-        return [query_dl, database_dl]
 
 
 
