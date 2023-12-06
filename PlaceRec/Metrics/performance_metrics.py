@@ -153,9 +153,9 @@ def count_flops(method) -> int:
     loader = ds.query_images_loader("test", preprocess=method.preprocess)
     assert isinstance(method.model, nn.Module)
     if method.model is not None:
-        for batch in loader:
+        for batch, indicies in loader:
             input = batch[0][None, :].to(method.device)  # get one input item
-            flops, _ = profile(method.model, inputs=(input,))
+            flops, _ = profile(method.model, inputs=(input,), verbose=False)
             return int(flops)
     else:
         return 0

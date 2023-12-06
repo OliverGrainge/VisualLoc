@@ -22,31 +22,35 @@ run:
     - "calc"
   partition: "test"
   num_workers: 0
-  pin_memory: True
+  pin_memory: False
   batch_size: 10
   device: None
 
 train: 
+  ######################## High Level Training Configuration ########################
+  seed: 0 # random seed
   training_type: "contrastive" # training type
   method: "resnet18_gem" # method to train
-  loss_distance: "l2" # either cosine or l2
-  seed: 0 # random seed
+  dataset_name: "pitts30k" # Dataset to train on 
   train_batch_size: 10 # training batch size
   infer_batch_size: 128 # inference batch size 
-  margin: 0.1 # margin of the triplet loss
   learning_rate: 0.00001 # learning rate
-  cache_refresh_rate: 1000 # number of triplets per epoch
-  neg_num_per_query: 10 # number of negative images per triplet
-  mining: "random" # either partial or random. Partial mines the hardest negatives, random mines random negatives. 
-  device: "cpu" # either cpu or cuda 
+  device: "cpu" # either cpu or cuda for acceleration
   num_workers: 0 # number of workers for the dataloader
-  val_positive_dist_threshold: 25
-  train_positive_dist_threshold: 10
+  max_epochs: 200 # maximum number of allowable epochs
+  patience: 5 # patience for early stopping
   #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
   datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
-  dataset_name: "mapillary_sls" # Dataset to train on 
-  patience: 5 # patience for early stopping
-  max_epochs: 200 # maximum number of allowable epochs
+
+
+  ######################## Contrastive Training Configuration #########################
+  cache_refresh_rate: 1000 # number of triplets per epoch
+  train_positive_dist_threshold: 10
+  val_positive_dist_threshold: 25
+  neg_num_per_query: 10 # number of negative images per triplet
+  mining: "random" # either partial or random. Partial mines the hardest negatives, random mines random negatives. 
+  loss_distance: "l2" # either cosine or l2
+  margin: 0.1 # margin of the triplet loss
   val_check_interval: 5 # how many epochs before performing validation
 
 

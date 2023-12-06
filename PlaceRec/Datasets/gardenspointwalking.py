@@ -9,8 +9,8 @@ from PIL import Image
 from scipy.signal import convolve2d
 from torch.utils.data import DataLoader
 
-from ..utils import ImageDataset, s3_bucket_download
-from .base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
+from PlaceRec.Datasets.base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -110,7 +110,7 @@ class GardensPointWalking(BaseDataset):
             raise Exception("Partition must be 'train', 'val' or 'all'")
 
         # build the dataloader
-        dataset = ImageDataset(paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,
@@ -130,7 +130,7 @@ class GardensPointWalking(BaseDataset):
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
         # build the dataloader
-        dataset = ImageDataset(self.map_paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,

@@ -5,10 +5,10 @@ import boto3
 import botocore
 import numpy as np
 import torch.nn as nn
+import yaml
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import yaml
 
 
 class ImageDataset(Dataset):

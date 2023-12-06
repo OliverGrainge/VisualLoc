@@ -1,16 +1,15 @@
 import argparse
 
 import yaml
+
 from parsers import run_arguments
-
-from PlaceRec.utils import get_dataset, get_method, get_config
-
+from PlaceRec.utils import get_config, get_dataset, get_method
 
 config = get_config()
 args = run_arguments()
 
-#################################### Computing Descriptors ###########################################
 
+#################################### Computing Descriptors ###########################################
 
 for method_name in args.methods:
     method = get_method(method_name)

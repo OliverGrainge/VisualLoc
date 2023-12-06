@@ -10,8 +10,8 @@ from PIL import Image
 from scipy.signal import convolve2d
 from torch.utils.data import DataLoader
 
-from ..utils import ImageDataset
-from .base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
+from PlaceRec.Datasets.base_dataset import BaseDataset
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -197,7 +197,7 @@ class GsvCities(BaseDataset, GsvBase):
         paths = self.query_partition(partition)
 
         # build the dataloader
-        dataset = ImageDataset(paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,
@@ -219,7 +219,7 @@ class GsvCities(BaseDataset, GsvBase):
         paths = self.map_partition(partition)
 
         # build the dataloader
-        dataset = ImageDataset(paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,

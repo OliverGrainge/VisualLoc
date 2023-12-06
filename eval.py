@@ -2,8 +2,8 @@ import argparse
 
 import pandas as pd
 import yaml
-from parsers import eval_arguments
 
+from parsers import eval_arguments
 from PlaceRec.Metrics import (
     average_precision,
     benchmark_latency_cpu,

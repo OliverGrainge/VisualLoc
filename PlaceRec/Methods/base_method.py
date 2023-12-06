@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
-
+from PIL import Image
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -335,6 +335,15 @@ class BaseModelWrapper(BaseFunctionality):
         self.preprocess = preprocess
         self.model.to(self.device)
         self.model.eval()
+        self.features_dim = self.features_size()
+
+    def features_size(self):
+        img = np.random.rand(224, 224, 3)*255
+        img = Image.fromarray(img.astype(np.uint8))
+        img = self.preprocess(img)
+        with torch.no_grad():
+            features = self.model(img[None, :].to(self.device)).detach().cpu()
+        return features.size(1)
 
     def compute_query_desc(
         self,
@@ -352,10 +361,11 @@ class BaseModelWrapper(BaseFunctionality):
             dict: A dictionary containing the computed query descriptors.
         """
 
-        all_desc = []
-        for batch in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
-            all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-        all_desc = np.vstack(all_desc)
+        all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
+        with torch.no_grad():
+            for batch, indicies in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
+                features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
         query_desc = {"query_descriptors": all_desc}
@@ -378,10 +388,11 @@ class BaseModelWrapper(BaseFunctionality):
             dict: A dictionary containing the computed map descriptors.
         """
 
-        all_desc = []
-        for batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
-            all_desc.append(self.model(batch.to(self.device)).detach().cpu().numpy())
-        all_desc = np.vstack(all_desc)
+        all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
+        with torch.no_grad():
+            for batch, indicies in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
+                features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
         map_desc = {"map_descriptors": all_desc}

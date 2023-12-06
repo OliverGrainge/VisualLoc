@@ -12,8 +12,8 @@ from scipy.signal import convolve2d
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
-from ..utils import ImageDataset
-from .base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
+from PlaceRec.Datasets.base_dataset import BaseDataset
 
 with open(join(os.getcwd(), "config.yaml"), "r") as file:
     config = yaml.safe_load(file)
@@ -143,7 +143,7 @@ class Pitts30k(BaseDataset):
         # get the required partition of the dataset
         paths = self.query_partition(partition)
         # build the dataloader
-        dataset = ImageDataset(paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,
@@ -164,9 +164,9 @@ class Pitts30k(BaseDataset):
     ) -> torch.utils.data.DataLoader:
         # build the dataloader
         if partition == "train" or partition == "all":
-            dataset = ImageDataset(self.train_database_paths, preprocess=preprocess)
+            dataset = ImageIdxDataset(self.train_database_paths, preprocess=preprocess)
         elif partition in ["test", "val"]:
-            dataset = ImageDataset(self.test_database_paths, preprocess=preprocess)
+            dataset = ImageIdxDataset(self.test_database_paths, preprocess=preprocess)
         else:
             raise Exception("partition must be train, test, val or all")
 

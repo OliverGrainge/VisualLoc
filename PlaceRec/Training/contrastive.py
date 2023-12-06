@@ -23,10 +23,30 @@ from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
 
-from PlaceRec.utils import ImageDataset, get_loss_function, get_method, ImageIdxDataset
+from PlaceRec.utils import (
+    ImageIdxDataset,
+    get_loss_function,
+    get_method,
+)
 
 
 def test(args, eval_ds, model, preprocess):
+    """
+    Evaluate the model on a given dataset.
+
+    This function computes descriptors for the database and query images, and then uses these descriptors to perform image retrieval. 
+    The retrieval performance is measured using recall values at different cut-off points.
+
+    Parameters:
+    - args (Namespace): Arguments containing model, dataset, and evaluation configuration.
+    - eval_ds (Dataset): The evaluation dataset containing paths to database and query images.
+    - model (nn.Module): Trained model to compute image descriptors.
+    - preprocess (function): Preprocessing function to apply to images before passing them to the model.
+
+    Returns:
+    - tuple: A tuple containing the recall values and a formatted string of recall values.
+    """
+
     model = model.eval()
     with torch.no_grad():
         database_descs = np.empty((eval_ds.database_num, args.features_dim), dtype="float32")
@@ -71,7 +91,18 @@ def test(args, eval_ds, model, preprocess):
 
 
 class BaseTrainingDataset(data.Dataset):
-    """Dataset with images from database and queries, used for inference (testing and building cache)."""
+    """
+    A PyTorch Dataset for loading and processing images for model inference.
+
+    This dataset is used for both training and testing, handling the loading of database and query images. It also computes soft and hard positives for each query image.
+
+    Parameters:
+    - args (Namespace): Arguments containing dataset configuration.
+    - split (str): Indicates the dataset split to use ('train' or 'test').
+
+    Raises:
+    - FileNotFoundError: If the dataset folders do not exist.
+    """
 
     def __init__(self, args, split="train"):
         super().__init__()
@@ -136,6 +167,23 @@ class BaseTrainingDataset(data.Dataset):
 
 
 class TripletDataset(BaseTrainingDataset):
+    """
+    A PyTorch Dataset for generating image triplets for training.
+
+    This dataset inherits from BaseTrainingDataset and adds functionality to create triplets consisting of an anchor, a positive, and multiple negatives.
+
+    Parameters:
+    - args (Namespace): Arguments containing dataset and mining configuration.
+    - test_preprocess (function): Preprocessing function for testing images.
+    - train_preprocess (function): Preprocessing function for training images.
+    - split (str): Dataset split to use ('train' or 'test').
+
+    Methods:
+    - features_size(model): Returns the size of the features extracted by the model.
+    - view_triplets(sample_size): Displays sample triplets.
+    - mine_triplets(model): Mines triplets based on the specified mining strategy.
+    """
+
     def __init__(self, args, test_preprocess, train_preprocess, split="train"):
         super().__init__(args, split=split)
 
@@ -173,7 +221,7 @@ class TripletDataset(BaseTrainingDataset):
         for idx in idxs:
             print(idx)
             triplet = self.triplets[idx]
-            fig, ax = plt.subplots(3)
+            fig, ax = plt.subplots(1, 3)
             ax[0].imshow(Image.open(triplet[0]))
             ax[0].set_title("Anchor")
             ax[1].imshow(Image.open(triplet[1]))
@@ -198,7 +246,6 @@ class TripletDataset(BaseTrainingDataset):
         model.to(self.args.device)
         sample_query_indexes = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate, replace=False)
         sample_query_paths = [self.queries_paths[idx] for idx in sample_query_indexes]
-
         hard_positives_per_query = [np.random.choice(self.hard_positives_per_query[idx]) for idx in sample_query_indexes]
 
         sample_negatives_per_query = [
@@ -247,9 +294,6 @@ class TripletDataset(BaseTrainingDataset):
 
     def random_mine(self, model):
         query_idxs = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
-        # sample a random
-        # raise Exception("Need to Remove the Queries in the Dataset without Any Positives")
-
         positive_idxs = np.array([np.random.choice(self.hard_positives_per_query[v]) for v in query_idxs])
         neg_idxs = np.array(
             [np.random.choice(np.setdiff1d(np.arange(self.database_num), pos_idx), size=self.args.neg_num_per_query) for pos_idx in positive_idxs]
@@ -262,37 +306,49 @@ class TripletDataset(BaseTrainingDataset):
             self.triplets.append([anchor_path, positive_path] + negatives_paths)
 
 
+
+################################################### Data Module ###################################################
+
+
 class TripletDataModule(pl.LightningDataModule):
-    def __init__(self, args, test_transform, train_transform=None):
+    """
+    A PyTorch Lightning Data Module for handling triplet datasets.
+
+    This module prepares the dataset for training and validation, handling the necessary transformations and data loading.
+
+    Parameters:
+    - args (Namespace): Arguments containing dataset and model configuration.
+    - test_preprocess (function): Transformation function for test data.
+    - train_preprocess (function, optional): Transformation function for train data.
+    """
+
+    def __init__(self, args, test_preprocess, train_preprocess=None):
         super().__init__()
         self.args = args
-        self.test_transform = test_transform
-        if train_transform is not None:
-            self.train_transform = train_transform
+        self.test_preprocess = test_preprocess
+        if train_preprocess is not None:
+            self.train_preprocess = train_preprocess
         else:
-            self.train_transform = test_transform
+            self.train_preprocess = test_preprocess
 
         self.pin_memory = True if self.args.device == "cuda" else False
 
     def setup(self, stage=None):
         # Split data into train, validate, and test sets
-        self.train_dataset = TripletDataset(self.args, self.test_transform, self.train_transform, split="train")
-        self.test_dataset = TripletDataset(self.args, self.test_transform, self.train_transform, split="test")
+        self.train_dataset = TripletDataset(self.args, self.test_preprocess, self.train_preprocess, split="train")
+        self.test_dataset = TripletDataset(self.args, self.test_preprocess, self.train_preprocess, split="test")
 
     def train_dataloader(self):
         return DataLoader(
             self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=True
         )
 
-    def val_dataloader(self):
-        return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
-
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory)
 
     def recall_dataloader(self):
-        query_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_transform)
-        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_transform)
+        query_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_preprocess)
+        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_preprocess)
         query_dl = DataLoader(
             query_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=False
         )
@@ -302,7 +358,34 @@ class TripletDataModule(pl.LightningDataModule):
         return [query_dl, database_dl]
 
 
+
+
+
+################################################### Training Module ###################################################
+
+
 class TripletModule(pl.LightningModule):
+    """
+    A PyTorch Lightning Module for training with triplet loss.
+
+    This module encapsulates the model training process using triplet loss. It handles the training steps, validation, and testing, as well as optimizer configuration.
+
+    Parameters:
+    - args (Namespace): Arguments containing model and training configuration.
+    - model (nn.Module): The neural network model to train.
+    - datamodule (TripletDataModule): The data module containing training and validation data.
+
+    Methods:
+    - features_size(): Returns the size of the features extracted by the model.
+    - on_train_start(): Prepares the dataset for training.
+    - on_train_epoch_end(): Updates the mining of triplets at the end of each training epoch.
+    - forward(x): Forward pass through the model.
+    - training_step(batch, batch_idx): Defines the training step.
+    - on_validation_epoch_end(outputs): Handles actions at the end of a validation epoch.
+    - on_test_epoch_end(batch, batch_idx, dataloader_idx): Handles actions at the end of a test epoch.
+    - configure_optimizers(): Configures the model optimizers.
+    """
+
     def __init__(self, args, model, datamodule):
         super().__init__()
         self.args = args
@@ -311,10 +394,11 @@ class TripletModule(pl.LightningModule):
         self.loss_fn = get_loss_function(args)
         self.save_hyperparameters(ignore=["model"])
 
-    def features_size(self):
-        dl, _ = self.datamodule.recall_dataloader()
-        for batch, _ in dl:
-            features = self.model(batch.to(self.args.device)).detach().cpu()
+    def features_size(self, model):
+        img = Image.open(self.datamodule.train_dataset.queries_paths[0]).convert("RGB")
+        img = self.test_preprocess(img)
+        with torch.no_grad():
+            features = model(img[None, :].to(self.args.device)).detach().cpu()
             return features.size(1)
 
     def on_train_start(self):
@@ -346,7 +430,7 @@ class TripletModule(pl.LightningModule):
         recalls, recalls_str = test(self.args, self.datamodule.test_dataset, self.model, self.datamodule.test_transform)
         print(recalls_str)
         for recall, i in enumerate(recalls):
-            self.log("Recall@" + str(self.args.recall_values[i]), recall)
+            self.log("recallat" + str(self.args.recall_values[i]), recall)
         return recalls[1]
 
     def on_test_epoch_end(self, batch, batch_idx, dataloader_idx=0):
@@ -354,7 +438,7 @@ class TripletModule(pl.LightningModule):
         recalls, recalls_str = test(self.args, self.datamodule.test_dataset, self.model, self.datamodule.test_transform)
         print(recalls_str)
         for recall, i in enumerate(recalls):
-            self.log("Test_Recall@" + str(self.args.recall_values[i]), recall)
+            self.log("recallat" + str(self.args.recall_values[i]), recall)
         return recalls[1]
 
     def configure_optimizers(self):

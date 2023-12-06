@@ -24,12 +24,11 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-from parsers import train_arguments
-from PlaceRec.utils import get_config
 
 import wandb
+from parsers import train_arguments
 from PlaceRec.Training import TripletDataModule, TripletModule
-from PlaceRec.utils import ImageDataset, get_method
+from PlaceRec.utils import ImageDataset, get_config, get_method
 
 config = get_config()
 args = train_arguments()
@@ -38,33 +37,40 @@ args = train_arguments()
 if __name__ == "__main__":
     pl.seed_everything(args.seed)
     torch.set_float32_matmul_precision("medium")
-    method = get_method(args.method, pretrained=True)
+    method = get_method(args.method, pretrained=False)
     model = method.model.to(args.device)
 
     if args.training_type == "contrastive":
+        # Early Stopping CallBack
         early_stop_callback = EarlyStopping(
-            monitor="val_loss",  # Metric to monitor
-            min_delta=0.00,  # Minimum change to qualify as an improvement
-            patience=args.patience,  # Number of epochs with no improvement after which training will be stopped
-            verbose=False,  # Whether to output a message when early stopping is triggered
-            mode="max",  # Mode - 'min' for minimizing the metric, 'max' for maximizing
+            monitor="Recall@" + str(args.recall_values[1]),
+            min_delta=0.00,
+            patience=args.patience,
+            verbose=False,
+            mode="max",
         )
 
+        # Checkpointing the Model
         checkpoint_callback = ModelCheckpoint(
             monitor="Recall@" + str(args.recall_values[1]),
-            filename=join(os.getcwd(), "PlaceRec/Training/checkpoints/" + method.name + "/" + method.name + "-{epoch:02d}-{val_loss:.2f}"),
+            filename=join(
+                os.getcwd(), "PlaceRec/Training/checkpoints/", args.training_type, method.name, method.name + "-{epoch:02d}-{recallat1:.2f}"
+            ),
             save_top_k=1,
             verbose=False,
-            mode="min",
+            mode="max",
         )
 
-        logger = WandbLogger(project=method.name)
-        logger.experiment.config.update(config["train"])
+        logger = WandbLogger(project=method.name)  # need to login to a WandB account
+        logger.experiment.config.update(config["train"])  # Log the training configuration
 
+        # Build the Datamodule
         tripletdatamodule = TripletDataModule(args, method.preprocess)
-        tripletdatamodule.setup(None)
+
+        # Build the Training Module
         tripletmodule = TripletModule(args, model, tripletdatamodule)
 
+        # Build the Training Class
         trainer = pl.Trainer(
             val_check_interval=args.val_check_interval,
             max_epochs=args.max_epochs,
@@ -73,4 +79,5 @@ if __name__ == "__main__":
             callbacks=[early_stop_callback, checkpoint_callback],
         )
 
+        # Initiate Training
         trainer.fit(tripletmodule, datamodule=tripletdatamodule)
