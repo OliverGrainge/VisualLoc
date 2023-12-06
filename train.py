@@ -41,7 +41,6 @@ if __name__ == "__main__":
     method = get_method(args.method, pretrained=True)
     model = method.model.to(args.device)
 
-
     if args.training_type == "contrastive":
         early_stop_callback = EarlyStopping(
             monitor="val_loss",  # Metric to monitor

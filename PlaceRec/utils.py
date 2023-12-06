@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 import yaml
 
+
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
         self.img_paths = img_paths
@@ -27,6 +28,7 @@ class ImageDataset(Dataset):
 
         img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
         return img
+
 
 class ImageIdxDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):

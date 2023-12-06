@@ -26,7 +26,6 @@ from tqdm import tqdm
 from PlaceRec.utils import ImageDataset, get_loss_function, get_method, ImageIdxDataset
 
 
-
 def test(args, eval_ds, model, preprocess):
     model = model.eval()
     with torch.no_grad():
@@ -43,7 +42,7 @@ def test(args, eval_ds, model, preprocess):
         for inputs, indicies in tqdm(queries_dl, desc="Computing Test Query Descriptors"):
             features = model(inputs.to(args.device)).cpu().numpy()
             queries_descs[indicies.numpy(), :] = features
-        
+
         if args.loss_distance == "cosine":
             faiss.normalize_L2(database_descs)
             index = faiss.IndexFlatIP(args.features_dim)
@@ -71,9 +70,9 @@ def test(args, eval_ds, model, preprocess):
     return recalls, recalls_str
 
 
-
 class BaseTrainingDataset(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
+
     def __init__(self, args, split="train"):
         super().__init__()
         self.args = args
@@ -95,12 +94,9 @@ class BaseTrainingDataset(data.Dataset):
         self.database_paths = sorted(glob(join(database_folder, "**", "*.jpg"), recursive=True))
         self.queries_paths = sorted(glob(join(queries_folder, "**", "*.jpg"), recursive=True))
 
-
-
         # The format must be path/to/file/@utm_easting@utm_northing@...@.jpg
         self.database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]).astype(float)
         self.queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]).astype(float)
-
 
         # Find soft_positives_per_query, which are within val_positive_dist_threshold (deafult 25 meters)
         knn = NearestNeighbors(n_jobs=-1)
@@ -125,7 +121,6 @@ class BaseTrainingDataset(data.Dataset):
         # Remove queries without positives
         self.hard_positives_per_query = [arr for i, arr in enumerate(self.hard_positives_per_query) if i not in queries_without_any_hard_positive]
         self.queries_paths = [arr for i, arr in enumerate(self.queries_paths) if i not in queries_without_any_hard_positive]
-
 
         self.all_images_paths = list(self.database_paths) + list(self.queries_paths)
         self.queries_paths = list(self.queries_paths)
@@ -169,7 +164,6 @@ class TripletDataset(BaseTrainingDataset):
         with torch.no_grad():
             features = model(img[None, :].to(self.args.device)).detach().cpu()
             return features.size(1)
-
 
     def view_triplets(self, sample_size=5):
         if len(self.triplets) == 0:
@@ -315,7 +309,7 @@ class TripletModule(pl.LightningModule):
         self.model = model
         self.datamodule = datamodule
         self.loss_fn = get_loss_function(args)
-        self.save_hyperparameters(ignore=['model'])
+        self.save_hyperparameters(ignore=["model"])
 
     def features_size(self):
         dl, _ = self.datamodule.recall_dataloader()
