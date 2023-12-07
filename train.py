@@ -119,9 +119,9 @@ if __name__ == "__main__":
         distillationmodule = DistillationModule(args, student_method)
 
 
+
         # Build the Training Class
         trainer = pl.Trainer(
-            val_check_interval=args.val_check_interval,
             max_epochs=args.max_epochs,
             accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,

@@ -25,6 +25,7 @@ import random
 import torchvision.transforms.functional as TF
 from PlaceRec.utils import ImageIdxDataset
 
+file_directory = os.path.dirname(os.path.abspath(__file__))
 
 
 def test(args, eval_ds, model, preprocess, database_descs):
@@ -196,26 +197,25 @@ class DistillationDataModule(pl.LightningDataModule):
         if self.reload: 
             try: 
                 # try and load the cache
-                self.train_cache = torch.load(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
-                self.val_cache = torch.load(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
-
-                print("===================", self.train_cache.size(0), self.val_cache.size(0))
+                self.train_cache = torch.load(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
+                self.val_cache = torch.load(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
+                
             except: 
                 # Build the Teacher Features using the test_preprocess processing method
                 train_dataset = TeacherDataset(BaseDistillationDataset(self.args, "train"), preprocess=self.test_preprocess)
                 train_dataloader = DataLoader(train_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda"))
                 self.train_cache = self.compute_cache(train_dataloader)
                 del train_dataloader 
-                val_dataset = TeacherDataset(BaseDistillationDataset(self.args, "train"), preprocess=self.test_preprocess)
+                val_dataset = TeacherDataset(BaseDistillationDataset(self.args, "val"), preprocess=self.test_preprocess)
                 val_dataloader = DataLoader(val_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda"))
                 self.val_cache = self.compute_cache(val_dataloader)
                 del val_dataloader
 
-                if not os.path.exists(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name)):
-                    os.makedirs(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name))
+                if not os.path.exists(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name)):
+                    os.makedirs(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name))
 
-                torch.save(self.train_cache, os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
-                torch.save(self.val_cache, os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
+                torch.save(self.train_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
+                torch.save(self.val_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
         else: 
             print("========================= Computing Features Cache =============================")
             # Build the Teacher Features using the test_preprocess processing method
@@ -228,11 +228,11 @@ class DistillationDataModule(pl.LightningDataModule):
             self.val_cache = self.compute_cache(val_dataloader)
             del val_dataloader
 
-            if not os.path.exists(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name)):
-                os.makedirs(os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name))
+            if not os.path.exists(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name)):
+                os.makedirs(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name))
 
-            torch.save(self.train_cache, os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
-            torch.save(self.val_cache, os.path.join(os.getcwd(), "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
+            torch.save(self.train_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
+            torch.save(self.val_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
 
 
         # build the student training and validation datasets
@@ -301,3 +301,5 @@ class DistillationModule(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         return optimizer
+
+

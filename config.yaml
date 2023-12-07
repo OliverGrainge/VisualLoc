@@ -29,7 +29,7 @@ run:
 train: 
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
-  training_type: "asymmetric_distillation" # training type either contrastive or asymmetric distillation
+  training_type: "contrastive" # training type either contrastive or asymmetric distillation
   dataset_name: "pitts30k" # Dataset to train on
 
   method: "resnet18_gem" # method to train
