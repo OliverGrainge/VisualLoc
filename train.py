@@ -46,7 +46,7 @@ if __name__ == "__main__":
         model = method.model.to(args.device)
         # Early Stopping CallBack
         early_stop_callback = EarlyStopping(
-            monitor="Recall@" + str(args.recall_values[1]),
+            monitor="recallat" + str(args.recall_values[1]),
             min_delta=0.00,
             patience=args.patience,
             verbose=False,
@@ -69,17 +69,18 @@ if __name__ == "__main__":
 
         # Build the Datamodule
         tripletdatamodule = TripletDataModule(args, method.preprocess)
-
+        tripletdatamodule.setup()
         # Build the Training Module
         tripletmodule = TripletModule(args, model, tripletdatamodule)
 
         # Build the Training Class
         trainer = pl.Trainer(
-            val_check_interval=args.val_check_interval,
+            check_val_every_n_epoch=args.val_check_interval,
+            log_every_n_steps=20,
             max_epochs=args.max_epochs,
             accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
-            callbacks=[early_stop_callback, checkpoint_callback],
+            #callbacks=[early_stop_callback, checkpoint_callback],
         )
 
         # Initiate Training

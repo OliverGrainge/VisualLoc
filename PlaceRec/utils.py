@@ -9,7 +9,7 @@ import yaml
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+import torch.nn.functional as F
 
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -187,3 +187,11 @@ def get_config():
     with open("config.yaml", "r") as file:
         config = yaml.safe_load(file)
     return config
+
+
+class L2Norm(nn.Module):
+    def __init__(self, dim=1):
+        super().__init__()
+        self.dim = dim
+    def forward(self, x):
+        return F.normalize(x, p=2, dim=self.dim)

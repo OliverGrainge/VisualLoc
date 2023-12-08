@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torchvision import models, transforms
+from PlaceRec.utils import L2Norm
 
 from .base_method import BaseModelWrapper
 
@@ -29,7 +30,7 @@ def resnet18_gem(descriptor_size=1024):
 
     backbone = torch.nn.Sequential(*layers)
 
-    return torch.nn.Sequential(backbone, nn.Conv2d(512, descriptor_size, 1, stride=1), GeM())
+    return torch.nn.Sequential(backbone, nn.Conv2d(512, descriptor_size, 1, stride=1), GeM(), L2Norm())
 
 
 preprocess = transforms.Compose(

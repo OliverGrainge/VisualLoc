@@ -123,7 +123,12 @@ def eval_arguments():
 def train_arguments():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--recall_values", type=int, default=[1, 5, 10, 20], nargs="+", help="Recalls to be computed, such as R@5.")
+    parser.add_argument(
+        "--recall_values", 
+        type=int, 
+        default=config["train"]["recall_values"], 
+        nargs="+", 
+        help="Recalls to be computed, such as R@5.")
 
     parser.add_argument(
         "--dataset_name",

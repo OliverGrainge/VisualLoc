@@ -52,16 +52,23 @@ def test(args, eval_ds, model, preprocess):
         database_descs = np.empty((eval_ds.database_num, args.features_dim), dtype="float32")
         database_ds = ImageIdxDataset(eval_ds.database_paths, preprocess)
         database_dl = DataLoader(database_ds, num_workers=args.num_workers, batch_size=args.infer_batch_size, pin_memory=(args.device == "cuda"))
-        for inputs, indicies in tqdm(database_dl, desc="Computing Test Database Descriptors"):
+        i = 0
+        progress_bar = tqdm(total=len(database_dl), desc="Computing Test Database Descriptors")
+        for inputs, indicies in database_dl:
             features = model(inputs.to(args.device)).cpu().numpy()
-            database_descs[indicies.numpy(), :] = features
+            database_descs[indicies.cpu().numpy(), :] = features
+            progress_bar.update(1)
+        progress_bar.close()
 
         queries_descs = np.empty((eval_ds.queries_num, args.features_dim), dtype="float32")
         queries_ds = ImageIdxDataset(eval_ds.queries_paths, preprocess)
         queries_dl = DataLoader(queries_ds, num_workers=args.num_workers, batch_size=args.infer_batch_size, pin_memory=(args.device == "cuda"))
-        for inputs, indicies in tqdm(queries_dl, desc="Computing Test Query Descriptors"):
+        progress_bar = tqdm(total=len(queries_dl), desc="Computing Test Query Descriptors")
+        for inputs, indicies in queries_dl:
             features = model(inputs.to(args.device)).cpu().numpy()
-            queries_descs[indicies.numpy(), :] = features
+            queries_descs[indicies.cpu().numpy(), :] = features
+            progress_bar.update()
+        progress_bar.close()
 
         if args.loss_distance == "cosine":
             faiss.normalize_L2(database_descs)
@@ -74,7 +81,7 @@ def test(args, eval_ds, model, preprocess):
             index.add(database_descs)
             del database_descs
 
-    distances, predictions = index.search(queries_descs, max(args.recall_values))
+    _, predictions = index.search(queries_descs, max(args.recall_values))
     #### For each query, check if the predictions are correct
     positives_per_query = eval_ds.soft_positives_per_query
     # args.recall_values by default is [1, 5, 10, 20]
@@ -84,6 +91,7 @@ def test(args, eval_ds, model, preprocess):
             if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
                 recalls[i:] += 1
                 break
+
     # Divide by the number of queries*100, so the recalls are in percentages
     recalls = recalls / eval_ds.queries_num * 100
     recalls_str = ", ".join([f"R@{val}: {rec:.1f}" for val, rec in zip(args.recall_values, recalls)])
@@ -268,9 +276,9 @@ class TripletDataset(BaseTrainingDataset):
             for batch, indicies in mining_loader:
                 features = model(batch.to(self.args.device)).detach().cpu()
                 all_descs[indicies.numpy(), :] = features
+                progress_bar.update(1)
 
-        all_desc = torch.vstack(all_desc).numpy().astype(np.float32)
-        queries_desc, negatives_desc = all_desc[: len(sample_query_paths)], all_desc[len(sample_query_paths) :]
+        queries_desc, negatives_desc = all_descs[: len(sample_query_paths)], all_descs[len(sample_query_paths) :]
 
         if self.args.loss_distance == "cosine":
             faiss.normalize_L2(negatives_desc)
@@ -342,6 +350,15 @@ class TripletDataModule(pl.LightningDataModule):
         return DataLoader(
             self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=True
         )
+    
+    def val_dataloader(self):
+        queries_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_preprocess)
+        queries_dl = DataLoader(queries_ds, num_workers=self.args.num_workers, batch_size=self.args.infer_batch_size, pin_memory=(self.args.device == "cuda"))
+        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_preprocess)
+        database_dl = DataLoader(database_ds, num_workers=self.args.num_workers, batch_size=self.args.infer_batch_size, pin_memory=(self.args.device == "cuda"))
+        return queries_dl, database_dl
+    
+
 
 
 
@@ -380,12 +397,13 @@ class TripletModule(pl.LightningModule):
         self.datamodule = datamodule
         self.loss_fn = get_loss_function(args)
         self.save_hyperparameters(ignore=["model"])
+        self.features_dim = self.features_size()
 
-    def features_size(self, model):
+    def features_size(self):
         img = Image.open(self.datamodule.train_dataset.queries_paths[0]).convert("RGB")
-        img = self.test_preprocess(img)
+        img = self.datamodule.test_preprocess(img)
         with torch.no_grad():
-            features = model(img[None, :].to(self.args.device)).detach().cpu()
+            features = self.model(img[None, :].to(self.args.device)).detach().cpu()
             return features.size(1)
 
     def on_train_start(self):
@@ -411,22 +429,56 @@ class TripletModule(pl.LightningModule):
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
         self.log("train_loss", loss)
         return loss
+    
+    def on_validation_epoch_start(self):
+        self.validation_queries_descs = np.empty((self.datamodule.test_dataset.queries_num, self.features_dim), dtype=np.float32)
+        self.validation_database_descs = np.empty((self.datamodule.test_dataset.database_num, self.features_dim), dtype=np.float32)
+    
+    def validation_step(self, batch, batch_idx, dataloader_idx):
+        batch, indicies = batch
+        features = self.model(batch)
 
-    def on_validation_epoch_end(self, outputs):
-        self.args.features_dim = self.features_size()
-        recalls, recalls_str = test(self.args, self.datamodule.test_dataset, self.model, self.datamodule.test_transform)
-        print(recalls_str)
-        for recall, i in enumerate(recalls):
-            self.log("recallat" + str(self.args.recall_values[i]), recall)
-        return recalls[1]
+        if dataloader_idx == 0:
+            self.validation_queries_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
+        elif dataloader_idx == 1:
+            self.validation_database_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
+        
 
-    def on_test_epoch_end(self, batch, batch_idx):
-        self.args.features_dim = self.features_size()
-        recalls, recalls_str = test(self.args, self.datamodule.test_dataset, self.model, self.datamodule.test_transform)
+    def on_validation_epoch_end(self):  
+        if self.args.loss_distance == "cosine":
+            faiss.normalize_L2(self.validation_database_descs)
+            index = faiss.IndexFlatIP(self.features_dim)
+            index.add(self.validation_database_descs)
+            faiss.normalize_L2(self.validation_queries_descs)
+        elif self.args.loss_distance == "l2":
+            index = faiss.IndexFlatL2(self.features_dim)
+            index.add(self.validation_database_descs)
+
+        distances, predictions = index.search(self.validation_queries_descs, max(self.args.recall_values))
+        #### For each query, check if the predictions are correct
+        positives_per_query = self.datamodule.test_dataset.soft_positives_per_query
+        # args.recall_values by default is [1, 5, 10, 20]
+        recalls = np.zeros(len(self.args.recall_values))
+        for query_index, pred in enumerate(predictions):
+            for i, n in enumerate(self.args.recall_values):
+                if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
+                    recalls[i:] += 1
+                    break
+
+        # Divide by the number of queries*100, so the recalls are in percentages
+        recalls = recalls / self.datamodule.test_dataset.queries_num * 100
+        recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(self.args.recall_values, recalls)])
+
+
+        print("")
+        print("")
         print(recalls_str)
-        for recall, i in enumerate(recalls):
-            self.log("recallat" + str(self.args.recall_values[i]), recall)
+        print("")
+        print("")
+        for i, recall in enumerate(recalls):
+            self.log("recallat" + str(self.args.recall_values[i]), recall, on_epoch=True)
         return recalls[1]
+    
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
