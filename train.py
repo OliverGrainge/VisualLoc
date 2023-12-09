@@ -80,6 +80,7 @@ if __name__ == "__main__":
             max_epochs=args.max_epochs,
             accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
+            reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
 
