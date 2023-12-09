@@ -665,7 +665,7 @@ class TripletModule(pl.LightningModule):
             (   queries_indexes,
                 positives_indexes,
                 negatives_indexes,
-            ) = triplets.mT
+            ) = triplets.T
             loss += self.loss_fn(
                 features[queries_indexes],
                 features[positives_indexes],
