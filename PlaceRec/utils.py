@@ -178,7 +178,7 @@ def cosine_distance(x1, x2):
 
 def get_loss_function(args):
     if args.loss_distance == "l2":
-        return nn.TripletMarginLoss(args.margin)
+        return nn.TripletMarginLoss(args.margin, p=2, reduction="sum")
     elif args.loss_distance == "cosine":
         return nn.TripletMarginWithDistanceLoss(distance_function=cosine_distance, margin=args.margin)
 

@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torchvision import models, transforms
 from PlaceRec.utils import L2Norm
+from torchvision.models import ResNet18_Weights
 
 from .base_method import BaseModelWrapper
 
@@ -18,13 +19,7 @@ class GeM(nn.Module):
 
 
 def resnet18_gem(descriptor_size=1024):
-    backbone = models.resnet18(pretrained=True)
-    for name, child in backbone.named_children():
-        # Freeze layers before conv_3
-        if name == "layer3":
-            break
-        for params in child.parameters():
-            params.requires_grad = False
+    backbone = models.resnet18(weights=ResNet18_Weights)
 
     layers = list(backbone.children())[:-2]
 
@@ -56,3 +51,7 @@ class ResNet18GeM(BaseModelWrapper):
 
         self.model.to(self.device)
         self.model.eval()
+
+if __name__ == "__main__":
+    model = resnet18_gem()
+    print(model)

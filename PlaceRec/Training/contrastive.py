@@ -22,6 +22,9 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
+from PIL import Image
+import io
+import wandb
 
 from PlaceRec.utils import (
     ImageIdxDataset,
@@ -221,25 +224,23 @@ class TripletDataset(BaseTrainingDataset):
             features = model(img[None, :].to(self.args.device)).detach().cpu()
             return features.size(1)
 
-    def view_triplets(self, sample_size=5):
+    def view_triplets(self, epoch, sample_size=5):
         if len(self.triplets) == 0:
             self.mine_triplets()
-
-        idxs = np.random.choice(np.arange(len(self.triplets)), size=sample_size)
-        for idx in idxs:
-            print(idx)
-            triplet = self.triplets[idx]
-            fig, ax = plt.subplots(1, 3)
-            ax[0].imshow(Image.open(triplet[0]))
-            ax[0].set_title("Anchor")
-            ax[1].imshow(Image.open(triplet[1]))
-            ax[1].set_title("Positive")
-            ax[2].imshow(Image.open(triplet[2]))
-            ax[2].set_title("Negative")
-            ax[0].axis("off")
-            ax[1].axis("off")
-            ax[2].axis("off")
-        plt.show()
+        idx = np.random.choice(np.arange(len(self.triplets)))
+        triplet = self.triplets[idx]
+        fig, ax = plt.subplots(1, 3)
+        plt.title("Triplet from Epoch: " + str(epoch))
+        ax[0].imshow(Image.open(triplet[0]))
+        ax[0].set_title("Anchor")
+        ax[1].imshow(Image.open(triplet[1]))
+        ax[1].set_title("Positive")
+        ax[2].imshow(Image.open(triplet[2]))
+        ax[2].set_title("Negative")
+        ax[0].axis("off")
+        ax[1].axis("off")
+        ax[2].axis("off")
+        return fig
 
     def mine_triplets(self, model):
         if self.args.mining == "partial":
@@ -257,16 +258,17 @@ class TripletDataset(BaseTrainingDataset):
         hard_positives_per_query = [np.random.choice(self.hard_positives_per_query[idx]) for idx in sample_query_indexes]
 
         sample_negatives_per_query = [
-            np.random.choice(np.setdiff1d(np.arange(self.database_num), hard_positives_per_query[i]), size=10)
-            for i in range(len(hard_positives_per_query))
+            np.random.choice(np.setdiff1d(np.arange(self.database_num), hard_positives_per_query[idx]), size=self.args.neg_num_per_query)
+            for idx in range(len(hard_positives_per_query))
         ]
+
         sample_negatives_per_query = np.array(sample_negatives_per_query).flatten()
         sample_negatives_per_query_paths = [self.database_paths[idx] for idx in sample_negatives_per_query]
 
         pin_memory = True if self.args.device == "cuda" else False
         mining_ds = ImageIdxDataset(np.concatenate((sample_query_paths, sample_negatives_per_query_paths)), preprocess=self.test_preprocess)
         mining_loader = DataLoader(
-            mining_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory, shuffle=False
+            mining_ds, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=pin_memory
         )
 
         self.args.features_dim = self.features_size(model)
@@ -304,7 +306,7 @@ class TripletDataset(BaseTrainingDataset):
         query_idxs = np.random.choice(np.arange(self.queries_num), size=self.args.cache_refresh_rate)
         positive_idxs = np.array([np.random.choice(self.hard_positives_per_query[v]) for v in query_idxs])
         neg_idxs = np.array(
-            [np.random.choice(np.setdiff1d(np.arange(self.database_num), pos_idx), size=self.args.neg_num_per_query) for pos_idx in positive_idxs]
+            [np.random.choice(np.setdiff1d(np.arange(self.database_num), self.soft_positives_per_query[idx]), size=self.args.neg_num_per_query) for idx in query_idxs]
         )
         self.triplets = []
         for i in range(len(query_idxs)):
@@ -427,6 +429,7 @@ class TripletModule(pl.LightningModule):
         loss = 0
         for negative in negatives_desc:
             loss += self.loss_fn(anchor_desc, positive_desc, negative)
+        loss /= self.args.train_batch_size * self.args.neg_num_per_query
         self.log("train_loss", loss)
         return loss
     
@@ -442,6 +445,7 @@ class TripletModule(pl.LightningModule):
             self.validation_queries_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
         elif dataloader_idx == 1:
             self.validation_database_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
+            
         
 
     def on_validation_epoch_end(self):  
@@ -477,6 +481,7 @@ class TripletModule(pl.LightningModule):
         print("")
         for i, recall in enumerate(recalls):
             self.log("recallat" + str(self.args.recall_values[i]), recall, on_epoch=True)
+
         return recalls[1]
     
 

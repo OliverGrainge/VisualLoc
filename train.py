@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
         # Checkpointing the Model
         checkpoint_callback = ModelCheckpoint(
-            monitor="Recall@" + str(args.recall_values[1]),
+            monitor="recallat" + str(args.recall_values[1]),
             filename=join(
                 os.getcwd(), "PlaceRec/Training/checkpoints/", args.training_type, method.name, method.name + "-{epoch:02d}-{recallat1:.2f}"
             ),
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             mode="max",
         )
 
-        logger = WandbLogger(project=method.name)  # need to login to a WandB account
+        logger = WandbLogger(project=method.name, log_model="all")  # need to login to a WandB account
         logger.experiment.config.update(config["train"])  # Log the training configuration
 
         # Build the Datamodule
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             max_epochs=args.max_epochs,
             accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
-            #callbacks=[early_stop_callback, checkpoint_callback],
+            callbacks=[checkpoint_callback],
         )
 
         # Initiate Training
