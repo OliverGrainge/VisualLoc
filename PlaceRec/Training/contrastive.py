@@ -851,7 +851,6 @@ def train(args, model, train_preprocess, test_preprocess):
     test_dataset = BaseDataset(args, test_preprocess, datasets_folder=args.datasets_folder, dataset_name=args.dataset_name, split="test")
     for epoch in range(args.max_epochs):
         model.train()
-        """
         for loop_number in range(args.val_check_interval):
             # Compute triplets to use in the triplet loss
             train_dataset.is_inference = True
@@ -884,11 +883,7 @@ def train(args, model, train_preprocess, test_preprocess):
                 optimizer.zero_grad()
                 loss_triplet.backward()
                 optimizer.step()
-        """
-
-        test(args, test_dataset, model)
-        # Validation
-        features_dim = 2048
+  
         model.eval()
         queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
         database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)
