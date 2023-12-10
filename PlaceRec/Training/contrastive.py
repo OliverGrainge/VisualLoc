@@ -736,3 +736,102 @@ class TripletModule(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         return optimizer
+
+
+
+def train(args, model, train_preprocess, test_preprocess):
+    model.to(args.device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    criterion_triplet = get_loss_function(args)
+    train_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="train")
+    test_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="test")
+    for epoch in range(args.max_epochs):
+        for loop_number in 5:
+            # Compute triplets to use in the triplet loss
+            train_dataset.is_inference = True
+            train_dataset.compute_triplets(args, model)
+            train_dataset.is_inference = False
+
+            train_dl = DataLoader(dataset=train_dataset, num_workers=args.num_workers,
+                                 batch_size=args.train_batch_size,
+                                 collate_fn=collate_fn,
+                                 pin_memory=(args.device == "cuda"),
+                                 drop_last=True)
+
+            model = model.train()
+
+            for images, triplets_local_indexes, _ in tqdm(train_dl, ncols=100, desc="Epoch: " + str(epoch) + " Loop: " + str(loop_number)):
+                features = model(images.to(args.device))
+                features_dim = features.shape(1)
+                loss_triplet = 0
+                triplets_local_indexes = torch.transpose(
+                    triplets_local_indexes.view(args.train_batch_size, args.negs_num_per_query, 3), 1, 0)
+
+
+                for triplets in triplets_local_indexes:
+                    queries_indexes, positives_indexes, negatives_indexes = triplets.T
+                    loss_triplet += criterion_triplet(features[queries_indexes],
+                                                      features[positives_indexes],
+                                                      features[negatives_indexes])
+
+                loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
+                optimizer.zero_grad()
+                loss_triplet.backward()
+                optimizer.step()
+
+        # Validation
+        queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
+        database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)
+
+        queries_dl = DataLoader(ImageIdxDataset(test_dataset.queries_paths, test_preprocess), 
+                                batch_size=args.infer_batch_size,
+                                num_workers=args.num_workers, 
+                                pin_memory=(args.device == "cuda"))
+
+        database_dl = DataLoader(ImageIdxDataset(test_dataset.database_paths, test_preprocess),
+                                batch_size=args.infer_batch_size,
+                                num_workers=args.num_workers, 
+                                pin_memory=(args.device == "cuda"))
+        with torch.no_grad():
+            for batch, idxs in tqdm(queries_dl, desc="Validation Query Features"):
+                features = model(batch.to(args.device)).detach().cpu().numpy()
+                queries_descs[idxs.numpy(), :] = features
+
+            for batch, idxs in tqdm(database_dl, desc="Validation Database Features"):
+                features = model(batch.to(args.device)).detach().cpu().numpy()
+                database_descs[idxs.numpy(), :] = features
+
+        if args.loss_distance == "cosine":
+            faiss.normalize_L2(database_descs)
+            index = faiss.IndexFlatIP(features_dim)
+            index.add(database_descs)
+            faiss.normalize_L2(queries_descs)
+        elif args.loss_distance == "l2":
+            index = faiss.IndexFlatL2(features_dim)
+            index.add(database_descs)
+
+        distances, predictions = index.search(queries_descs, max(args.recall_values))
+        #### For each query, check if the predictions are correct
+        positives_per_query = test_dataset.soft_positives_per_query
+        # args.recall_values by default is [1, 5, 10, 20]
+        recalls = np.zeros(len(args.recall_values))
+        for query_index, pred in enumerate(predictions):
+            for i, n in enumerate(args.recall_values):
+                if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
+                    recalls[i:] += 1
+                    break
+
+        # Divide by the number of queries*100, so the recalls are in percentages
+        recalls = recalls / test_dataset.queries_num * 100
+        recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(args.recall_values, recalls)])
+        
+        print(" ")
+        print(" ")
+        print(recalls_str)
+        print(" ")
+        print(" ")
+            
+
+                    
+
+
