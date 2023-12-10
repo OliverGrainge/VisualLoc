@@ -739,6 +739,44 @@ class TripletModule(pl.LightningModule):
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def train(args, model, train_preprocess, test_preprocess):
     model.to(args.device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
