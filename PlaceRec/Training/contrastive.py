@@ -580,7 +580,6 @@ class TripletDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         # Split data into train, validate, and test sets]
-
         self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
         self.test_dataset = TripletsDataset(self.args, self.test_preprocess, self.test_preprocess, split="test")
 
@@ -656,23 +655,18 @@ class TripletModule(pl.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        images, local_indicies, _ = batch
-        
+        images, triplets_local_indexes, _ = batch
         features = self.model(images)
-        loss = 0
-        local_indicies = torch.transpose(local_indicies.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
-        for triplets in local_indicies:
+        loss_triplet = 0
+        triplets_local_indexes = torch.transpose(
+            triplets_local_indexes.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
+        for triplets in triplets_local_indexes:
             queries_indexes, positives_indexes, negatives_indexes = triplets.T
-
-            loss += self.loss_fn(
-                features[queries_indexes],
-                features[positives_indexes],
-                features[negatives_indexes],
-            )
-
-        loss /= self.args.train_batch_size * self.args.neg_num_per_query
-        self.log("train_loss", loss)
-        return loss
+            loss_triplet += self.loss_fn(features[queries_indexes],
+                                            features[positives_indexes],
+                                            features[negatives_indexes])
+        loss_triplet /= (self.args.train_batch_size * self.args.neg_num_per_query)
+        return loss_triplet
     
     def on_train_epoch_end(self):
         self.datamodule.train_dataset.is_inference = True
@@ -716,18 +710,11 @@ class TripletModule(pl.LightningModule):
         # Divide by the number of queries*100, so the recalls are in percentages
         recalls = recalls / self.datamodule.test_dataset.queries_num * 100
         recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(self.args.recall_values, recalls)])
-
-
-        print("")
-        print("")
         print(recalls_str)
-        print("")
-        print("")
         for i, recall in enumerate(recalls):
+            recall = recall.astype(np.float32)
             self.log("recallat" + str(self.args.recall_values[i]), recall, on_epoch=True)
-
         return recalls[1]
-    
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
@@ -869,10 +856,9 @@ def train(args, model, train_preprocess, test_preprocess):
                 features = model(images.to(args.device))
                 features_dim = features.shape[1]
                 loss_triplet = 0
+
                 triplets_local_indexes = torch.transpose(
                     triplets_local_indexes.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
-
-
                 for triplets in triplets_local_indexes:
                     queries_indexes, positives_indexes, negatives_indexes = triplets.T
                     loss_triplet += criterion_triplet(features[queries_indexes],

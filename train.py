@@ -75,7 +75,7 @@ if __name__ == "__main__":
 
         # Build the Training Class
         trainer = pl.Trainer(
-            check_val_every_n_epoch=args.val_check_interval,
+            #check_val_every_n_epoch=args.val_check_interval,
             log_every_n_steps=20,
             max_epochs=args.max_epochs,
             accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
@@ -85,8 +85,9 @@ if __name__ == "__main__":
         )
 
         # Initiate Training
-        #trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-        train(args, model, method.preprocess, method.preprocess)
+        trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+        #train(args, model, method.preprocess, method.preprocess)
+        #trainer.validate(tripletmodule, datamodule=tripletdatamodule)
 
 
     ###################### Asymmetric Distillation Training #######################
