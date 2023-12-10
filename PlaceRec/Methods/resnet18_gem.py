@@ -19,7 +19,7 @@ class GeM(nn.Module):
 
 
 def resnet18_gem(descriptor_size=1024):
-    backbone = models.resnet18(weights=ResNet18_Weights)
+    backbone = models.resnet18(weights=ResNet18_Weights.DEFAULT)
 
     layers = list(backbone.children())[:-2]
 

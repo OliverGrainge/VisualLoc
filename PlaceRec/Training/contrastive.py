@@ -660,12 +660,10 @@ class TripletModule(pl.LightningModule):
         
         features = self.model(images)
         loss = 0
-
+        local_indicies = torch.transpose(local_indicies.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
         for triplets in local_indicies:
-            (   queries_indexes,
-                positives_indexes,
-                negatives_indexes,
-            ) = triplets.T
+            queries_indexes, positives_indexes, negatives_indexes = triplets.T
+
             loss += self.loss_fn(
                 features[queries_indexes],
                 features[positives_indexes],
@@ -675,6 +673,13 @@ class TripletModule(pl.LightningModule):
         loss /= self.args.train_batch_size * self.args.neg_num_per_query
         self.log("train_loss", loss)
         return loss
+    
+    def on_train_epoch_end(self):
+        self.datamodule.train_dataset.is_inference = True
+        self.datamodule.train_dataset.compute_triplets(self.args, self.model)
+        self.datamodule.train_dataset.is_inference = False
+
+
     
     def on_validation_epoch_start(self):
         self.validation_queries_descs = np.empty((self.datamodule.test_dataset.queries_num, self.features_dim), dtype=np.float32)
