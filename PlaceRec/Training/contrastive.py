@@ -679,8 +679,6 @@ class TripletModule(pl.LightningModule):
         self.datamodule.train_dataset.compute_triplets(self.args, self.model)
         self.datamodule.train_dataset.is_inference = False
 
-
-    
     def on_validation_epoch_start(self):
         self.validation_queries_descs = np.empty((self.datamodule.test_dataset.queries_num, self.features_dim), dtype=np.float32)
         self.validation_database_descs = np.empty((self.datamodule.test_dataset.database_num, self.features_dim), dtype=np.float32)
@@ -694,8 +692,6 @@ class TripletModule(pl.LightningModule):
         elif dataloader_idx == 1:
             self.validation_database_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
             
-        
-
     def on_validation_epoch_end(self):  
         if self.args.loss_distance == "cosine":
             faiss.normalize_L2(self.validation_database_descs)
@@ -770,9 +766,79 @@ class TripletModule(pl.LightningModule):
 
 
 
+def test(args, eval_ds, model):
+    """Compute features of the given dataset and compute the recalls."""
+
+    model = model.eval()
+    with torch.no_grad():
+        # For database use "hard_resize", although it usually has no effect because database images have same resolution
+        eval_ds.test_method = "hard_resize"
+        database_subset_ds = Subset(eval_ds, list(range(eval_ds.database_num)))
+        database_dataloader = DataLoader(
+            dataset=database_subset_ds,
+            num_workers=args.num_workers,
+            batch_size=args.infer_batch_size,
+            pin_memory=(args.device == "cuda"),
+            drop_last=True,
+        )
+
+       
+        all_features = np.empty((len(eval_ds), args.features_dim), dtype="float32")
+
+        for inputs, indices in tqdm(database_dataloader, ncols=100):
+            with torch.no_grad():
+                features = model(inputs.to(args.device)).float()
+            if torch.isnan(features).any():
+                raise Exception("Features have NAN in them")
+            features = features.cpu().numpy()
+            all_features[indices.numpy(), :] = features
+
+        queries_subset_ds = Subset(
+            eval_ds,
+            list(
+                range(eval_ds.database_num, eval_ds.database_num + eval_ds.queries_num)
+            ),
+        )
 
 
+        queries_dataloader = DataLoader(
+            dataset=queries_subset_ds,
+            num_workers=args.num_workers,
+            batch_size=args.infer_batch_size,
+            pin_memory=(args.device == "cuda"),
+            drop_last=True,
+        )
+        for inputs, indices in tqdm(queries_dataloader, ncols=100):
+            features = model(inputs.to(args.device)).float()
+            features = features.cpu().numpy()
+            all_features[indices.numpy(), :] = features
 
+    queries_features = all_features[eval_ds.database_num :]
+    database_features = all_features[: eval_ds.database_num]
+
+    faiss_index = faiss.IndexFlatL2(args.features_dim)
+    faiss_index.add(database_features)
+    del database_features, all_features
+
+    distances, predictions = faiss_index.search(
+        queries_features, max(args.recall_values)
+    )
+    #### For each query, check if the predictions are correct
+    positives_per_query = eval_ds.get_positives()
+    # args.recall_values by default is [1, 5, 10, 20]
+    recalls = np.zeros(len(args.recall_values))
+    for query_index, pred in enumerate(predictions):
+        for i, n in enumerate(args.recall_values):
+            if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
+                recalls[i:] += 1
+                break
+    # Divide by the number of queries*100, so the recalls are in percentages
+    recalls = recalls / eval_ds.queries_num * 100
+    recalls_str = ", ".join(
+        [f"R@{val}: {rec:.1f}" for val, rec in zip(args.recall_values, recalls)]
+    )
+    print(recalls_str)
+    return recalls, recalls_str
 
 
 
@@ -782,9 +848,10 @@ def train(args, model, train_preprocess, test_preprocess):
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
     criterion_triplet = get_loss_function(args)
     train_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="train")
-    test_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="test")
+    test_dataset = BaseDataset(args, test_preprocess, datasets_folder=args.datasets_folder, dataset_name=args.dataset_name, split="test")
     for epoch in range(args.max_epochs):
         model.train()
+        """
         for loop_number in range(args.val_check_interval):
             # Compute triplets to use in the triplet loss
             train_dataset.is_inference = True
@@ -817,8 +884,11 @@ def train(args, model, train_preprocess, test_preprocess):
                 optimizer.zero_grad()
                 loss_triplet.backward()
                 optimizer.step()
+        """
 
+        test(args, test_dataset, model)
         # Validation
+        features_dim = 2048
         model.eval()
         queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
         database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)

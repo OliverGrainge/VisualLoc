@@ -30,18 +30,18 @@ train:
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
   training_type: "contrastive" # training type either contrastive or asymmetric distillation
-  dataset_name: "mapillary_sls" # Dataset to train on
+  dataset_name: "pitts30k" # Dataset to train on
 
   method: "resnet18_gem" # method to train
   train_batch_size: 25 # training batch size
   infer_batch_size: 128 # inference batch size 
   learning_rate: 0.00001 # learning rate
-  device: "cuda" # either cpu or cuda for acceleration
-  num_workers: 15 # number of workers for the dataloader
+  device: "mps" # either cpu or cuda for acceleration
+  num_workers: 0 # number of workers for the dataloader
   max_epochs: 10000 # maximum number of allowable epochs
   patience: 10 # patience for early stopping
-  datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
-  #datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
+  #datasets_folder: "/home/oliver/Documents/github/lightweight_VPR/datasets_vg/datasets" # path to all the datasets
+  datasets_folder: "/Users/olivergrainge/Documents/github/lightweight_VPR/datasets_vg/datasets"
   recall_values: [1, 3, 5, 10, 20]
 
 
