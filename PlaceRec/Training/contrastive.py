@@ -746,6 +746,7 @@ def train(args, model, train_preprocess, test_preprocess):
     train_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="train")
     test_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="test")
     for epoch in range(args.max_epochs):
+        model.train()
         for loop_number in range(args.val_check_interval):
             # Compute triplets to use in the triplet loss
             train_dataset.is_inference = True
@@ -762,10 +763,10 @@ def train(args, model, train_preprocess, test_preprocess):
 
             for images, triplets_local_indexes, _ in tqdm(train_dl, ncols=100, desc="Epoch: " + str(epoch) + " Loop: " + str(loop_number)):
                 features = model(images.to(args.device))
-                features_dim = features.shape(1)
+                features_dim = features.shape[1]
                 loss_triplet = 0
                 triplets_local_indexes = torch.transpose(
-                    triplets_local_indexes.view(args.train_batch_size, args.negs_num_per_query, 3), 1, 0)
+                    triplets_local_indexes.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
 
 
                 for triplets in triplets_local_indexes:
@@ -774,12 +775,13 @@ def train(args, model, train_preprocess, test_preprocess):
                                                       features[positives_indexes],
                                                       features[negatives_indexes])
 
-                loss_triplet /= (args.train_batch_size * args.negs_num_per_query)
+                loss_triplet /= (args.train_batch_size * args.neg_num_per_query)
                 optimizer.zero_grad()
                 loss_triplet.backward()
                 optimizer.step()
 
         # Validation
+        model.eval()
         queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
         database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)
 
