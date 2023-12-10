@@ -29,7 +29,7 @@ import wandb
 from parsers import train_arguments
 from PlaceRec.Training import TripletDataModule, TripletModule
 from PlaceRec.utils import ImageDataset, get_config, get_method
-from PlaceRec.Training import DistillationDataModule, DistillationModule
+from PlaceRec.Training import DistillationDataModule, DistillationModule, train
 
 config = get_config()
 args = train_arguments()
@@ -85,7 +85,8 @@ if __name__ == "__main__":
         )
 
         # Initiate Training
-        trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+        #trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+        train(args, model, method.preprocess, method.preprocess)
 
 
     ###################### Asymmetric Distillation Training #######################

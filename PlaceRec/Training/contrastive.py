@@ -746,7 +746,7 @@ def train(args, model, train_preprocess, test_preprocess):
     train_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="train")
     test_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="test")
     for epoch in range(args.max_epochs):
-        for loop_number in 5:
+        for loop_number in range(args.val_check_interval):
             # Compute triplets to use in the triplet loss
             train_dataset.is_inference = True
             train_dataset.compute_triplets(args, model)
