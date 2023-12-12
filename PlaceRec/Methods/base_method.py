@@ -6,9 +6,10 @@ from typing import Tuple
 import faiss
 import numpy as np
 import torch
+from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
-from PIL import Image
+
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -338,7 +339,7 @@ class BaseModelWrapper(BaseFunctionality):
         self.features_dim = self.features_size()
 
     def features_size(self):
-        img = np.random.rand(224, 224, 3)*255
+        img = np.random.rand(224, 224, 3) * 255
         img = Image.fromarray(img.astype(np.uint8))
         img = self.preprocess(img)
         with torch.no_grad():

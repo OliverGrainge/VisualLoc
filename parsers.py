@@ -26,18 +26,6 @@ def run_arguments():
 
     parser.add_argument(
         "--methods",
-        choices=(
-            "regionvlad",
-            "mixvpr",
-            "convap",
-            "amosnet",
-            "hybridnet",
-            "netvlad",
-            "hog",
-            "cosplace",
-            "calc",
-            "alexnet",
-        ),
         help="specify one of the techniques from vpr/vpr_tecniques",
         type=str,
         default=config["run"]["methods"],
@@ -124,11 +112,29 @@ def train_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "--min_size",
+        type=int,
+        default=config["train"]["min_size"]
+    )
+
+    parser.add_argument(
+        "--max_size",
+        type=int,
+        default=config["train"]["max_size"]
+    )
+
+    parser.add_argument(
         "--recall_values", 
         type=int, 
         default=config["train"]["recall_values"], 
         nargs="+", 
         help="Recalls to be computed, such as R@5.")
+    
+    parser.add_argument(
+        "--distillation_type",
+        type=str,
+        default=config["train"]["distillation_type"]
+    )
 
     parser.add_argument(
         "--dataset_name",
@@ -247,37 +253,18 @@ def train_arguments():
         help="This includes pre/post-processing methods and prediction refinement",
     )
 
-    parser.add_argument(
-        "--max_epochs", 
-        type=int, 
-        default=config["train"]["max_epochs"])
+    parser.add_argument("--max_epochs", type=int, default=config["train"]["max_epochs"])
 
-    parser.add_argument(
-        "--loss_distance", 
-        type=str, 
-        default=config["train"]["loss_distance"])
+    parser.add_argument("--loss_distance", type=str, default=config["train"]["loss_distance"])
 
-    parser.add_argument(
-        "--val_check_interval", 
-        type=int, 
-        default=config["train"]["val_check_interval"])
+    parser.add_argument("--val_check_interval", type=int, default=config["train"]["val_check_interval"])
 
-    parser.add_argument(
-        "--teacher_method",
-        type=str, 
-        default=config["train"]["teacher_method"]
-    )
+    parser.add_argument("--teacher_method", type=str, default=config["train"]["teacher_method"])
 
-    parser.add_argument(
-        "--student_method",
-        type=str,
-        default=config["train"]["teacher_method"]
-    )
+    parser.add_argument("--student_method", type=str, default=config["train"]["teacher_method"])
 
-    parser.add_argument(
-        "--reload",
-        type=bool,
-        default=config["train"]["reload"]
-    )
+    parser.add_argument("--reload", type=bool, default=config["train"]["reload"])
+
+    parser.add_argument("--num_gpus", type=int, default=config["train"]["num_gpus"])
     args = parser.parse_args()
     return args

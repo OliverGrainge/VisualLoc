@@ -27,9 +27,13 @@ from tqdm import tqdm
 
 import wandb
 from parsers import train_arguments
-from PlaceRec.Training import TripletDataModule, TripletModule
+from PlaceRec.Training import (
+    DistillationDataModule,
+    DistillationModule,
+    train,
+)
+
 from PlaceRec.utils import ImageDataset, get_config, get_method
-from PlaceRec.Training import DistillationDataModule, DistillationModule, train
 
 config = get_config()
 args = train_arguments()
@@ -37,14 +41,15 @@ args = train_arguments()
 
 if __name__ == "__main__":
     pl.seed_everything(args.seed)
-    torch.set_float32_matmul_precision("medium")
-  
+    torch.set_float32_matmul_precision("medium")        # Initiate Training
+
 
     ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
         method = get_method(args.method, pretrained=False)
         model = method.model.to(args.device)
         # Early Stopping CallBack
+        """
         early_stop_callback = EarlyStopping(
             monitor="recallat" + str(args.recall_values[1]),
             min_delta=0.00,
@@ -75,25 +80,23 @@ if __name__ == "__main__":
 
         # Build the Training Class
         trainer = pl.Trainer(
-            #check_val_every_n_epoch=args.val_check_interval,
+            check_val_every_n_epoch=args.val_check_interval,
             log_every_n_steps=20,
             max_epochs=args.max_epochs,
-            accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
+            accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
             reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
-
+        """
         # Initiate Training
-        trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-        #train(args, model, method.preprocess, method.preprocess)
-        #trainer.validate(tripletmodule, datamodule=tripletdatamodule)
-
+        #trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+        train(args, model, method.preprocess, method.preprocess)
 
     ###################### Asymmetric Distillation Training #######################
     elif args.training_type == "asymmetric_distillation":
         student_method = get_method(args.student_method, pretrained=False)
-        teacher_method = get_method(args.teacher_method, pretrained=False)
+        teacher_method = get_method(args.teacher_method, pretrained=True)
         # Early Stopping CallBack
         early_stop_callback = EarlyStopping(
             monitor="val_loss",
@@ -107,7 +110,11 @@ if __name__ == "__main__":
         checkpoint_callback = ModelCheckpoint(
             monitor="val_loss",
             filename=join(
-                os.getcwd(), "PlaceRec/Training/checkpoints/", args.training_type, student_method.name, student_method.name + "-{epoch:02d}-{recallat1:.2f}"
+                os.getcwd(),
+                "PlaceRec/Training/checkpoints/",
+                args.training_type,
+                student_method.name,
+                student_method.name + "-{epoch:02d}-{recallat1:.2f}",
             ),
             save_top_k=1,
             verbose=False,
@@ -122,16 +129,13 @@ if __name__ == "__main__":
         # Build the Training Module
         distillationmodule = DistillationModule(args, student_method)
 
-
-
         # Build the Training Class
         trainer = pl.Trainer(
             max_epochs=args.max_epochs,
-            accelerator= "gpu" if args.device in ["mps", "cuda"] else "cpu",
+            accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
             callbacks=[early_stop_callback, checkpoint_callback],
+            #val_check_interval=args.val_check_interval
         )
 
-        # Initiate Training
         trainer.fit(distillationmodule, datamodule=distillationdatamodule)
-

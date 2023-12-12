@@ -1,23 +1,24 @@
-
 import os
 from glob import glob
 from os.path import join
 
 import faiss
 import numpy as np
+import pytorch_lightning as pl
 import torch
 import torch.utils.data as data
 import torchvision.transforms as T
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
+from torch import optim
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
+import copy
 from tqdm import tqdm
-from PlaceRec.utils import ImageIdxDataset
-from os.path import join
-import pytorch_lightning as pl
-from PlaceRec.utils import get_loss_function
-from torch import optim
+
+from PlaceRec.utils import ImageIdxDataset, get_loss_function
+
+filepath = os.path.dirname(os.path.abspath(__file__))
 
 base_transform = T.Compose(
     [
@@ -50,25 +51,17 @@ def collate_fn(batch):
     images = torch.cat([e[0] for e in batch])
     triplets_local_indexes = torch.cat([e[1][None] for e in batch])
     triplets_global_indexes = torch.cat([e[2][None] for e in batch])
-    for i, (local_indexes, global_indexes) in enumerate(
-        zip(triplets_local_indexes, triplets_global_indexes)
-    ):
-        local_indexes += (
-            len(global_indexes) * i
-        )  # Increment local indexes by offset (len(global_indexes) is 12)
+    for i, (local_indexes, global_indexes) in enumerate(zip(triplets_local_indexes, triplets_global_indexes)):
+        local_indexes += len(global_indexes) * i  # Increment local indexes by offset (len(global_indexes) is 12)
     return images, torch.cat(tuple(triplets_local_indexes)), triplets_global_indexes
 
 
 class PCADataset(data.Dataset):
-    def __init__(
-        self, args, datasets_folder="dataset", dataset_folder="pitts30k/images/train"
-    ):
+    def __init__(self, args, datasets_folder="dataset", dataset_folder="pitts30k/images/train"):
         dataset_folder_full_path = join(datasets_folder, dataset_folder)
         if not os.path.exists(dataset_folder_full_path):
             raise FileNotFoundError(f"Folder {dataset_folder_full_path} does not exist")
-        self.images_paths = sorted(
-            glob(join(dataset_folder_full_path, "**", "*.jpg"), recursive=True)
-        )
+        self.images_paths = sorted(glob(join(dataset_folder_full_path, "**", "*.jpg"), recursive=True))
 
     def __getitem__(self, index):
         return base_transform(path_to_pil_img(self.images_paths[index]))
@@ -80,9 +73,7 @@ class PCADataset(data.Dataset):
 class BaseDataset(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
 
-    def __init__(
-        self, args, test_preprocess, datasets_folder="datasets", dataset_name="pitts30k", split="train"
-    ):
+    def __init__(self, args, test_preprocess, datasets_folder="datasets", dataset_name="pitts30k", split="train"):
         super().__init__()
         self.args = args
         self.dataset_name = dataset_name
@@ -101,20 +92,12 @@ class BaseDataset(data.Dataset):
         if not os.path.exists(queries_folder):
             raise FileNotFoundError(f"Folder {queries_folder} does not exist")
 
-        self.database_paths = sorted(
-            glob(join(database_folder, "**", "*.jpg"), recursive=True)
-        )
-        self.queries_paths = sorted(
-            glob(join(queries_folder, "**", "*.jpg"), recursive=True)
-        )
+        self.database_paths = sorted(glob(join(database_folder, "**", "*.jpg"), recursive=True))
+        self.queries_paths = sorted(glob(join(queries_folder, "**", "*.jpg"), recursive=True))
 
         # The format must be path/to/file/@utm_easting@utm_northing@...@.jpg
-        self.database_utms = np.array(
-            [(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]
-        ).astype(float)
-        self.queries_utms = np.array(
-            [(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]
-        ).astype(float)
+        self.database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]).astype(float)
+        self.queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]).astype(float)
 
         # Find soft_positives_per_query, which are within val_positive_dist_threshold (deafult 25 meters)
         knn = NearestNeighbors(n_jobs=-1)
@@ -143,24 +126,14 @@ class BaseDataset(data.Dataset):
         elif self.test_method == "central_crop":
             # Take the biggest central crop of size self.resize. Preserves ratio.
             scale = max(self.resize[0] / H, self.resize[1] / W)
-            processed_img = torch.nn.functional.interpolate(
-                img.unsqueeze(0), scale_factor=scale
-            ).squeeze(0)
+            processed_img = torch.nn.functional.interpolate(img.unsqueeze(0), scale_factor=scale).squeeze(0)
             processed_img = T.functional.center_crop(processed_img, self.resize)
-            assert processed_img.shape[1:] == torch.Size(
-                self.resize
-            ), f"{processed_img.shape[1:]} {self.resize}"
-        elif (
-            self.test_method == "five_crops"
-            or self.test_method == "nearest_crop"
-            or self.test_method == "maj_voting"
-        ):
+            assert processed_img.shape[1:] == torch.Size(self.resize), f"{processed_img.shape[1:]} {self.resize}"
+        elif self.test_method == "five_crops" or self.test_method == "nearest_crop" or self.test_method == "maj_voting":
             # Get 5 square crops with size==shorter_side (usually 480). Preserves ratio and allows batches.
             shorter_side = min(self.resize)
             processed_img = T.functional.resize(img, shorter_side)
-            processed_img = torch.stack(
-                T.functional.five_crop(processed_img, shorter_side)
-            )
+            processed_img = torch.stack(T.functional.five_crop(processed_img, shorter_side))
             assert processed_img.shape == torch.Size(
                 [5, 3, shorter_side, shorter_side]
             ), f"{processed_img.shape} {torch.Size([5, 3, shorter_side, shorter_side])}"
@@ -193,14 +166,10 @@ class TripletsDataset(BaseDataset):
     ):
         super().__init__(args, test_preprocess, args.datasets_folder, args.dataset_name, split)
         self.mining = args.mining
-        self.neg_num_per_query = (args.neg_num_per_query)
+        self.neg_num_per_query = args.neg_num_per_query
 
-        if (
-            self.args.mining == "full"
-        ):  # "Full database mining" keeps a cache with last used negatives
-            self.neg_cache = [
-                np.empty((0,), dtype=np.int32) for _ in range(self.queries_num)
-            ]
+        if self.args.mining == "full":  # "Full database mining" keeps a cache with last used negatives
+            self.neg_cache = [np.empty((0,), dtype=np.int32) for _ in range(self.queries_num)]
         self.is_inference = False
 
         self.train_preprocess = train_preprocess
@@ -218,26 +187,16 @@ class TripletsDataset(BaseDataset):
         )
 
         #### Some queries might have no positive, we should remove those queries.
-        queries_without_any_hard_positive = np.where(
-            np.array([len(p) for p in self.hard_positives_per_query], dtype=object) == 0
-        )[0]
+        queries_without_any_hard_positive = np.where(np.array([len(p) for p in self.hard_positives_per_query], dtype=object) == 0)[0]
         if len(queries_without_any_hard_positive) != 0:
             print(
                 f"There are {len(queries_without_any_hard_positive)} queries without any positives "
                 + "within the training set. They won't be considered as they're useless for training."
             )
         # Remove queries without positives
-        self.hard_positives_per_query = [
-            arr
-            for i, arr in enumerate(self.hard_positives_per_query)
-            if i not in queries_without_any_hard_positive
-        ]
+        self.hard_positives_per_query = [arr for i, arr in enumerate(self.hard_positives_per_query) if i not in queries_without_any_hard_positive]
 
-        self.queries_paths = [
-            arr
-            for i, arr in enumerate(self.queries_paths)
-            if i not in queries_without_any_hard_positive
-        ]
+        self.queries_paths = [arr for i, arr in enumerate(self.queries_paths) if i not in queries_without_any_hard_positive]
 
         # Recompute images_paths and queries_num because some queries might have been removed
         self.images_paths = list(self.database_paths) + list(self.queries_paths)
@@ -248,16 +207,11 @@ class TripletsDataset(BaseDataset):
         if self.mining == "msls_weighted":
             notes = [p.split("@")[-2] for p in self.queries_paths]
             try:
-                night_indexes = np.where(
-                    np.array([n.split("_")[0] == "night" for n in notes])
-                )[0]
-                sideways_indexes = np.where(
-                    np.array([n.split("_")[1] == "sideways" for n in notes])
-                )[0]
+                night_indexes = np.where(np.array([n.split("_")[0] == "night" for n in notes]))[0]
+                sideways_indexes = np.where(np.array([n.split("_")[1] == "sideways" for n in notes]))[0]
             except IndexError:
                 raise RuntimeError(
-                    "You're using msls_weighted mining but this dataset "
-                    + "does not have night/sideways information. Are you using Mapillary SLS?"
+                    "You're using msls_weighted mining but this dataset " + "does not have night/sideways information. Are you using Mapillary SLS?"
                 )
             self.weights = np.ones(self.queries_num)
             assert (
@@ -271,17 +225,10 @@ class TripletsDataset(BaseDataset):
         if self.is_inference:
             # At inference time return the single image. This is used for caching or computing NetVLAD's clusters
             return super().__getitem__(index)
-        query_index, best_positive_index, neg_indexes = torch.split(
-            self.triplets_global_indexes[index], (1, 1, self.neg_num_per_query)
-        )
+        query_index, best_positive_index, neg_indexes = torch.split(self.triplets_global_indexes[index], (1, 1, self.neg_num_per_query))
         query = self.train_preprocess(path_to_pil_img(self.queries_paths[query_index]))
-        positive = self.train_preprocess(
-            path_to_pil_img(self.database_paths[best_positive_index])
-        )
-        negatives = [
-            self.train_preprocess(path_to_pil_img(self.database_paths[i]))
-            for i in neg_indexes
-        ]
+        positive = self.train_preprocess(path_to_pil_img(self.database_paths[best_positive_index]))
+        negatives = [self.train_preprocess(path_to_pil_img(self.database_paths[i])) for i in neg_indexes]
         images = torch.stack((query, positive, *negatives), 0)
         triplets_local_indexes = torch.empty((0, 3), dtype=torch.int)
         for neg_num in range(len(neg_indexes)):
@@ -328,9 +275,8 @@ class TripletsDataset(BaseDataset):
         with torch.no_grad():
             progress_bar = tqdm(total=len(subset_dl), desc="Computing Cache")
             for images, indexes in subset_dl:
-                images = images.to(args.device)
-                features = model(images)
-                cache[indexes.numpy()] = features.cpu().numpy()
+                features = model(images.to(args.device)).detach().cpu()
+                cache[indexes.numpy()] = features.numpy()
                 progress_bar.update(1)
             progress_bar.close()
         return cache
@@ -351,9 +297,7 @@ class TripletsDataset(BaseDataset):
         faiss_index.add(positives_features)
         # Search the best positive (within 10 meters AND nearest in features space)
         _, best_positive_num = faiss_index.search(query_features.reshape(1, -1), 1)
-        best_positive_index = self.hard_positives_per_query[query_index][
-            best_positive_num[0]
-        ].item()
+        best_positive_index = self.hard_positives_per_query[query_index][best_positive_num[0]].item()
         return best_positive_index
 
     def get_hardest_negatives_indexes(self, args, cache, query_features, neg_samples):
@@ -361,9 +305,7 @@ class TripletsDataset(BaseDataset):
         faiss_index = faiss.IndexFlatL2(args.features_dim)
         faiss_index.add(neg_features)
         # Search the 10 nearest negatives (further than 25 meters and nearest in features space)
-        _, neg_nums = faiss_index.search(
-            query_features.reshape(1, -1), self.neg_num_per_query
-        )
+        _, neg_nums = faiss_index.search(query_features.reshape(1, -1), self.neg_num_per_query)
         neg_nums = neg_nums.reshape(-1)
         neg_indexes = neg_samples[neg_nums].astype(np.int32)
         return neg_indexes
@@ -371,33 +313,21 @@ class TripletsDataset(BaseDataset):
     def compute_triplets_random(self, args, model):
         self.triplets_global_indexes = []
         # Take 1000 random queries
-        sampled_queries_indexes = np.random.choice(
-            self.queries_num, args.cache_refresh_rate, replace=False
-        )
+        sampled_queries_indexes = np.random.choice(self.queries_num, args.cache_refresh_rate, replace=False)
         # Take all the positives
-        positives_indexes = [
-            self.hard_positives_per_query[i] for i in sampled_queries_indexes
-        ]
-        positives_indexes = [
-            p for pos in positives_indexes for p in pos
-        ]  # Flatten list of lists to a list
+        positives_indexes = [self.hard_positives_per_query[i] for i in sampled_queries_indexes]
+        positives_indexes = [p for pos in positives_indexes for p in pos]  # Flatten list of lists to a list
         positives_indexes = list(np.unique(positives_indexes))
 
         # Compute the cache only for queries and their positives, in order to find the best positive
-        subset_ds = Subset(
-            self, positives_indexes + list(sampled_queries_indexes + self.database_num)
-        )
-        cache = self.compute_cache(
-            args, model, subset_ds, (len(self), args.features_dim)
-        )
+        subset_ds = Subset(self, positives_indexes + list(sampled_queries_indexes + self.database_num))
+        cache = self.compute_cache(args, model, subset_ds, (len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
         progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
-            best_positive_index = self.get_best_positive_index(
-                args, query_index, cache, query_features
-            )
+            best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
 
             # Choose some random database images, from those remove the soft_positives, and then take the first 10 images as neg_indexes
             soft_positives = self.soft_positives_per_query[query_index]
@@ -406,13 +336,9 @@ class TripletsDataset(BaseDataset):
                 size=self.neg_num_per_query + len(soft_positives),
                 replace=False,
             )
-            neg_indexes = np.setdiff1d(neg_indexes, soft_positives, assume_unique=True)[
-                : self.neg_num_per_query
-            ]
+            neg_indexes = np.setdiff1d(neg_indexes, soft_positives, assume_unique=True)[: self.neg_num_per_query]
 
-            self.triplets_global_indexes.append(
-                (query_index, best_positive_index, *neg_indexes)
-            )
+            self.triplets_global_indexes.append((query_index, best_positive_index, *neg_indexes))
             progress_bar.update(1)
         progress_bar.close()
         # self.triplets_global_indexes is a tensor of shape [1000, 12]
@@ -421,46 +347,30 @@ class TripletsDataset(BaseDataset):
     def compute_triplets_full(self, args, model):
         self.triplets_global_indexes = []
         # Take 1000 random queries
-        sampled_queries_indexes = np.random.choice(
-            self.queries_num, args.cache_refresh_rate, replace=False
-        )
+        sampled_queries_indexes = np.random.choice(self.queries_num, args.cache_refresh_rate, replace=False)
         # Take all database indexes
         database_indexes = list(range(self.database_num))
         #  Compute features for all images and store them in cache
-        subset_ds = Subset(
-            self, database_indexes + list(sampled_queries_indexes + self.database_num)
-        )
-        cache = self.compute_cache(
-            args, model, subset_ds, (len(self), args.features_dim)
-        )
+        subset_ds = Subset(self, database_indexes + list(sampled_queries_indexes + self.database_num))
+        cache = self.compute_cache(args, model, subset_ds, (len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
         progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
-            best_positive_index = self.get_best_positive_index(
-                args, query_index, cache, query_features
-            )
+            best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
             # Choose 1000 random database images (neg_indexes)
-            neg_indexes = np.random.choice(
-                self.database_num, self.neg_samples_num, replace=False
-            )
+            neg_indexes = np.random.choice(self.database_num, self.neg_num_per_query, replace=False)
             # Remove the eventual soft_positives from neg_indexes
             soft_positives = self.soft_positives_per_query[query_index]
             neg_indexes = np.setdiff1d(neg_indexes, soft_positives, assume_unique=True)
             # Concatenate neg_indexes with the previous top 10 negatives (neg_cache)
-            neg_indexes = np.unique(
-                np.concatenate([self.neg_cache[query_index], neg_indexes])
-            )
+            neg_indexes = np.unique(np.concatenate([self.neg_cache[query_index], neg_indexes]))
             # Search the hardest negatives
-            neg_indexes = self.get_hardest_negatives_indexes(
-                args, cache, query_features, neg_indexes
-            )
+            neg_indexes = self.get_hardest_negatives_indexes(args, cache, query_features, neg_indexes)
             # Update nearest negatives in neg_cache
             self.neg_cache[query_index] = neg_indexes
-            self.triplets_global_indexes.append(
-                (query_index, best_positive_index, *neg_indexes)
-            )
+            self.triplets_global_indexes.append((query_index, best_positive_index, *neg_indexes))
             progress_bar.update(1)
         progress_bar.close()
         # self.triplets_global_indexes is a tensor of shape [1000, 12]
@@ -470,57 +380,35 @@ class TripletsDataset(BaseDataset):
         self.triplets_global_indexes = []
         # Take 1000 random queries
         if self.mining == "partial":
-            sampled_queries_indexes = np.random.choice(
-                self.queries_num, args.cache_refresh_rate, replace=False
-            )
-        elif (
-            self.mining == "msls_weighted"
-        ):  # Pick night and sideways queries with higher probability
-            sampled_queries_indexes = np.random.choice(
-                self.queries_num, args.cache_refresh_rate, replace=False, p=self.weights
-            )
+            sampled_queries_indexes = np.random.choice(self.queries_num, args.cache_refresh_rate, replace=False)
+        elif self.mining == "msls_weighted":  # Pick night and sideways queries with higher probability
+            sampled_queries_indexes = np.random.choice(self.queries_num, args.cache_refresh_rate, replace=False, p=self.weights)
 
         # Sample 1000 random database images for the negatives
-        sampled_database_indexes = np.random.choice(
-            self.database_num, self.neg_samples_num, replace=False
-        )
+        sampled_database_indexes = np.random.choice(self.database_num, self.neg_num_per_query, replace=False)
         # Take all the positives
-        positives_indexes = [
-            self.hard_positives_per_query[i] for i in sampled_queries_indexes
-        ]
+        positives_indexes = [self.hard_positives_per_query[i] for i in sampled_queries_indexes]
         positives_indexes = [p for pos in positives_indexes for p in pos]
         # Merge them into database_indexes and remove duplicates
         database_indexes = list(sampled_database_indexes) + positives_indexes
         database_indexes = list(np.unique(database_indexes))
 
-        subset_ds = Subset(
-            self, database_indexes + list(sampled_queries_indexes + self.database_num)
-        )
-        cache = self.compute_cache(
-            args, model, subset_ds, cache_shape=(len(self), args.features_dim)
-        )
+        subset_ds = Subset(self, database_indexes + list(sampled_queries_indexes + self.database_num))
+        cache = self.compute_cache(args, model, subset_ds, cache_shape=(len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
         progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
-            best_positive_index = self.get_best_positive_index(
-                args, query_index, cache, query_features
-            )
+            best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
 
             # Choose the hardest negatives within sampled_database_indexes, ensuring that there are no positives
             soft_positives = self.soft_positives_per_query[query_index]
-            neg_indexes = np.setdiff1d(
-                sampled_database_indexes, soft_positives, assume_unique=True
-            )
+            neg_indexes = np.setdiff1d(sampled_database_indexes, soft_positives, assume_unique=True)
 
             # Take all database images that are negatives and are within the sampled database images (aka database_indexes)
-            neg_indexes = self.get_hardest_negatives_indexes(
-                args, cache, query_features, neg_indexes
-            )
-            self.triplets_global_indexes.append(
-                (query_index, best_positive_index, *neg_indexes)
-            )
+            neg_indexes = self.get_hardest_negatives_indexes(args, cache, query_features, neg_indexes)
+            self.triplets_global_indexes.append((query_index, best_positive_index, *neg_indexes))
             progress_bar.update(1)
         progress_bar.close()
         # self.triplets_global_indexes is a tensor of shape [1000, 12]
@@ -551,378 +439,165 @@ class RAMEfficient2DMatrix:
             return self.matrix[index]
 
 
-
 ################################################### Data Module ###################################################
 
 
-class TripletDataModule(pl.LightningDataModule):
-    """
-    A PyTorch Lightning Data Module for handling triplet datasets.
 
-    This module prepares the dataset for training and validation, handling the necessary transformations and data loading.
 
-    Parameters:
-    - args (Namespace): Arguments containing dataset and model configuration.
-    - test_preprocess (function): Transformation function for test data.
-    - train_preprocess (function, optional): Transformation function for train data.
-    """
 
-    def __init__(self, args, test_preprocess, train_preprocess=None):
-        super().__init__()
-        self.args = args
-        self.test_preprocess = test_preprocess
-        if train_preprocess is not None:
-            self.train_preprocess = train_preprocess
-        else:
-            self.train_preprocess = test_preprocess
 
-        self.pin_memory = True if self.args.device == "cuda" else False
 
-    def setup(self, stage=None):
-        # Split data into train, validate, and test sets]
-        self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
-        self.test_dataset = TripletsDataset(self.args, self.test_preprocess, self.test_preprocess, split="test")
 
-    def train_dataloader(self):
-        return DataLoader(
-            self.train_dataset, batch_size=self.args.train_batch_size, num_workers=self.args.num_workers, pin_memory=self.pin_memory, shuffle=True,
-            collate_fn=collate_fn, drop_last=True,
-        )
-    
-    def val_dataloader(self):
-        queries_ds = ImageIdxDataset(self.test_dataset.queries_paths, self.test_preprocess)
-        queries_dl = DataLoader(queries_ds, num_workers=self.args.num_workers, batch_size=self.args.infer_batch_size, pin_memory=(self.args.device == "cuda"))
-        database_ds = ImageIdxDataset(self.test_dataset.database_paths, self.test_preprocess)
-        database_dl = DataLoader(database_ds, num_workers=self.args.num_workers, batch_size=self.args.infer_batch_size, pin_memory=(self.args.device == "cuda"))
-        return queries_dl, database_dl
-    
 
 
 
+from lightning.fabric import Fabric
+from lightning.fabric.loggers import TensorBoardLogger
+import copy
+from os.path import join
+from PlaceRec.utils import get_config
+from PIL import Image
+from glob import glob
 
-
-
-
-################################################### Training Module ###################################################
-
-
-class TripletModule(pl.LightningModule):
-    """
-    A PyTorch Lightning Module for training with triplet loss.
-
-    This module encapsulates the model training process using triplet loss. It handles the training steps, validation, and testing, as well as optimizer configuration.
-
-    Parameters:
-    - args (Namespace): Arguments containing model and training configuration.
-    - model (nn.Module): The neural network model to train.
-    - datamodule (TripletDataModule): The data module containing training and validation data.
-
-    Methods:
-    - features_size(): Returns the size of the features extracted by the model.
-    - on_train_start(): Prepares the dataset for training.
-    - on_train_epoch_end(): Updates the mining of triplets at the end of each training epoch.
-    - forward(x): Forward pass through the model.
-    - training_step(batch, batch_idx): Defines the training step.
-    - on_validation_epoch_end(outputs): Handles actions at the end of a validation epoch.
-    - on_test_epoch_end(batch, batch_idx, dataloader_idx): Handles actions at the end of a test epoch.
-    - configure_optimizers(): Configures the model optimizers.
-    """
-
-    def __init__(self, args, model, datamodule):
-        super().__init__()
-        self.args = args
-        self.model = model
-        self.loss_fn = get_loss_function(args)
-        self.save_hyperparameters(ignore=["model"])
-        self.datamodule = datamodule
-        self.features_dim = self.features_size()
-        self.args.features_dim = self.features_dim
-
-
-    def features_size(self):
-        img = Image.open(self.datamodule.train_dataset.queries_paths[0]).convert("RGB")
-        img = self.datamodule.test_preprocess(img)
-        with torch.no_grad():
-            features = self.model(img[None, :].to(self.args.device)).detach().cpu()
-            return features.size(1)
-
-    def setup(self, stage):
-        self.datamodule.train_dataset.is_inference = True
-        self.datamodule.train_dataset.compute_triplets(self.args, self.model)
-        self.datamodule.train_dataset.is_inference = False
-
-    def forward(self, x):
-        return self.model(x)
-
-    def training_step(self, batch, batch_idx):
-        images, triplets_local_indexes, _ = batch
-        features = self.model(images)
-        loss_triplet = 0
-        triplets_local_indexes = torch.transpose(
-            triplets_local_indexes.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
-        for triplets in triplets_local_indexes:
-            queries_indexes, positives_indexes, negatives_indexes = triplets.T
-            loss_triplet += self.loss_fn(features[queries_indexes],
-                                            features[positives_indexes],
-                                            features[negatives_indexes])
-        loss_triplet /= (self.args.train_batch_size * self.args.neg_num_per_query)
-        return loss_triplet
-    
-    def on_train_epoch_end(self):
-        self.datamodule.train_dataset.is_inference = True
-        self.datamodule.train_dataset.compute_triplets(self.args, self.model)
-        self.datamodule.train_dataset.is_inference = False
-
-    def on_validation_epoch_start(self):
-        self.validation_queries_descs = np.empty((self.datamodule.test_dataset.queries_num, self.features_dim), dtype=np.float32)
-        self.validation_database_descs = np.empty((self.datamodule.test_dataset.database_num, self.features_dim), dtype=np.float32)
-    
-    def validation_step(self, batch, batch_idx, dataloader_idx):
-        batch, indicies = batch
-        features = self.model(batch)
-
-        if dataloader_idx == 0:
-            self.validation_queries_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
-        elif dataloader_idx == 1:
-            self.validation_database_descs[indicies.cpu().numpy(), :] = features.detach().cpu().numpy()
-            
-    def on_validation_epoch_end(self):  
-        if self.args.loss_distance == "cosine":
-            faiss.normalize_L2(self.validation_database_descs)
-            index = faiss.IndexFlatIP(self.features_dim)
-            index.add(self.validation_database_descs)
-            faiss.normalize_L2(self.validation_queries_descs)
-        elif self.args.loss_distance == "l2":
-            index = faiss.IndexFlatL2(self.features_dim)
-            index.add(self.validation_database_descs)
-
-        distances, predictions = index.search(self.validation_queries_descs, max(self.args.recall_values))
-        #### For each query, check if the predictions are correct
-        positives_per_query = self.datamodule.test_dataset.soft_positives_per_query
-        # args.recall_values by default is [1, 5, 10, 20]
-        recalls = np.zeros(len(self.args.recall_values))
-        for query_index, pred in enumerate(predictions):
-            for i, n in enumerate(self.args.recall_values):
-                if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
-                    recalls[i:] += 1
-                    break
-
-        # Divide by the number of queries*100, so the recalls are in percentages
-        recalls = recalls / self.datamodule.test_dataset.queries_num * 100
-        recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(self.args.recall_values, recalls)])
-        print(recalls_str)
-        for i, recall in enumerate(recalls):
-            recall = recall.astype(np.float32)
-            self.log("recallat" + str(self.args.recall_values[i]), recall, on_epoch=True)
-        return recalls[1]
-
-    def configure_optimizers(self):
-        optimizer = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-        return optimizer
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def test(args, eval_ds, model):
-    """Compute features of the given dataset and compute the recalls."""
-
-    model = model.eval()
-    with torch.no_grad():
-        # For database use "hard_resize", although it usually has no effect because database images have same resolution
-        eval_ds.test_method = "hard_resize"
-        database_subset_ds = Subset(eval_ds, list(range(eval_ds.database_num)))
-        database_dataloader = DataLoader(
-            dataset=database_subset_ds,
-            num_workers=args.num_workers,
-            batch_size=args.infer_batch_size,
-            pin_memory=(args.device == "cuda"),
-            drop_last=True,
-        )
-
-       
-        all_features = np.empty((len(eval_ds), args.features_dim), dtype="float32")
-
-        for inputs, indices in tqdm(database_dataloader, ncols=100):
-            with torch.no_grad():
-                features = model(inputs.to(args.device)).float()
-            if torch.isnan(features).any():
-                raise Exception("Features have NAN in them")
-            features = features.cpu().numpy()
-            all_features[indices.numpy(), :] = features
-
-        queries_subset_ds = Subset(
-            eval_ds,
-            list(
-                range(eval_ds.database_num, eval_ds.database_num + eval_ds.queries_num)
-            ),
-        )
-
-
-        queries_dataloader = DataLoader(
-            dataset=queries_subset_ds,
-            num_workers=args.num_workers,
-            batch_size=args.infer_batch_size,
-            pin_memory=(args.device == "cuda"),
-            drop_last=True,
-        )
-        for inputs, indices in tqdm(queries_dataloader, ncols=100):
-            features = model(inputs.to(args.device)).float()
-            features = features.cpu().numpy()
-            all_features[indices.numpy(), :] = features
-
-    queries_features = all_features[eval_ds.database_num :]
-    database_features = all_features[: eval_ds.database_num]
-
-    faiss_index = faiss.IndexFlatL2(args.features_dim)
-    faiss_index.add(database_features)
-    del database_features, all_features
-
-    distances, predictions = faiss_index.search(
-        queries_features, max(args.recall_values)
-    )
-    #### For each query, check if the predictions are correct
-    positives_per_query = eval_ds.get_positives()
-    # args.recall_values by default is [1, 5, 10, 20]
-    recalls = np.zeros(len(args.recall_values))
-    for query_index, pred in enumerate(predictions):
-        for i, n in enumerate(args.recall_values):
-            if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
-                recalls[i:] += 1
-                break
-    # Divide by the number of queries*100, so the recalls are in percentages
-    recalls = recalls / eval_ds.queries_num * 100
-    recalls_str = ", ".join(
-        [f"R@{val}: {rec:.1f}" for val, rec in zip(args.recall_values, recalls)]
-    )
-    print(recalls_str)
-    return recalls, recalls_str
-
+def features_size(args, model, preprocess):
+    image = torch.rand(244, 244, 3) * 255
+    image = image.numpy().astype(np.uint8)
+    image = Image.fromarray(image)
+    image = preprocess(image)
+    out = model(image[None, :].to(args.device))
+    return out.shape[1]
 
 
 
 def train(args, model, train_preprocess, test_preprocess):
+    fabric = Fabric()
+    fabric.launch()
+
+    local_filename = None
+    logger = TensorBoardLogger(join(filepath, "logs", "contrastive", args.dataset_name),  name=args.method)
+    logger.log_hyperparams(get_config()["train"])
+
+    best_recall, patience_state = 0, 0
+
     model.to(args.device)
+    model = model.eval()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
-    criterion_triplet = get_loss_function(args)
+    model, optimizer = fabric.setup(model, optimizer)
+    args.features_dim = features_size(args, model, test_preprocess)
+    loss_fn = get_loss_function(args)
     train_dataset = TripletsDataset(args, train_preprocess, test_preprocess, split="train")
     test_dataset = BaseDataset(args, test_preprocess, datasets_folder=args.datasets_folder, dataset_name=args.dataset_name, split="test")
+
     for epoch in range(args.max_epochs):
-        model.train()
         for loop_number in range(args.val_check_interval):
-            # Compute triplets to use in the triplet loss
+            model.eval()
             train_dataset.is_inference = True
             train_dataset.compute_triplets(args, model)
             train_dataset.is_inference = False
 
             train_dl = DataLoader(dataset=train_dataset, num_workers=args.num_workers,
-                                 batch_size=args.train_batch_size,
-                                 collate_fn=collate_fn,
-                                 pin_memory=(args.device == "cuda"),
-                                 drop_last=True)
+                                batch_size=args.train_batch_size,
+                                collate_fn=collate_fn,
+                                pin_memory=(args.device=="cuda"),
+                                drop_last=True)
 
-            model = model.train()
-
-            for images, triplets_local_indexes, _ in tqdm(train_dl, ncols=100, desc="Epoch: " + str(epoch) + " Loop: " + str(loop_number)):
-                features = model(images.to(args.device))
+            train_dl = fabric.setup_dataloaders(train_dl)
+            
+            model.train()
+            train_losses = []
+            for images, triplets_idx, _ in tqdm(train_dl, desc="Epoch: " + str(epoch) + " Loop: " + str(loop_number)):
+                features = model(images)
                 features_dim = features.shape[1]
                 loss_triplet = 0
 
-                triplets_local_indexes = torch.transpose(
-                    triplets_local_indexes.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
-                for triplets in triplets_local_indexes:
-                    queries_indexes, positives_indexes, negatives_indexes = triplets.T
-                    loss_triplet += criterion_triplet(features[queries_indexes],
-                                                      features[positives_indexes],
-                                                      features[negatives_indexes])
-
+                triplets_idx = torch.transpose(
+                    triplets_idx.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
+                for triplets in triplets_idx:
+                    queries_idx, positives_idx, negatives_idx = triplets.T
+                    loss_triplet += loss_fn(features[queries_idx],
+                                            features[positives_idx],
+                                            features[negatives_idx])
                 loss_triplet /= (args.train_batch_size * args.neg_num_per_query)
                 optimizer.zero_grad()
-                loss_triplet.backward()
+                fabric.backward(loss_triplet)
                 optimizer.step()
-  
+                train_losses.append(loss_triplet.item())
+            logger.log_metrics({"train_loss": np.mean(train_losses)})
+
+            
+        # Validation 
         model.eval()
         queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
         database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)
 
-        queries_dl = DataLoader(ImageIdxDataset(test_dataset.queries_paths, test_preprocess), 
-                                batch_size=args.infer_batch_size,
-                                num_workers=args.num_workers, 
-                                pin_memory=(args.device == "cuda"))
-
+        queries_dl = DataLoader(ImageIdxDataset(test_dataset.queries_paths, test_preprocess),
+                                 batch_size=args.train_batch_size,
+                                 num_workers=args.num_workers,
+                                 pin_memory=(args.device == "cuda"))
+        
         database_dl = DataLoader(ImageIdxDataset(test_dataset.database_paths, test_preprocess),
-                                batch_size=args.infer_batch_size,
-                                num_workers=args.num_workers, 
-                                pin_memory=(args.device == "cuda"))
+                            batch_size=args.train_batch_size,
+                            num_workers=args.num_workers,
+                            pin_memory=(args.device == "cuda"))
+
+        queries_dl = fabric.setup_dataloaders(queries_dl)
+        database_dl = fabric.setup_dataloaders(database_dl)
+        
         with torch.no_grad():
             for batch, idxs in tqdm(queries_dl, desc="Validation Query Features"):
-                features = model(batch.to(args.device)).detach().cpu().numpy()
-                queries_descs[idxs.numpy(), :] = features
+                features = model(batch).detach().cpu().numpy()
+                queries_descs[idxs.detach().cpu().numpy(), :] = features
 
             for batch, idxs in tqdm(database_dl, desc="Validation Database Features"):
-                features = model(batch.to(args.device)).detach().cpu().numpy()
-                database_descs[idxs.numpy(), :] = features
+                features = model(batch).detach().cpu().numpy()
+                database_descs[idxs.detach().cpu().numpy(), :] = features
 
-        if args.loss_distance == "cosine":
-            faiss.normalize_L2(database_descs)
-            index = faiss.IndexFlatIP(features_dim)
-            index.add(database_descs)
-            faiss.normalize_L2(queries_descs)
-        elif args.loss_distance == "l2":
-            index = faiss.IndexFlatL2(features_dim)
-            index.add(database_descs)
+        index = faiss.IndexFlatL2(features_dim)
+        index.add(database_descs)
+        del database_descs
 
-        distances, predictions = index.search(queries_descs, max(args.recall_values))
-        #### For each query, check if the predictions are correct
-        positives_per_query = test_dataset.soft_positives_per_query
-        # args.recall_values by default is [1, 5, 10, 20]
+        _, predictions = index.search(queries_descs, max(args.recall_values))
+
+        pos_per_query = test_dataset.soft_positives_per_query
         recalls = np.zeros(len(args.recall_values))
         for query_index, pred in enumerate(predictions):
             for i, n in enumerate(args.recall_values):
-                if np.any(np.in1d(pred[:n], positives_per_query[query_index])):
+                if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
                     recalls[i:] += 1
                     break
-
-        # Divide by the number of queries*100, so the recalls are in percentages
         recalls = recalls / test_dataset.queries_num * 100
-        recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(args.recall_values, recalls)])
         
+        for val, rec in zip(args.recall_values, recalls):
+            logger.log_metrics({"recall@" + str(val): rec})
+
+        # update patience for early stopping
+        if recalls[1] > best_recall: 
+ 
+            if local_filename is not None:
+                for file in glob(f"{args.dataset_name}_{args.method}_recallat{args.recall_values[1]}-"):
+                    os.remove(file)
+            best_recall = recalls[1]
+            patience_state = 0
+            state = {"model": model, "optimizer": optimizer, "epoch": epoch, "best_recall": best_recall}
+            local_filename = f"{args.dataset_name}_{args.method}_recallat{args.recall_values[1]}-{best_recall:.2f}.ckpt"
+            fabric.save(join(filepath, "checkpoints", "contrastive", local_filename), state)
+        else: 
+            patience_state += 1
+
+
+        if patience_state > args.patience:
+            print(" ============================= Completed Training Early Stopping =======================================")
+            print(" Epoch: ", epoch)
+            print("")
+            logger.finalize("sucess")
+            break
+
+        recalls_str = ", ".join([f"R@{val}: {rec:.4f}" for val, rec in zip(args.recall_values, recalls)])
         print(" ")
         print(" ")
         print(recalls_str)
         print(" ")
         print(" ")
-            
-
-                    
+    logger.finalize("success")
 
 

@@ -12,8 +12,8 @@ from scipy.signal import convolve2d
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 from PlaceRec.Datasets.base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 
 with open(join(os.getcwd(), "config.yaml"), "r") as file:
     config = yaml.safe_load(file)
@@ -28,7 +28,7 @@ class Pitts30k(BaseDataset):
             # download dataset as zip file
             raise Exception("Pitts30k Not Downloaded")
 
-        self.dataset_folder = join(config["train"]["datasets_folder"], "pitts30k", "images", "train")
+        self.dataset_folder = join(config["train"]["datasets_folder"], "pitts30k", "images", "test")
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(f"Folder {self.dataset_folder} does not exist")
 

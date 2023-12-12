@@ -9,8 +9,8 @@ from PIL import Image
 from scipy.signal import convolve2d
 from torch.utils.data import DataLoader
 
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 from PlaceRec.Datasets.base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 

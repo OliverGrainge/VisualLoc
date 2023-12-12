@@ -12,8 +12,8 @@ from scipy.signal import convolve2d
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 from PlaceRec.Datasets.base_dataset import BaseDataset
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
 
 with open(join(os.getcwd(), "config.yaml"), "r") as file:
     config = yaml.safe_load(file)

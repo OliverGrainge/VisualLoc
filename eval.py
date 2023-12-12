@@ -167,7 +167,7 @@ for dataset_name in args.datasets:
             show=False,
             metric_name="recall@100p",
             dataset_name=ds.name,
-            scores=list(recallat100p.values())
+            scores=list(recallat100p.values()),
         )
 
     if "gpu_latency" in args.metrics:

@@ -5,11 +5,12 @@ import boto3
 import botocore
 import numpy as np
 import torch.nn as nn
+import torch.nn.functional as F
 import yaml
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import torch.nn.functional as F
+
 
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -164,6 +165,11 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet18GeM
 
         method = ResNet18GeM(pretrained=pretrained)
+    elif name == "resnet50_gem":
+
+        from PlaceRec.Methods import ResNet50GeM
+
+        method = ResNet50GeM(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method
@@ -193,5 +199,6 @@ class L2Norm(nn.Module):
     def __init__(self, dim=1):
         super().__init__()
         self.dim = dim
+
     def forward(self, x):
         return F.normalize(x, p=2, dim=self.dim)
