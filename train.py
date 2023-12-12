@@ -84,7 +84,7 @@ def main(args, config):
         # Build the Datamodule
         tripletdatamodule = TripletsDataModule(args, method.model, method.preprocess, method.preprocess)
         # Build the Training Module
-        tripletmodule = TripletsModule(args, model, tripletdatamodule)
+        tripletmodule = TripletsModule(args, model, method.preprocess)
         # Build the Training Class
         trainer = pl.Trainer(
             check_val_every_n_epoch=args.val_check_interval,

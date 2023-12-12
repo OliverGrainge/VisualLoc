@@ -285,7 +285,7 @@ class TripletsDataset(BaseDataset):
             progress_bar = tqdm(total=len(subset_dl), desc="Computing Cache")
             for images, indexes in subset_dl:
                 features = model(images.to(args.device)).detach().cpu()
-                cache[indexes.numpy()] = features.numpy()
+                cache[indexes.numpy()] = features.numpy().astype(np.float32)
                 progress_bar.update(1)
             progress_bar.close()
         return cache
@@ -500,14 +500,12 @@ class TripletsDataModule(pl.LightningDataModule):
 
 
 class TripletsModule(pl.LightningModule):
-    def __init__(self, args, model, datamodule):
+    def __init__(self, args, model, preprocess):
         super().__init__()
         self.args = args
         self.model = model
-        self.datamodule = datamodule
-        self.args.features_dim = features_size(args, model, datamodule.test_preprocess)
+        self.args.features_dim = features_size(args, model, preprocess)
         self.loss_fn = get_loss_function(args)
-
 
     def forward(self, x):
         desc = self.model(x)
@@ -517,7 +515,6 @@ class TripletsModule(pl.LightningModule):
         images, triplets_idx, _ = batch
         features = self.model(images)
         loss_triplet = 0
-
         triplets_idx = torch.transpose(triplets_idx.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
         for triplets in triplets_idx:
             queries_idx, positives_idx, negatives_idx = triplets.T
@@ -526,56 +523,39 @@ class TripletsModule(pl.LightningModule):
         self.log("train_loss", loss_triplet)
         return loss_triplet
 
-    def setup(self):
-        mysd = self.model.state_dict()
-        dmsd = self.datamodule.state_dict()
-        for key, value in mysd.items():
-            assert torch.equal(dmsd[key],value)
-            print("they are equal")
-
-    def on_train_epoch_end(self):
-        mysd = self.model.state_dict()
-        dmsd = self.datamodule.state_dict()
-        for key, value in mysd.items():
-            assert torch.equal(dmsd[key],value)
-            print("they are equal")
-
-        self.datamodule.train_dataset.is_inference = True
-        self.datamodule.train_dataset.compute_triplets(self.args, self.model)
-        self.datamodule.train_dataset.is_inference = False
+    def on_train_epoch_start(self):
+        self.trainer.datamodule.train_dataset.is_inference = True
+        self.trainer.datamodule.train_dataset.compute_triplets(self.args, self.model)
+        self.trainer.datamodule.train_dataset.is_inference = False
 
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
 
     def on_validation_epoch_start(self):
-        self.val_descs = np.empty((self.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
+        self.val_descs = np.empty((self.trainer.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
 
     def validation_step(self, batch, batch_idx):
         imgs, idxs = batch
-        descs = self.model(imgs).detach().cpu().numpy()
+        descs = self.model(imgs).detach().cpu().numpy().astype(np.float32)
         self.val_descs[idxs.cpu().numpy(), :] = descs
 
-
     def on_validation_epoch_end(self):
-        database_descs = self.val_descs[:self.datamodule.test_dataset.database_num, :]
-        queries_descs = self.val_descs[self.datamodule.test_dataset.database_num:, :]
-
+        database_descs = self.val_descs[:self.trainer.datamodule.test_dataset.database_num, :]
+        queries_descs = self.val_descs[self.trainer.datamodule.test_dataset.database_num:, :]
         index = faiss.IndexFlatL2(self.args.features_dim)
         index.add(database_descs)
         del database_descs
-
         _, predictions = index.search(queries_descs, max(self.args.recall_values))
-
-        pos_per_query = self.datamodule.test_dataset.soft_positives_per_query
+        pos_per_query = self.trainer.datamodule.test_dataset.soft_positives_per_query
         recalls = np.zeros(len(self.args.recall_values))
         for query_index, pred in enumerate(predictions):
             for i, n in enumerate(self.args.recall_values):
                 if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
                     recalls[i:] += 1
                     break
-        recalls = recalls / self.datamodule.test_dataset.queries_num * 100
+        recalls = recalls / self.trainer.datamodule.test_dataset.queries_num * 100
         for val, rec in zip(self.args.recall_values, recalls):
-            self.log("recallat" + str(val), rec)
+            self.log("recallat", rec)
 
 
     
@@ -674,11 +654,11 @@ def train(args, model, train_preprocess, test_preprocess):
 
         with torch.no_grad():
             for batch, idxs in tqdm(queries_dl, desc="Validation Query Features"):
-                features = model(batch).detach().cpu().numpy()
+                features = model(batch).detach().cpu().numpy().astype(np.float32)
                 queries_descs[idxs.detach().cpu().numpy(), :] = features
 
             for batch, idxs in tqdm(database_dl, desc="Validation Database Features"):
-                features = model(batch).detach().cpu().numpy()
+                features = model(batch).detach().cpu().numpy().astype(np.float32)
                 database_descs[idxs.detach().cpu().numpy(), :] = features
 
         index = faiss.IndexFlatL2(features_dim)
