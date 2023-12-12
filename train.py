@@ -78,15 +78,13 @@ def main(args, config):
             verbose=False,
             mode="max",
         )
-
+        
         logger = WandbLogger(project=method.name, log_model="all")  # need to login to a WandB account
         logger.experiment.config.update(config["train"])  # Log the training configuration
-
         # Build the Datamodule
         tripletdatamodule = TripletsDataModule(args, method.model, method.preprocess, method.preprocess)
         # Build the Training Module
         tripletmodule = TripletsModule(args, model, tripletdatamodule)
-
         # Build the Training Class
         trainer = pl.Trainer(
             check_val_every_n_epoch=args.val_check_interval,
@@ -99,7 +97,7 @@ def main(args, config):
         )
 
         # Initiate Training
-        #trainer.fit(tripletmodule, datamodule=tripletdatamodule)
+        trainer.fit(tripletmodule, datamodule=tripletdatamodule)
         trainer.validate(tripletmodule, datamodule=tripletdatamodule)
         #train(args, model, method.preprocess, method.preprocess)
 

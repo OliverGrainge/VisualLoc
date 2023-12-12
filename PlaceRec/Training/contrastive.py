@@ -468,9 +468,6 @@ class TripletsDataModule(pl.LightningDataModule):
         self.train_dataset.is_inference = False
 
     def train_dataloader(self):
-        print("=======================================")
-        print("======== Loading new Dataloader =======")
-        print("=======================================")
         train_dl = DataLoader(
             dataset=self.train_dataset,
             num_workers=self.args.num_workers,
@@ -529,9 +526,26 @@ class TripletsModule(pl.LightningModule):
         self.log("train_loss", loss_triplet)
         return loss_triplet
 
+    def setup(self):
+        mysd = self.model.state_dict()
+        dmsd = self.datamodule.state_dict()
+        for key, value in mysd.items():
+            assert torch.equal(dmsd[key],value)
+            print("they are equal")
+
+    def on_train_epoch_end(self):
+        mysd = self.model.state_dict()
+        dmsd = self.datamodule.state_dict()
+        for key, value in mysd.items():
+            assert torch.equal(dmsd[key],value)
+            print("they are equal")
+
+        self.datamodule.train_dataset.is_inference = True
+        self.datamodule.train_dataset.compute_triplets(self.args, self.model)
+        self.datamodule.train_dataset.is_inference = False
+
     def configure_optimizers(self):
         return torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-
 
     def on_validation_epoch_start(self):
         self.val_descs = np.empty((self.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
@@ -542,7 +556,7 @@ class TripletsModule(pl.LightningModule):
         self.val_descs[idxs.cpu().numpy(), :] = descs
 
 
-    def on_validation_epcoh_end(self):
+    def on_validation_epoch_end(self):
         database_descs = self.val_descs[:self.datamodule.test_dataset.database_num, :]
         queries_descs = self.val_descs[self.datamodule.test_dataset.database_num:, :]
 
@@ -560,9 +574,8 @@ class TripletsModule(pl.LightningModule):
                     recalls[i:] += 1
                     break
         recalls = recalls / self.datamodule.test_dataset.queries_num * 100
-        print("=========", recalls)
         for val, rec in zip(self.args.recall_values, recalls):
-            self.log("recall@" + str(val), rec)
+            self.log("recallat" + str(val), rec)
 
 
     
