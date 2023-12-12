@@ -28,6 +28,14 @@ base_transform = T.Compose(
 )
 
 
+def features_size(args, model, preprocess):
+    image = torch.rand(244, 244, 3) * 255
+    image = image.numpy().astype(np.uint8)
+    image = Image.fromarray(image)
+    image = preprocess(image)
+    out = model(image[None, :].to(args.device))
+    return out.shape[1]
+
 def path_to_pil_img(path):
     return Image.open(path).convert("RGB")
 
@@ -111,6 +119,7 @@ class BaseDataset(data.Dataset):
         self.images_paths = list(self.database_paths) + list(self.queries_paths)
         self.database_num = len(self.database_paths)
         self.queries_num = len(self.queries_paths)
+        self.images_num = self.database_num + self.queries_num
 
     def __getitem__(self, index):
         img = path_to_pil_img(self.images_paths[index])
@@ -439,16 +448,127 @@ class RAMEfficient2DMatrix:
             return self.matrix[index]
 
 
+
+################################################## Lightning #####################################################
+
+class TripletsDataModule(pl.LightningDataModule):
+    def __init__(self, args, model, train_preprocess, test_preprocess):
+        super().__init__()
+        self.args = args
+        self.model = model
+        self.train_preprocess = train_preprocess
+        self.test_preprocess = test_preprocess
+
+    def setup(self, stage=None):
+        self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
+        self.test_dataset = BaseDataset(self.args, self.test_preprocess, self.args.datasets_folder, self.args.dataset_name, split="test")
+
+        self.train_dataset.is_inference = True
+        self.train_dataset.compute_triplets(self.args, self.model)
+        self.train_dataset.is_inference = False
+
+    def train_dataloader(self):
+        print("=======================================")
+        print("======== Loading new Dataloader =======")
+        print("=======================================")
+        train_dl = DataLoader(
+            dataset=self.train_dataset,
+            num_workers=self.args.num_workers,
+            batch_size=self.args.train_batch_size,
+            collate_fn=collate_fn,
+            pin_memory=(self.args.device == "cuda"),
+            drop_last=True,
+        )
+        return train_dl
+
+    def val_dataloader(self):
+        val_dl = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=self.args.infer_batch_size,
+            num_workers=self.args.num_workers,
+            pin_memory=(self.args.device == "cuda"),
+            drop_last=False
+        )
+        return val_dl
+
+    def test_dataloader(self):
+        test_dl = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=self.args.infer_batch_size,
+            num_workers=self.args.num_workers,
+            pin_memory=(self.args.device == "cuda"),
+            drop_last=False
+        )
+        return test_dl
+
+
+class TripletsModule(pl.LightningModule):
+    def __init__(self, args, model, datamodule):
+        super().__init__()
+        self.args = args
+        self.model = model
+        self.datamodule = datamodule
+        self.args.features_dim = features_size(args, model, datamodule.test_preprocess)
+        self.loss_fn = get_loss_function(args)
+
+
+    def forward(self, x):
+        desc = self.model(x)
+        return desc
+
+    def training_step(self, batch, batch_idx):
+        images, triplets_idx, _ = batch
+        features = self.model(images)
+        loss_triplet = 0
+
+        triplets_idx = torch.transpose(triplets_idx.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
+        for triplets in triplets_idx:
+            queries_idx, positives_idx, negatives_idx = triplets.T
+            loss_triplet += self.loss_fn(features[queries_idx], features[positives_idx], features[negatives_idx])
+        loss_triplet /= self.args.train_batch_size * self.args.neg_num_per_query
+        self.log("train_loss", loss_triplet)
+        return loss_triplet
+
+    def configure_optimizers(self):
+        return torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+
+
+    def on_validation_epoch_start(self):
+        self.val_descs = np.empty((self.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
+
+    def validation_step(self, batch, batch_idx):
+        imgs, idxs = batch
+        descs = self.model(imgs).detach().cpu().numpy()
+        self.val_descs[idxs.cpu().numpy(), :] = descs
+
+
+    def on_validation_epcoh_end(self):
+        database_descs = self.val_descs[:self.datamodule.test_dataset.database_num, :]
+        queries_descs = self.val_descs[self.datamodule.test_dataset.database_num:, :]
+
+        index = faiss.IndexFlatL2(self.args.features_dim)
+        index.add(database_descs)
+        del database_descs
+
+        _, predictions = index.search(queries_descs, max(self.args.recall_values))
+
+        pos_per_query = self.datamodule.test_dataset.soft_positives_per_query
+        recalls = np.zeros(len(self.args.recall_values))
+        for query_index, pred in enumerate(predictions):
+            for i, n in enumerate(self.args.recall_values):
+                if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
+                    recalls[i:] += 1
+                    break
+        recalls = recalls / self.datamodule.test_dataset.queries_num * 100
+        print("=========", recalls)
+        for val, rec in zip(self.args.recall_values, recalls):
+            self.log("recall@" + str(val), rec)
+
+
+    
+
+
 ################################################### Data Module ###################################################
-
-
-
-
-
-
-
-
-
 
 
 from lightning.fabric import Fabric
@@ -459,13 +579,6 @@ from PlaceRec.utils import get_config
 from PIL import Image
 from glob import glob
 
-def features_size(args, model, preprocess):
-    image = torch.rand(244, 244, 3) * 255
-    image = image.numpy().astype(np.uint8)
-    image = Image.fromarray(image)
-    image = preprocess(image)
-    out = model(image[None, :].to(args.device))
-    return out.shape[1]
 
 
 
@@ -474,7 +587,7 @@ def train(args, model, train_preprocess, test_preprocess):
     fabric.launch()
 
     local_filename = None
-    logger = TensorBoardLogger(join(filepath, "logs", "contrastive", args.dataset_name),  name=args.method)
+    logger = TensorBoardLogger(join(filepath, "logs", "contrastive", args.dataset_name), name=args.method)
     logger.log_hyperparams(get_config()["train"])
 
     best_recall, patience_state = 0, 0
@@ -495,14 +608,17 @@ def train(args, model, train_preprocess, test_preprocess):
             train_dataset.compute_triplets(args, model)
             train_dataset.is_inference = False
 
-            train_dl = DataLoader(dataset=train_dataset, num_workers=args.num_workers,
-                                batch_size=args.train_batch_size,
-                                collate_fn=collate_fn,
-                                pin_memory=(args.device=="cuda"),
-                                drop_last=True)
+            train_dl = DataLoader(
+                dataset=train_dataset,
+                num_workers=args.num_workers,
+                batch_size=args.train_batch_size,
+                collate_fn=collate_fn,
+                pin_memory=(args.device == "cuda"),
+                drop_last=True,
+            )
 
             train_dl = fabric.setup_dataloaders(train_dl)
-            
+
             model.train()
             train_losses = []
             for images, triplets_idx, _ in tqdm(train_dl, desc="Epoch: " + str(epoch) + " Loop: " + str(loop_number)):
@@ -510,39 +626,39 @@ def train(args, model, train_preprocess, test_preprocess):
                 features_dim = features.shape[1]
                 loss_triplet = 0
 
-                triplets_idx = torch.transpose(
-                    triplets_idx.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
+                triplets_idx = torch.transpose(triplets_idx.view(args.train_batch_size, args.neg_num_per_query, 3), 1, 0)
                 for triplets in triplets_idx:
                     queries_idx, positives_idx, negatives_idx = triplets.T
-                    loss_triplet += loss_fn(features[queries_idx],
-                                            features[positives_idx],
-                                            features[negatives_idx])
-                loss_triplet /= (args.train_batch_size * args.neg_num_per_query)
+                    loss_triplet += loss_fn(features[queries_idx], features[positives_idx], features[negatives_idx])
+                loss_triplet /= args.train_batch_size * args.neg_num_per_query
                 optimizer.zero_grad()
                 fabric.backward(loss_triplet)
                 optimizer.step()
                 train_losses.append(loss_triplet.item())
             logger.log_metrics({"train_loss": np.mean(train_losses)})
 
-            
-        # Validation 
+        # Validation
         model.eval()
         queries_descs = np.empty((test_dataset.queries_num, features_dim), dtype=np.float32)
         database_descs = np.empty((test_dataset.database_num, features_dim), dtype=np.float32)
 
-        queries_dl = DataLoader(ImageIdxDataset(test_dataset.queries_paths, test_preprocess),
-                                 batch_size=args.train_batch_size,
-                                 num_workers=args.num_workers,
-                                 pin_memory=(args.device == "cuda"))
-        
-        database_dl = DataLoader(ImageIdxDataset(test_dataset.database_paths, test_preprocess),
-                            batch_size=args.train_batch_size,
-                            num_workers=args.num_workers,
-                            pin_memory=(args.device == "cuda"))
+        queries_dl = DataLoader(
+            ImageIdxDataset(test_dataset.queries_paths, test_preprocess),
+            batch_size=args.train_batch_size,
+            num_workers=args.num_workers,
+            pin_memory=(args.device == "cuda"),
+        )
+
+        database_dl = DataLoader(
+            ImageIdxDataset(test_dataset.database_paths, test_preprocess),
+            batch_size=args.train_batch_size,
+            num_workers=args.num_workers,
+            pin_memory=(args.device == "cuda"),
+        )
 
         queries_dl = fabric.setup_dataloaders(queries_dl)
         database_dl = fabric.setup_dataloaders(database_dl)
-        
+
         with torch.no_grad():
             for batch, idxs in tqdm(queries_dl, desc="Validation Query Features"):
                 features = model(batch).detach().cpu().numpy()
@@ -566,13 +682,12 @@ def train(args, model, train_preprocess, test_preprocess):
                     recalls[i:] += 1
                     break
         recalls = recalls / test_dataset.queries_num * 100
-        
+
         for val, rec in zip(args.recall_values, recalls):
             logger.log_metrics({"recall@" + str(val): rec})
 
         # update patience for early stopping
-        if recalls[1] > best_recall: 
- 
+        if recalls[1] > best_recall:
             if local_filename is not None:
                 for file in glob(f"{args.dataset_name}_{args.method}_recallat{args.recall_values[1]}-"):
                     os.remove(file)
@@ -581,9 +696,8 @@ def train(args, model, train_preprocess, test_preprocess):
             state = {"model": model, "optimizer": optimizer, "epoch": epoch, "best_recall": best_recall}
             local_filename = f"{args.dataset_name}_{args.method}_recallat{args.recall_values[1]}-{best_recall:.2f}.ckpt"
             fabric.save(join(filepath, "checkpoints", "contrastive", local_filename), state)
-        else: 
+        else:
             patience_state += 1
-
 
         if patience_state > args.patience:
             print(" ============================= Completed Training Early Stopping =======================================")
@@ -599,5 +713,3 @@ def train(args, model, train_preprocess, test_preprocess):
         print(" ")
         print(" ")
     logger.finalize("success")
-
-

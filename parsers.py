@@ -265,6 +265,5 @@ def train_arguments():
 
     parser.add_argument("--reload", type=bool, default=config["train"]["reload"])
 
-    parser.add_argument("--num_gpus", type=int, default=config["train"]["num_gpus"])
     args = parser.parse_args()
     return args

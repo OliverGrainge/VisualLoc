@@ -6,6 +6,7 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import argparse
 from glob import glob
 from os.path import join
+import matplotlib.pyplot as plt
 
 import faiss
 import numpy as np
@@ -30,26 +31,35 @@ from parsers import train_arguments
 from PlaceRec.Training import (
     DistillationDataModule,
     DistillationModule,
+    TripletsModule,
+    TripletsDataModule,
     train,
+    recallvsresolution
 )
 
 from PlaceRec.utils import ImageDataset, get_config, get_method
 
-config = get_config()
-args = train_arguments()
+
+def features_size(args, model, preprocess):
+    image = torch.rand(244, 244, 3) * 255
+    image = image.numpy().astype(np.uint8)
+    image = Image.fromarray(image)
+    image = preprocess(image)
+    out = model(image[None, :].to(args.device))
+    return out.shape[1]
 
 
-if __name__ == "__main__":
+
+def main(args, config):
     pl.seed_everything(args.seed)
     torch.set_float32_matmul_precision("medium")        # Initiate Training
-
-
     ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
         method = get_method(args.method, pretrained=False)
         model = method.model.to(args.device)
+
+        args.features_dim = features_size(args, model, method.preprocess)
         # Early Stopping CallBack
-        """
         early_stop_callback = EarlyStopping(
             monitor="recallat" + str(args.recall_values[1]),
             min_delta=0.00,
@@ -73,10 +83,9 @@ if __name__ == "__main__":
         logger.experiment.config.update(config["train"])  # Log the training configuration
 
         # Build the Datamodule
-        tripletdatamodule = TripletDataModule(args, method.preprocess)
-        tripletdatamodule.setup()
+        tripletdatamodule = TripletsDataModule(args, method.model, method.preprocess, method.preprocess)
         # Build the Training Module
-        tripletmodule = TripletModule(args, model, tripletdatamodule)
+        tripletmodule = TripletsModule(args, model, tripletdatamodule)
 
         # Build the Training Class
         trainer = pl.Trainer(
@@ -88,10 +97,11 @@ if __name__ == "__main__":
             reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
-        """
+
         # Initiate Training
         #trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-        train(args, model, method.preprocess, method.preprocess)
+        trainer.validate(tripletmodule, datamodule=tripletdatamodule)
+        #train(args, model, method.preprocess, method.preprocess)
 
     ###################### Asymmetric Distillation Training #######################
     elif args.training_type == "asymmetric_distillation":
@@ -135,7 +145,27 @@ if __name__ == "__main__":
             accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
             callbacks=[early_stop_callback, checkpoint_callback],
-            #val_check_interval=args.val_check_interval
         )
 
-        trainer.fit(distillationmodule, datamodule=distillationdatamodule)
+        #trainer.fit(distillationmodule, datamodule=distillationdatamodule)
+        recalls, resolutions = recallvsresolution(args, 
+            teacher_method.model,
+            test_preprocess=student_method.preprocess,
+            n_points=4)
+
+        for col in range(recalls.shape[1]):
+            rec = recalls[:, col]
+            plt.plot(rec, resolutions, label=f"Recall@{args.recall_values[col]}")
+
+        plt.plot(recalls, resolutions)
+        plt.xlabel("Recall@N")
+        plt.ylabel("Image Resolution")
+        plt.show()
+
+
+
+
+if __name__ == "__main__":
+    config = get_config()
+    args = train_arguments()
+    main(args, config)

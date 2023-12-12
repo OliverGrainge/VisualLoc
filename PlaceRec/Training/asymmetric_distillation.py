@@ -26,7 +26,7 @@ from torchvision.transforms import v2
 from tqdm import tqdm
 import torchvision.transforms as transforms
 from PlaceRec.utils import ImageIdxDataset
-from PlaceRec import contrastive
+from PlaceRec.Training import contrastive
 
 file_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -158,7 +158,7 @@ class UniformRandomResizeDataset(data.Dataset):
         pil_img, _ = self.base_dataset.__getitem__(idx)
         img = self.preprocess(pil_img)
         return img, self.cache[idx], idx
-    
+
     def collate_fn(self, batch):
         res = torch.randint(low=self.min_size, high=self.max_size, size=(1,))
         imgs = [F.resize(item[0], (res, res), antialias=True) for item in batch]
@@ -168,7 +168,6 @@ class UniformRandomResizeDataset(data.Dataset):
         features = torch.vstack(features)
         idxs = torch.tensor(idxs)
         return imgs, features, idxs
-
 
 
 class DistillationDataModule(pl.LightningDataModule):
@@ -211,59 +210,41 @@ class DistillationDataModule(pl.LightningDataModule):
                 self.val_cache = torch.load(
                     os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt")
                 )
-
             except:
-                # Build the Teacher Features using the test_preprocess processing method
-                train_dataset = TeacherDataset(BaseDistillationDataset(self.args, "train"), preprocess=self.test_preprocess)
-                train_dataloader = DataLoader(
-                    train_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
-                )
-                self.train_cache = self.compute_cache(train_dataloader, "Computing Training Teacher Features: ")
-                del train_dataloader
-                val_dataset = TeacherDataset(BaseDistillationDataset(self.args, "test"), preprocess=self.test_preprocess)
-                val_dataloader = DataLoader(
-                    val_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
-                )
-                self.val_cache = self.compute_cache(val_dataloader, "Computing Validation Teacher Features: ")
-                del val_dataloader
-
-                if not os.path.exists(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name)):
-                    os.makedirs(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name))
-
-                torch.save(
-                    self.train_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt")
-                )
-                torch.save(self.val_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
+                self.compute_teacher_features()
         else:
-            print("========================= Computing Features Cache =============================")
-            # Build the Teacher Features using the test_preprocess processing method
-                            # Build the Teacher Features using the test_preprocess processing method
-            train_dataset = TeacherDataset(BaseDistillationDataset(self.args, "train"), preprocess=self.test_preprocess)
-            train_dataloader = DataLoader(
-                train_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
-            )
-            self.train_cache = self.compute_cache(train_dataloader, "Computing Training Teacher Features: ")
-            del train_dataloader
-            val_dataset = TeacherDataset(BaseDistillationDataset(self.args, "test"), preprocess=self.test_preprocess)
-            val_dataloader = DataLoader(
-                val_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
-            )
-            self.val_cache = self.compute_cache(val_dataloader,  "Computing Validation Teacher Features: ")
-            del val_dataloader
+            self.compute_teacher_features()
 
-            if not os.path.exists(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name)):
-                os.makedirs(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name))
-
-            torch.save(self.train_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
-            torch.save(self.val_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
-
-        # build the student training and validation datasets
         self.base_train_dataset = BaseDistillationDataset(self.args, split="train")
         self.base_val_dataset = BaseDistillationDataset(self.args, split="test")
 
         if self.args.distillation_type == "uniform_random_resize":
-            self.student_train_dataset = UniformRandomResizeDataset(self.base_train_dataset, self.train_cache, preprocess=self.train_preprocess, min_size=self.args.min_size, max_size=self.args.max_size)
-            self.student_val_dataset = UniformRandomResizeDataset(self.base_val_dataset, self.val_cache, preprocess=self.test_preprocess, min_size=self.args.min_size, max_size=self.args.max_size)
+            self.student_train_dataset = UniformRandomResizeDataset(
+                self.base_train_dataset, self.train_cache, preprocess=self.train_preprocess, min_size=self.args.min_size, max_size=self.args.max_size
+            )
+            self.student_val_dataset = UniformRandomResizeDataset(
+                self.base_val_dataset, self.val_cache, preprocess=self.test_preprocess, min_size=self.args.min_size, max_size=self.args.max_size
+            )
+
+    def compute_teacher_features(self):
+        train_dataset = TeacherDataset(BaseDistillationDataset(self.args, "train"), preprocess=self.test_preprocess)
+        train_dataloader = DataLoader(
+            train_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
+        )
+        self.train_cache = self.compute_cache(train_dataloader, "Computing Training Teacher Features: ")
+        del train_dataloader
+        val_dataset = TeacherDataset(BaseDistillationDataset(self.args, "test"), preprocess=self.test_preprocess)
+        val_dataloader = DataLoader(
+            val_dataset, batch_size=self.args.infer_batch_size, num_workers=self.args.num_workers, pin_memory=(self.args.device == "cuda")
+        )
+        self.val_cache = self.compute_cache(val_dataloader, "Computing Validation Teacher Features: ")
+        del val_dataloader
+
+        if not os.path.exists(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name)):
+            os.makedirs(os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name))
+
+        torch.save(self.train_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "train_features.pt"))
+        torch.save(self.val_cache, os.path.join(file_directory, "utils", self.args.dataset_name, self.teacher_method.name, "val_features.pt"))
 
     def compute_cache(self, dataloader, desc):
         cache = np.empty((dataloader.dataset.__len__(), self.teacher_method.features_dim), dtype=np.float32)
@@ -279,26 +260,26 @@ class DistillationDataModule(pl.LightningDataModule):
             batch_size=self.args.train_batch_size,
             num_workers=self.args.num_workers,
             pin_memory=self.pin_memory,
-            collate_fn = self.student_train_dataset.collate_fn,
-            shuffle=True
+            collate_fn=self.student_train_dataset.collate_fn,
+            shuffle=True,
         )
 
     def val_dataloader(self):
         return DataLoader(
-            self.student_val_dataset, 
-            batch_size=self.args.infer_batch_size, 
-            num_workers=self.args.num_workers, 
+            self.student_val_dataset,
+            batch_size=self.args.infer_batch_size,
+            num_workers=self.args.num_workers,
             collate_fn=self.student_val_dataset.collate_fn,
-            pin_memory=self.pin_memory
+            pin_memory=self.pin_memory,
         )
 
     def test_dataloader(self):
         return DataLoader(
-            self.student_val_dataset, 
-            batch_size=self.args.infer_batch_size, 
+            self.student_val_dataset,
+            batch_size=self.args.infer_batch_size,
             num_workers=self.args.num_workers,
             collate_fn=self.student_val_dataset.collate_fn,
-            pin_memory=self.pin_memory
+            pin_memory=self.pin_memory,
         )
 
 
@@ -340,18 +321,14 @@ class DistillationModule(pl.LightningModule):
         return optimizer
 
 
-
-
-def update_transforms_size(all_transforms, new_size):
-        # Find the Resize transform and update it
-    new_transforms = []
-    for i, transform in enumerate(all_transforms.transforms):
+def update_preprocess_size(all_preprocess, new_size):
+    new_preprocess = []
+    for i, transform in enumerate(all_preprocess.transforms):
         if isinstance(transform, transforms.Resize):
-            new_transforms.append(transforms.Resize(new_size, antialias=True))
+            new_preprocess.append(transforms.Resize(new_size, antialias=True))
         else:
-            new_transforms.append(transform)
-    # Recreate the Compose with the updated list
-    return transforms.Compose(new_transforms)
+            new_preprocess.append(transform)
+    return transforms.Compose(new_preprocess)
 
 
 def recallatn(args, model, test_dataset, test_preprocess):
@@ -359,16 +336,20 @@ def recallatn(args, model, test_dataset, test_preprocess):
     queries_descs = np.empty((test_dataset.queries_num, args.features_dim), dtype=np.float32)
     database_descs = np.empty((test_dataset.database_num, args.features_dim), dtype=np.float32)
 
-    queries_dl = DataLoader(ImageIdxDataset(test_dataset.queries_paths, test_preprocess),
-                                batch_size=args.train_batch_size,
-                                num_workers=args.num_workers,
-                                pin_memory=(args.device == "cuda"))
-    
-    database_dl = DataLoader(ImageIdxDataset(test_dataset.database_paths, test_preprocess),
-                        batch_size=args.train_batch_size,
-                        num_workers=args.num_workers,
-                        pin_memory=(args.device == "cuda"))
-    
+    queries_dl = DataLoader(
+        ImageIdxDataset(test_dataset.queries_paths, test_preprocess),
+        batch_size=args.train_batch_size,
+        num_workers=args.num_workers,
+        pin_memory=(args.device == "cuda"),
+    )
+
+    database_dl = DataLoader(
+        ImageIdxDataset(test_dataset.database_paths, test_preprocess),
+        batch_size=args.train_batch_size,
+        num_workers=args.num_workers,
+        pin_memory=(args.device == "cuda"),
+    )
+
     with torch.no_grad():
         for batch, idxs in tqdm(queries_dl, desc="Validation Query Features"):
             features = model(batch).detach().cpu().numpy()
@@ -395,17 +376,15 @@ def recallatn(args, model, test_dataset, test_preprocess):
     return recalls
 
 
-
 def recallvsresolution(args, model, test_preprocess, n_points=10):
     base_preprocess = test_preprocess
     sizes = np.linspace(args.min_size, args.max_size, n_points).astype(int)
     all_recalls = []
     for size in sizes:
-        test_preprocess = update_transforms_size(base_preprocess, size)
-        test_dataset = contrastive.BaseDataset(args, test_preprocess, datasets_folder=args.datasets_folder, dataset_name=args.dataset_name, split="test")
+        test_preprocess = update_preprocess_size(base_preprocess, size)
+        test_dataset = contrastive.BaseDataset(
+            args, test_preprocess, datasets_folder=args.datasets_folder, dataset_name=args.dataset_name, split="test"
+        )
         recalls = recallatn(args, model, test_dataset, test_preprocess)
         all_recalls.append(recalls)
     return sizes, np.vstack(all_recalls)
-
-
-    
