@@ -34,7 +34,9 @@ from PlaceRec.Training import (
     TripletsModule,
     TripletsDataModule,
     train,
-    recallvsresolution
+    recallvsresolution,
+    ContrastiveLearningModel,
+    ContrastiveDataModule
 )
 
 from PlaceRec.utils import ImageDataset, get_config, get_method
@@ -82,9 +84,11 @@ def main(args, config):
         logger = WandbLogger(project=method.name, log_model="all")  # need to login to a WandB account
         logger.experiment.config.update(config["train"])  # Log the training configuration
         # Build the Datamodule
-        tripletdatamodule = TripletsDataModule(args, method.model, method.preprocess, method.preprocess)
+        #tripletdatamodule = ContrastiveDataModule(args, method.model, method.preprocess, method.preprocess)
+        datamodule = ContrastiveDataModule(args, model, method.preprocess, method.preprocess)
         # Build the Training Module
-        tripletmodule = TripletsModule(args, model, method.preprocess)
+        #tripletmodule = TripletsModule(args, model, method.preprocess)
+        learningmodule = ContrastiveLearningModel(args, model)
         # Build the Training Class
         trainer = pl.Trainer(
             check_val_every_n_epoch=args.val_check_interval,
@@ -92,13 +96,12 @@ def main(args, config):
             max_epochs=args.max_epochs,
             accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
-            reload_dataloaders_every_n_epochs=1,
             callbacks=[checkpoint_callback],
         )
 
         # Initiate Training
-        trainer.fit(tripletmodule, datamodule=tripletdatamodule)
-        trainer.validate(tripletmodule, datamodule=tripletdatamodule)
+        trainer.fit(learningmodule, datamodule=datamodule)
+        trainer.validate(learningmodule, datamodule=datamodule)
         #train(args, model, method.preprocess, method.preprocess)
 
     ###################### Asymmetric Distillation Training #######################

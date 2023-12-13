@@ -559,7 +559,108 @@ class TripletsModule(pl.LightningModule):
 
 
     
+class ContrastiveDataModule(pl.LightningDataModule):
+    def __init__(self, args, model, train_preprocess, test_preprocess):
+        super().__init__()
+        self.args = args
+        self.train_preprocess = train_preprocess
+        self.test_preprocess = test_preprocess
+        self.model = model
 
+
+    def setup(self, stage=None):
+        self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
+        self.test_dataset = BaseDataset(self.args, self.test_preprocess, self.args.datasets_folder, self.args.dataset_name, split="test")
+        self.train_dataset.is_inference = True
+        self.train_dataset.compute_triplets(self.args, self.model)
+        self.train_dataset.is_inference = False
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.train_dataset, 
+            batch_size=self.args.train_batch_size, 
+            num_workers=self.args.num_workers, 
+            pin_memory=(self.args.device == "cuda"), 
+            collate_fn=collate_fn,
+            drop_last=True)
+
+    def val_dataloader(self):
+        val_dl = DataLoader(
+            dataset=self.test_dataset,
+            batch_size=self.args.infer_batch_size,
+            num_workers=self.args.num_workers,
+            pin_memory=(self.args.device == "cuda"),
+            drop_last=False
+        )
+        return val_dl
+    
+
+class ContrastiveLearningModel(pl.LightningModule):
+    def __init__(self, args, model):
+        super().__init__()
+        self.args = args
+        self.model = model
+        self.loss_fn = get_loss_function(args)
+        self.save_hyperparameters(args)
+
+    def forward(self, x):
+        return self.model(x)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+        return optimizer
+
+    def training_step(self, batch, batch_idx):
+        images, triplets_idx, _ = batch
+        features = self(images)
+        loss_triplet = 0
+
+        triplets_idx = torch.transpose(triplets_idx.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
+        for triplets in triplets_idx:
+            queries_idx, positives_idx, negatives_idx = triplets.T
+            loss_triplet += self.loss_fn(features[queries_idx], features[positives_idx], features[negatives_idx])
+
+        loss_triplet /= self.args.train_batch_size * self.args.neg_num_per_query
+        self.log('train_loss', loss_triplet, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        return loss_triplet
+
+    def on_train_epoch_start(self):
+        train_loader = self.trainer.train_dataloader
+        train_dataset = train_loader.dataset
+        train_dataset.is_inference = True
+        train_dataset.compute_triplets(self.args, self.model)
+        train_dataset.is_inference = False
+
+    def validation_step(self, batch, batch_idx, dataset_type):
+        images, idxs = batch
+        features = self(images).detach().cpu().numpy().astype(np.float32)
+        return {"features": features, "idxs": idxs, "dataset_type": dataset_type}
+
+    def on_validation_epoch_start(self):
+        self.val_descs = np.empty((self.trainer.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
+
+    def validation_step(self, batch, batch_idx):
+        imgs, idxs = batch
+        descs = self.model(imgs).detach().cpu().numpy().astype(np.float32)
+        self.val_descs[idxs.cpu().numpy(), :] = descs
+
+    def on_validation_epoch_end(self):
+        database_descs = self.val_descs[:self.trainer.datamodule.test_dataset.database_num, :]
+        queries_descs = self.val_descs[self.trainer.datamodule.test_dataset.database_num:, :]
+        index = faiss.IndexFlatL2(self.args.features_dim)
+        index.add(database_descs)
+        del database_descs
+        _, predictions = index.search(queries_descs, max(self.args.recall_values))
+        pos_per_query = self.trainer.datamodule.test_dataset.soft_positives_per_query
+        recalls = np.zeros(len(self.args.recall_values))
+        for query_index, pred in enumerate(predictions):
+            for i, n in enumerate(self.args.recall_values):
+                if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
+                    recalls[i:] += 1
+                    break
+        recalls = recalls / self.trainer.datamodule.test_dataset.queries_num * 100
+        for val, rec in zip(self.args.recall_values, recalls):
+            self.log("recallat", rec.astype(np.float32))
 
 ################################################### Data Module ###################################################
 
