@@ -30,7 +30,7 @@ train:
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
   training_type: "contrastive" # training type either contrastive or asymmetric_distillation
-  dataset_name: "pitts30k" # Dataset to train on
+  dataset_name: "mapillary_sls" # Dataset to train on
 
   method: "resnet18_gem" # method to train
   train_batch_size: 7 # training batch size
@@ -53,7 +53,7 @@ train:
   mining: "partial" # either partial or random. Partial mines the hardest negatives, random mines random negatives. 
   loss_distance: "l2" # either cosine or l2
   margin: 0.1 # margin of the triplet loss
-  val_check_interval: 5 # how many epochs before performing validation 
+  val_check_interval: 1 # how many epochs before performing validation 
 
   ###################### Asymmetric Training Configuration ############################
   student_method: "resnet18_gem"

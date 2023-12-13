@@ -282,7 +282,7 @@ class TripletsDataset(BaseDataset):
         # RAMEfficient2DMatrix is RAM efficient for full database mining.
         cache = RAMEfficient2DMatrix(cache_shape, dtype=np.float32)
         with torch.no_grad():
-            progress_bar = tqdm(total=len(subset_dl), desc="Computing Cache")
+            progress_bar = tqdm(total=len(subset_dl), desc="Computing Cache", leave=False, disable=True)
             for images, indexes in subset_dl:
                 features = model(images.to(args.device)).detach().cpu()
                 cache[indexes.numpy()] = features.numpy().astype(np.float32)
@@ -333,7 +333,7 @@ class TripletsDataset(BaseDataset):
         cache = self.compute_cache(args, model, subset_ds, (len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
-        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
+        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Random Features", leave=False, disable=True)
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
             best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
@@ -364,7 +364,7 @@ class TripletsDataset(BaseDataset):
         cache = self.compute_cache(args, model, subset_ds, (len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
-        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
+        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Random Features", leave=False, disable=True)
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
             best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
@@ -406,7 +406,7 @@ class TripletsDataset(BaseDataset):
         cache = self.compute_cache(args, model, subset_ds, cache_shape=(len(self), args.features_dim))
 
         # This loop's iterations could be done individually in the __getitem__(). This way is slower but clearer (and yields same results)
-        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Radom Features")
+        progress_bar = tqdm(sampled_queries_indexes, desc="Mining Random Features", leave=False, disable=True)
         for query_index in sampled_queries_indexes:
             query_features = self.get_query_features(query_index, cache)
             best_positive_index = self.get_best_positive_index(args, query_index, cache, query_features)
@@ -451,131 +451,32 @@ class RAMEfficient2DMatrix:
 
 ################################################## Lightning #####################################################
 
-class TripletsDataModule(pl.LightningDataModule):
-    def __init__(self, args, model, train_preprocess, test_preprocess):
-        super().__init__()
-        self.args = args
-        self.model = model
-        self.train_preprocess = train_preprocess
-        self.test_preprocess = test_preprocess
-
-    def setup(self, stage=None):
-        self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
-        self.test_dataset = BaseDataset(self.args, self.test_preprocess, self.args.datasets_folder, self.args.dataset_name, split="test")
-
-        self.train_dataset.is_inference = True
-        self.train_dataset.compute_triplets(self.args, self.model)
-        self.train_dataset.is_inference = False
-
-    def train_dataloader(self):
-        train_dl = DataLoader(
-            dataset=self.train_dataset,
-            num_workers=self.args.num_workers,
-            batch_size=self.args.train_batch_size,
-            collate_fn=collate_fn,
-            pin_memory=(self.args.device == "cuda"),
-            drop_last=True,
-        )
-        return train_dl
-
-    def val_dataloader(self):
-        val_dl = DataLoader(
-            dataset=self.test_dataset,
-            batch_size=self.args.infer_batch_size,
-            num_workers=self.args.num_workers,
-            pin_memory=(self.args.device == "cuda"),
-            drop_last=False
-        )
-        return val_dl
-
-    def test_dataloader(self):
-        test_dl = DataLoader(
-            dataset=self.test_dataset,
-            batch_size=self.args.infer_batch_size,
-            num_workers=self.args.num_workers,
-            pin_memory=(self.args.device == "cuda"),
-            drop_last=False
-        )
-        return test_dl
-
-
-class TripletsModule(pl.LightningModule):
-    def __init__(self, args, model, preprocess):
-        super().__init__()
-        self.args = args
-        self.model = model
-        self.args.features_dim = features_size(args, model, preprocess)
-        self.loss_fn = get_loss_function(args)
-
-    def forward(self, x):
-        desc = self.model(x)
-        return desc
-
-    def training_step(self, batch, batch_idx):
-        images, triplets_idx, _ = batch
-        features = self.model(images)
-        loss_triplet = 0
-        triplets_idx = torch.transpose(triplets_idx.view(self.args.train_batch_size, self.args.neg_num_per_query, 3), 1, 0)
-        for triplets in triplets_idx:
-            queries_idx, positives_idx, negatives_idx = triplets.T
-            loss_triplet += self.loss_fn(features[queries_idx], features[positives_idx], features[negatives_idx])
-        loss_triplet /= self.args.train_batch_size * self.args.neg_num_per_query
-        self.log("train_loss", loss_triplet)
-        return loss_triplet
-
-    def on_train_epoch_start(self):
-        self.trainer.datamodule.train_dataset.is_inference = True
-        self.trainer.datamodule.train_dataset.compute_triplets(self.args, self.model)
-        self.trainer.datamodule.train_dataset.is_inference = False
-
-    def configure_optimizers(self):
-        return torch.optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-
-    def on_validation_epoch_start(self):
-        self.val_descs = np.empty((self.trainer.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
-
-    def validation_step(self, batch, batch_idx):
-        imgs, idxs = batch
-        descs = self.model(imgs).detach().cpu().numpy().astype(np.float32)
-        self.val_descs[idxs.cpu().numpy(), :] = descs
-
-    def on_validation_epoch_end(self):
-        database_descs = self.val_descs[:self.trainer.datamodule.test_dataset.database_num, :]
-        queries_descs = self.val_descs[self.trainer.datamodule.test_dataset.database_num:, :]
-        index = faiss.IndexFlatL2(self.args.features_dim)
-        index.add(database_descs)
-        del database_descs
-        _, predictions = index.search(queries_descs, max(self.args.recall_values))
-        pos_per_query = self.trainer.datamodule.test_dataset.soft_positives_per_query
-        recalls = np.zeros(len(self.args.recall_values))
-        for query_index, pred in enumerate(predictions):
-            for i, n in enumerate(self.args.recall_values):
-                if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
-                    recalls[i:] += 1
-                    break
-        recalls = recalls / self.trainer.datamodule.test_dataset.queries_num * 100
-        for val, rec in zip(self.args.recall_values, recalls):
-            self.log("recallat", rec)
-
 
     
-class ContrastiveDataModule(pl.LightningDataModule):
+
+class ContrastiveLearningModel(pl.LightningModule):
     def __init__(self, args, model, train_preprocess, test_preprocess):
         super().__init__()
         self.args = args
         self.train_preprocess = train_preprocess
         self.test_preprocess = test_preprocess
         self.model = model
+        self.loss_fn = get_loss_function(args)
+        self.save_hyperparameters(args)
+        self.log("batch_size", self.args.train_batch_size)
 
-
+    
     def setup(self, stage=None):
         self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
         self.test_dataset = BaseDataset(self.args, self.test_preprocess, self.args.datasets_folder, self.args.dataset_name, split="test")
-        self.train_dataset.is_inference = True
-        self.train_dataset.compute_triplets(self.args, self.model)
-        self.train_dataset.is_inference = False
 
     def train_dataloader(self):
+        self.model.eval()
+        self.train_dataset.is_inference=True
+        self.train_dataset.compute_triplets(self.args, self.model)
+        self.train_dataset.is_inference = False
+        self.model.train()
+
         return DataLoader(
             self.train_dataset, 
             batch_size=self.args.train_batch_size, 
@@ -593,15 +494,6 @@ class ContrastiveDataModule(pl.LightningDataModule):
             drop_last=False
         )
         return val_dl
-    
-
-class ContrastiveLearningModel(pl.LightningModule):
-    def __init__(self, args, model):
-        super().__init__()
-        self.args = args
-        self.model = model
-        self.loss_fn = get_loss_function(args)
-        self.save_hyperparameters(args)
 
     def forward(self, x):
         return self.model(x)
@@ -624,20 +516,13 @@ class ContrastiveLearningModel(pl.LightningModule):
         self.log('train_loss', loss_triplet, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss_triplet
 
-    def on_train_epoch_start(self):
-        train_loader = self.trainer.train_dataloader
-        train_dataset = train_loader.dataset
-        train_dataset.is_inference = True
-        train_dataset.compute_triplets(self.args, self.model)
-        train_dataset.is_inference = False
-
     def validation_step(self, batch, batch_idx, dataset_type):
         images, idxs = batch
         features = self(images).detach().cpu().numpy().astype(np.float32)
         return {"features": features, "idxs": idxs, "dataset_type": dataset_type}
 
     def on_validation_epoch_start(self):
-        self.val_descs = np.empty((self.trainer.datamodule.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
+        self.val_descs = np.empty((self.test_dataset.images_num, self.args.features_dim), dtype=np.float32)
 
     def validation_step(self, batch, batch_idx):
         imgs, idxs = batch
@@ -645,22 +530,23 @@ class ContrastiveLearningModel(pl.LightningModule):
         self.val_descs[idxs.cpu().numpy(), :] = descs
 
     def on_validation_epoch_end(self):
-        database_descs = self.val_descs[:self.trainer.datamodule.test_dataset.database_num, :]
-        queries_descs = self.val_descs[self.trainer.datamodule.test_dataset.database_num:, :]
+        database_descs = self.val_descs[:self.test_dataset.database_num, :]
+        queries_descs = self.val_descs[self.test_dataset.database_num:, :]
         index = faiss.IndexFlatL2(self.args.features_dim)
         index.add(database_descs)
         del database_descs
         _, predictions = index.search(queries_descs, max(self.args.recall_values))
-        pos_per_query = self.trainer.datamodule.test_dataset.soft_positives_per_query
+        pos_per_query = self.test_dataset.soft_positives_per_query
         recalls = np.zeros(len(self.args.recall_values))
         for query_index, pred in enumerate(predictions):
             for i, n in enumerate(self.args.recall_values):
                 if np.any(np.in1d(pred[:n], pos_per_query[query_index])):
                     recalls[i:] += 1
                     break
-        recalls = recalls / self.trainer.datamodule.test_dataset.queries_num * 100
+        recalls = recalls / self.test_dataset.queries_num * 100
         for val, rec in zip(self.args.recall_values, recalls):
-            self.log("recallat", rec.astype(np.float32))
+            self.log("recallat" + str(val), rec.astype(np.float32))
+        del self.val_descs
 
 ################################################### Data Module ###################################################
 
