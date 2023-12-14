@@ -36,6 +36,7 @@ def features_size(args, model, preprocess):
     out = model(image[None, :].to(args.device))
     return out.shape[1]
 
+
 def path_to_pil_img(path):
     return Image.open(path).convert("RGB")
 
@@ -448,11 +449,8 @@ class RAMEfficient2DMatrix:
             return self.matrix[index]
 
 
-
 ################################################## Lightning #####################################################
 
-
-    
 
 class ContrastiveLearningModel(pl.LightningModule):
     def __init__(self, args, model, train_preprocess, test_preprocess):
@@ -465,25 +463,25 @@ class ContrastiveLearningModel(pl.LightningModule):
         self.save_hyperparameters(args)
         self.log("batch_size", self.args.train_batch_size)
 
-    
     def setup(self, stage=None):
         self.train_dataset = TripletsDataset(self.args, self.train_preprocess, self.test_preprocess, split="train")
         self.test_dataset = BaseDataset(self.args, self.test_preprocess, self.args.datasets_folder, self.args.dataset_name, split="test")
 
     def train_dataloader(self):
         self.model.eval()
-        self.train_dataset.is_inference=True
+        self.train_dataset.is_inference = True
         self.train_dataset.compute_triplets(self.args, self.model)
         self.train_dataset.is_inference = False
         self.model.train()
 
         return DataLoader(
-            self.train_dataset, 
-            batch_size=self.args.train_batch_size, 
-            num_workers=self.args.num_workers, 
-            pin_memory=(self.args.device == "cuda"), 
+            self.train_dataset,
+            batch_size=self.args.train_batch_size,
+            num_workers=self.args.num_workers,
+            pin_memory=(self.args.device == "cuda"),
             collate_fn=collate_fn,
-            drop_last=True)
+            drop_last=True,
+        )
 
     def val_dataloader(self):
         val_dl = DataLoader(
@@ -491,7 +489,7 @@ class ContrastiveLearningModel(pl.LightningModule):
             batch_size=self.args.infer_batch_size,
             num_workers=self.args.num_workers,
             pin_memory=(self.args.device == "cuda"),
-            drop_last=False
+            drop_last=False,
         )
         return val_dl
 
@@ -513,7 +511,7 @@ class ContrastiveLearningModel(pl.LightningModule):
             loss_triplet += self.loss_fn(features[queries_idx], features[positives_idx], features[negatives_idx])
 
         loss_triplet /= self.args.train_batch_size * self.args.neg_num_per_query
-        self.log('train_loss', loss_triplet, on_step=True, on_epoch=True, prog_bar=True, logger=True)
+        self.log("train_loss", loss_triplet, on_step=True, on_epoch=True, prog_bar=True, logger=True)
         return loss_triplet
 
     def validation_step(self, batch, batch_idx, dataset_type):
@@ -530,8 +528,8 @@ class ContrastiveLearningModel(pl.LightningModule):
         self.val_descs[idxs.cpu().numpy(), :] = descs
 
     def on_validation_epoch_end(self):
-        database_descs = self.val_descs[:self.test_dataset.database_num, :]
-        queries_descs = self.val_descs[self.test_dataset.database_num:, :]
+        database_descs = self.val_descs[: self.test_dataset.database_num, :]
+        queries_descs = self.val_descs[self.test_dataset.database_num :, :]
         index = faiss.IndexFlatL2(self.args.features_dim)
         index.add(database_descs)
         del database_descs
@@ -548,6 +546,7 @@ class ContrastiveLearningModel(pl.LightningModule):
             self.log("recallat" + str(val), rec.astype(np.float32))
         del self.val_descs
 
+
 ################################################### Data Module ###################################################
 
 
@@ -558,8 +557,6 @@ from os.path import join
 from PlaceRec.utils import get_config
 from PIL import Image
 from glob import glob
-
-
 
 
 def train(args, model, train_preprocess, test_preprocess):

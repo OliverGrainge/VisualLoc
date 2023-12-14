@@ -111,30 +111,13 @@ def eval_arguments():
 def train_arguments():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument(
-        "--min_size",
-        type=int,
-        default=config["train"]["min_size"]
-    )
+    parser.add_argument("--min_size", type=int, default=config["train"]["min_size"])
 
-    parser.add_argument(
-        "--max_size",
-        type=int,
-        default=config["train"]["max_size"]
-    )
+    parser.add_argument("--max_size", type=int, default=config["train"]["max_size"])
 
-    parser.add_argument(
-        "--recall_values", 
-        type=int, 
-        default=config["train"]["recall_values"], 
-        nargs="+", 
-        help="Recalls to be computed, such as R@5.")
-    
-    parser.add_argument(
-        "--distillation_type",
-        type=str,
-        default=config["train"]["distillation_type"]
-    )
+    parser.add_argument("--recall_values", type=int, default=config["train"]["recall_values"], nargs="+", help="Recalls to be computed, such as R@5.")
+
+    parser.add_argument("--distillation_type", type=str, default=config["train"]["distillation_type"])
 
     parser.add_argument(
         "--dataset_name",

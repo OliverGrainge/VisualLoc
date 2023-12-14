@@ -8,5 +8,8 @@ from .hybridnet import HybridNet
 from .mixvpr import MixVPR
 from .netvlad import NetVLAD
 from .regionvlad import RegionVLAD
-#from .resnet50_gem import ResNet50GeM
+from .resnet50_gem import ResNet50GeM
 from .resnet18_gem import ResNet18GeM
+from .vit_base_patch16_224_gap import ViT_base_patch16_224_gap
+from .dinov2_base_patch16_224_gap import DinoV2_base_patch16_224_gap
+from .base_method import BaseModelWrapper

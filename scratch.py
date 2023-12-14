@@ -1,43 +1,46 @@
-from transformers import ViTModel, ViTFeatureExtractor
-from PIL import Image
-import requests
+import torch
 import torch.nn as nn
-from torchvision import transforms
+from transformers import ViTModel
 
+class NetVLAD(nn.Module):
+    def __init__(self, num_clusters, dim):
+        super(NetVLAD, self).__init__()
+        self.num_clusters = num_clusters
+        self.dim = dim
+        self.clusters = nn.Parameter(torch.randn(num_clusters, dim))
+        self.clusters2 = nn.Parameter(torch.randn(1, num_clusters, dim))
 
-
-preprocess = transforms.Compose([
-    transforms.Resize((224, 224)),  # Resize to 224x224
-    transforms.ToTensor(),  # This will automatically scale pixels to [0, 1]
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])  # Normalize
-])
-
-class vit_base_patch16_224_gap(nn.Module):
-    def __init__(self, feature_dim=2048, num_trainable_blocks=3):
-        super().__init__()
-        self.vit_backbone = ViTModel.from_pretrained('google/vit-base-patch16-224')
-
-        # Freeze all transformer blocks except the last `num_trainable_blocks`
-        num_blocks = len(self.vit_backbone.encoder.layer) # Total number of blocks
-        for i, block in enumerate(self.vit_backbone.encoder.layer):
-            if i < num_blocks - num_trainable_blocks:
-                for param in block.parameters():
-                    param.requires_grad = False
-
-
-        self.fc = nn.Linear(768, feature_dim)
-    
     def forward(self, x):
-        x = self.vit_backbone(x).last_hidden_state
-        x = x.mean(1)
-        x = self.fc(x)
-        return x
+        # x: tensor of shape [batch_size, num_tokens, feature_dim]
+        # self.clusters: tensor of shape [num_clusters, feature_dim]
+        
+        # Expand the clusters to match the batch size and number of tokens
+        clusters = self.clusters.unsqueeze(0).unsqueeze(0)
+        clusters = clusters.expand(x.size(0), x.size(1), self.num_clusters, self.dim)
+        x_expanded = x.unsqueeze(2)
+        x_expanded = x_expanded.expand_as(clusters)
+        assignment = torch.softmax(torch.sum(x_expanded * clusters, dim=3), dim=2)
+        a_sum = assignment.sum(1).unsqueeze(1).unsqueeze(3)
+        a = a_sum * self.clusters2
+        vlad = torch.sum((x.unsqueeze(2) - a) * assignment.unsqueeze(3), dim=1)
+        return vlad.flatten(1)
 
 
-url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
-image = Image.open(requests.get(url, stream=True).raw)
-image = preprocess(image)
-model = vit_base_patch16_224_gap()
-features = model(image[None, :])
+class ViTNetVLAD(nn.Module):
+    def __init__(self, num_clusters):
+        super(ViTNetVLAD, self).__init__()
+        self.vit_backbone = ViTModel.from_pretrained("google/vit-base-patch16-224")
+        dim = self.vit_backbone.config.hidden_size  # Dimension of the token embeddings from ViT
+        self.netvlad = NetVLAD(num_clusters, dim)
 
-print(features.shape)
+    def forward(self, x):
+        outputs = self.vit_backbone(x)
+        tokens = outputs.last_hidden_state
+        vlad = self.netvlad(tokens)
+        return vlad
+
+# Example usage
+model = ViTNetVLAD(num_clusters=64)
+input_tensor = torch.randn(2, 3, 224, 224)  # Example input
+output = model(input_tensor)
+print(output.shape)

@@ -48,10 +48,9 @@ def features_size(args, model, preprocess):
     return out.shape[1]
 
 
-
 def main(args, config):
     pl.seed_everything(args.seed)
-    torch.set_float32_matmul_precision("medium")        # Initiate Training
+    torch.set_float32_matmul_precision("medium")  # Initiate Training
     ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
         method = get_method(args.method, pretrained=False)
@@ -77,7 +76,7 @@ def main(args, config):
             verbose=False,
             mode="max",
         )
-        
+
         logger = WandbLogger(project=method.name, log_model="all")  # need to login to a WandB account
         logger.experiment.config.update(config["train"])  # Log the training configuration
 
@@ -141,11 +140,8 @@ def main(args, config):
             callbacks=[early_stop_callback, checkpoint_callback],
         )
 
-        #trainer.fit(distillationmodule, datamodule=distillationdatamodule)
-        recalls, resolutions = recallvsresolution(args, 
-            teacher_method.model,
-            test_preprocess=student_method.preprocess,
-            n_points=4)
+        # trainer.fit(distillationmodule, datamodule=distillationdatamodule)
+        recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
 
         for col in range(recalls.shape[1]):
             rec = recalls[:, col]
@@ -155,8 +151,6 @@ def main(args, config):
         plt.xlabel("Recall@N")
         plt.ylabel("Image Resolution")
         plt.show()
-
-
 
 
 if __name__ == "__main__":

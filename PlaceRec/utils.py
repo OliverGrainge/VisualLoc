@@ -166,10 +166,18 @@ def get_method(name: str = None, pretrained: bool = True):
 
         method = ResNet18GeM(pretrained=pretrained)
     elif name == "resnet50_gem":
-
         from PlaceRec.Methods import ResNet50GeM
 
         method = ResNet50GeM(pretrained=pretrained)
+
+    elif name == "vit_base_patch16_224_gap":
+        from PlaceRec.Methods import ViT_base_patch16_224_gap
+
+        method = ViT_base_patch16_224_gap(pretrained=pretrained)
+    elif name == "dinov2_base_patch16_224_gap":
+        from PlaceRec.Methods import DinoV2_base_patch16_224_gap
+
+        method = DinoV2_base_patch16_224_gap(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method

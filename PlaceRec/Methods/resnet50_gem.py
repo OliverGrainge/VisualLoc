@@ -21,7 +21,6 @@ class GeM(nn.Module):
         return F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1))).pow(1.0 / self.p).view(x.shape[0], -1)
 
 
-
 class Resnet50gemModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -36,14 +35,13 @@ class Resnet50gemModel(nn.Module):
         return x
 
 
-
-
-preprocess = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize((480, 640), antialias=True),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-])
-
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Resize((480, 640), antialias=True),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
 
 class ResNet50GeM(BaseModelWrapper):
@@ -60,6 +58,3 @@ class ResNet50GeM(BaseModelWrapper):
 
 if __name__ == "__main__":
     model = ResNet50GeM()
-
-
-    
