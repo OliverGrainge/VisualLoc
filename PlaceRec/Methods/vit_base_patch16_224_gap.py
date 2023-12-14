@@ -1,8 +1,22 @@
-from transformers import ViTModel, ViTFeatureExtractor
-from PIL import Image
-import requests
+import torch
 import torch.nn as nn
-from torchvision import transforms
+from torch.nn import functional as F
+from torchvision import models, transforms
+from torchvision.models import ResNet18_Weights
+import os
+
+from PlaceRec.utils import L2Norm
+from .base_method import BaseModelWrapper
+
+filepath = os.path.dirname(os.path.abspath(__file__))
+
+
+
+
+
+
+
+
 
 
 
@@ -34,6 +48,20 @@ class vit_base_patch16_224_gap(nn.Module):
         return x
 
 
+
+
+
+class ResNet18GeM(BaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        model = vit_base_patch16_224_gap()
+        if pretrained:
+            raise Exception("Pre-trained weights are not available")
+
+        super().__init__(model=model, preprocess=preprocess, name="resnet18_gem")
+
+        self.model.to(self.device)
+        self.model.eval()
+
 url = 'http://images.cocodataset.org/val2017/000000039769.jpg'
 image = Image.open(requests.get(url, stream=True).raw)
 image = preprocess(image)
@@ -41,3 +69,7 @@ model = vit_base_patch16_224_gap()
 features = model(image[None, :])
 
 print(features.shape)
+
+
+if __name__ == "__main__":
+    model = ResNet18GeM()
