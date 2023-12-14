@@ -1093,7 +1093,7 @@ class NetVLAD(nn.Module):
 
 preprocess = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize(384, antialias=True),
+    transforms.Resize((384, 384), antialias=True),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
@@ -1130,42 +1130,21 @@ class cct384_netvlad(nn.Module):
 
 class CCT384_NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        model = cct384_netvlad()
+        self.model = cct384_netvlad()
         if pretrained:
-            model.load_state_dict(torch.load(os.path.join(filepath, "weights", "msls_cct384tr8fz1_netvlad.pth")))
+            if torch.cuda.is_available():
+                state_dict = torch.load(os.path.join(filepath, "weights", "msls_cct384tr8fz1_netvlad.pth"))["model_state_dict"]
+            else: 
+                state_dict = torch.load(os.path.join(filepath, "weights", "msls_cct384tr8fz1_netvlad.pth"), map_location="cpu")["model_state_dict"]
 
-        super().__init__(model=model, preprocess=preprocess, name="cct384_netvlad")
+            if list(state_dict.keys())[0].startswith('module'):
+                state_dict = OrderedDict({k.replace('module.', ''): v for (k, v) in state_dict.items()})
+            self.model.load_state_dict(state_dict)
+
+        super().__init__(model=self.model, preprocess=preprocess, name="cct384_netvlad")
+
+        if self.device == "mps":
+            self.device = "cpu"
 
         self.model.to(self.device)
         self.model.eval()
-
-
-
-
-
-model = cct384_netvlad()
-
-
-sd = torch.load("/Users/olivergrainge/Documents/github/VisualLoc/PlaceRec/Methods/weights/msls_cct384tr8fz1_netvlad.pth", map_location="cpu")["model_state_dict"]
-
-loaded_sd = sd
-model_sd = model.state_dict()
-if list(loaded_sd.keys())[0].startswith('module'):
-        loaded_sd = OrderedDict({k.replace('module.', ''): v for (k, v) in loaded_sd.items()})
-
-loaded_sd_keys = list(loaded_sd.keys())
-model_sd_keys = list(model_sd.keys())
-
-
-
-
-
-model.load_state_dict(loaded_sd)
-
-
-
-image = torch.randn(1, 3, 384, 384)
-output = model(image)
-print(output.shape)
-
-

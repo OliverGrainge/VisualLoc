@@ -44,7 +44,6 @@ class vit_base_patch16_224_gap(nn.Module):
 
 class ViT_base_patch16_224_gap(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        print("====================", pretrained)
         model = vit_base_patch16_224_gap()
         if pretrained:
             raise Exception("Pre-trained weights are not available")

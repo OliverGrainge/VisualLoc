@@ -178,6 +178,11 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import DinoV2_base_patch16_224_gap
 
         method = DinoV2_base_patch16_224_gap(pretrained=pretrained)
+
+    elif name == "cct384_netvlad":
+        from PlaceRec.Methods import CCT384_NetVLAD
+
+        method = CCT384_NetVLAD(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method
