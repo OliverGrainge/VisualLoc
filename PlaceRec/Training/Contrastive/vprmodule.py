@@ -169,7 +169,6 @@ class VPRModel(pl.LightningModule):
                                                 faiss_gpu=self.args.faiss_gpu
                                                 )
             del r_list, q_list, feats, num_references, ground_truth
-
             self.log(f'{val_set_name}/R1', recalls_dict[1], prog_bar=False, logger=True)
             self.log(f'{val_set_name}/R5', recalls_dict[5], prog_bar=False, logger=True)
             self.log(f'{val_set_name}/R10', recalls_dict[10], prog_bar=False, logger=True)

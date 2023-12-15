@@ -74,14 +74,14 @@ train:
 
   img_per_place: 4
   min_img_per_place: 4
-  #cities: ["London"]
   cities: ["all"]
+  #cities: ["London"]
   shuffle_all: False
   random_sample_from_each_place: True
   image_size: [320, 320]
   num_workers: 12
   show_data_stats: True
-  val_set_names: ["pitts30k_val", "sped_val"]
+  val_set_names: ["pitts30k_val", "essex3in1_val", "sped_val", "inria_val", "crossseason_val"]
   batch_sampler: None
 
   ###################### Asymmetric Training Configuration ############################

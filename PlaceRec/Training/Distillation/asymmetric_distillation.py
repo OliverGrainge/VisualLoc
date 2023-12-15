@@ -26,7 +26,7 @@ from torchvision.transforms import v2
 from tqdm import tqdm
 import torchvision.transforms as transforms
 from PlaceRec.utils import ImageIdxDataset
-from PlaceRec.Training import contrastive
+
 
 file_directory = os.path.dirname(os.path.abspath(__file__))
 

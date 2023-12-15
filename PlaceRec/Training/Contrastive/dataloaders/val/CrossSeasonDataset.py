@@ -13,7 +13,7 @@ import os
 # performance is exactly the same as if you use VPR-Bench.
 
 config = get_config()
-DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "CrossSeason_CoHOG_Dataset")
+DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "CrossSeason_CoHOG_Dataset") + "/"
 GT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace("dataloaders/val", "datasets/")
 
 

@@ -91,7 +91,7 @@ def main(args, config):
             #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
         )
         trainer.fit(model=model, datamodule=datamodule)
-
+        
     ###################### Distillation Training #######################
     elif args.training_type == "distillation":
         student_method = get_method(args.student_method, pretrained=False)

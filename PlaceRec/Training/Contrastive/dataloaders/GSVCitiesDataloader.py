@@ -7,6 +7,9 @@ from PlaceRec.Training.Contrastive.dataloaders.val.PittsburghDataset import Pitt
 from PlaceRec.Training.Contrastive.dataloaders.val.MapillaryDataset import MSLS
 from PlaceRec.Training.Contrastive.dataloaders.val.NordlandDataset import NordlandDataset
 from PlaceRec.Training.Contrastive.dataloaders.val.SPEDDataset import SPEDDataset
+from PlaceRec.Training.Contrastive.dataloaders.val.EssexDataset import EssexDataset
+from PlaceRec.Training.Contrastive.dataloaders.val.InriaDataset import InriaDataset
+from PlaceRec.Training.Contrastive.dataloaders.val.CrossSeasonDataset import CrossSeasonDataset
 
 
 from prettytable import PrettyTable
@@ -108,6 +111,15 @@ class GSVCitiesDataModule(pl.LightningDataModule):
                         input_transform=self.valid_transform))
                 elif 'sped' in valid_set_name.lower():
                     self.val_datasets.append(SPEDDataset(
+                        input_transform=self.valid_transform))
+                elif 'essex' in valid_set_name.lower():
+                    self.val_datasets.append(EssexDataset(
+                        input_transform=self.valid_transform))
+                elif 'inria' in valid_set_name.lower():
+                    self.val_datasets.append(InriaDataset(
+                        input_transform=self.valid_transform))
+                elif 'cross' in valid_set_name.lower():
+                    self.val_datasets.append(CrossSeasonDataset(
                         input_transform=self.valid_transform))
                 else:
                     print(
