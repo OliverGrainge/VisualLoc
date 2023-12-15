@@ -1,5 +1,6 @@
 import pytorch_lightning as pl
 from prettytable import PrettyTable
+from typing import List, Dict, Tuple, Union
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
 
@@ -89,11 +90,9 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         print_stats(): Prints statistics about the dataset.
     """
 
-    def __init__(self, args,
-                 mean_std=IMAGENET_MEAN_STD,
-                 random_sample_from_each_place=True,
-                 ):
-
+    def __init__(self, args: Namespace,
+                 mean_std: Dict[str, float] = IMAGENET_MEAN_STD,
+                 random_sample_from_each_place: bool = True):
         """
         Initializes the GSVCitiesDataModule with the given arguments.
 
@@ -145,7 +144,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             'pin_memory': True,
             'shuffle': False}
 
-    def setup(self, stage):
+    def setup(self, stage: str) -> None:
         """
         Prepares data loaders for the given stage (e.g., 'fit').
 
@@ -184,7 +183,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             if self.show_data_stats:
                 self.print_stats()
 
-    def reload(self):
+    def reload(self) -> None:
         """
         Reloads the training dataset. This method is typically called to refresh the dataset, for example, when new data is added.
         """
@@ -195,7 +194,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             random_sample_from_each_place=self.random_sample_from_each_place,
             transform=self.train_transform)
 
-    def train_dataloader(self):
+    def train_dataloader(self) -> DataLoader:
         """
         Creates and returns the DataLoader for training.
 
@@ -205,7 +204,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         self.reload()
         return DataLoader(dataset=self.train_dataset, **self.train_loader_config)
 
-    def val_dataloader(self):
+    def val_dataloader(self) -> List[DataLoader]:
         """
         Creates and returns DataLoaders for validation.
 
@@ -218,7 +217,7 @@ class GSVCitiesDataModule(pl.LightningDataModule):
                 dataset=val_dataset, **self.valid_loader_config))
         return val_dataloaders
 
-    def print_stats(self):
+    def print_stats(self) -> None:
         """
         Prints statistics about the dataset, including the number of cities, places, images, and details of the training configuration.
         """
