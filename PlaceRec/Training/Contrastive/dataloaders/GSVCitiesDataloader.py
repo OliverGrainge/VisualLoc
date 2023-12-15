@@ -60,10 +60,48 @@ TRAIN_CITIES = [
 
 
 class GSVCitiesDataModule(pl.LightningDataModule):
+    """
+    A PyTorch Lightning DataModule for managing data related to city images from the Google Street View (GSV) dataset.
+
+    Attributes:
+        args (Namespace): A configuration namespace containing various parameters.
+        batch_size (int): The size of each batch during training.
+        img_per_place (int): The number of images per place.
+        min_img_per_place (int): The minimum number of images per place.
+        shuffle_all (bool): Whether to shuffle the entire dataset.
+        image_size (tuple): The size of the images.
+        num_workers (int): The number of workers for data loading.
+        batch_sampler: Sampler for batching strategies.
+        show_data_stats (bool): Flag to indicate if data statistics should be shown.
+        cities (list): List of cities included in the dataset.
+        mean_dataset (float): The mean value for dataset normalization.
+        std_dataset (float): The standard deviation value for dataset normalization.
+        random_sample_from_each_place (bool): Flag to sample randomly from each place.
+        val_set_names (list): Names of the validation datasets.
+        train_loader_config (dict): Configuration dictionary for the training data loader.
+        valid_loader_config (dict): Configuration dictionary for the validation data loader.
+
+    Methods:
+        setup(stage): Prepares data loaders for the given stage (e.g., 'fit').
+        reload(): Reloads the training dataset.
+        train_dataloader(): Returns the DataLoader for training.
+        val_dataloader(): Returns the DataLoader for validation.
+        print_stats(): Prints statistics about the dataset.
+    """
+
     def __init__(self, args,
                  mean_std=IMAGENET_MEAN_STD,
                  random_sample_from_each_place=True,
                  ):
+
+        """
+        Initializes the GSVCitiesDataModule with the given arguments.
+
+        Args:
+            args (Namespace): A configuration namespace containing various parameters.
+            mean_std (dict): A dictionary with 'mean' and 'std' keys for dataset normalization.
+            random_sample_from_each_place (bool): If True, samples randomly from each place.
+        """
         super().__init__()
         self.args = args
         self.batch_size = args.train_batch_size
@@ -102,12 +140,18 @@ class GSVCitiesDataModule(pl.LightningDataModule):
 
         self.valid_loader_config = {
             'batch_size': self.args.train_batch_size,
-            'num_workers': self.num_workers//2,
+            'num_workers': self.args.num_workers//2,
             'drop_last': False,
             'pin_memory': True,
             'shuffle': False}
 
     def setup(self, stage):
+        """
+        Prepares data loaders for the given stage (e.g., 'fit').
+
+        Args:
+            stage (str): The stage for which to set up the data module, typically 'fit' or 'test'.
+        """
         if stage == 'fit':
             # load train dataloader with reload routine
             self.reload()
@@ -141,6 +185,9 @@ class GSVCitiesDataModule(pl.LightningDataModule):
                 self.print_stats()
 
     def reload(self):
+        """
+        Reloads the training dataset. This method is typically called to refresh the dataset, for example, when new data is added.
+        """
         self.train_dataset = GSVCitiesDataset(
             cities=self.cities,
             img_per_place=self.img_per_place,
@@ -149,10 +196,22 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             transform=self.train_transform)
 
     def train_dataloader(self):
+        """
+        Creates and returns the DataLoader for training.
+
+        Returns:
+            DataLoader: The DataLoader for the training dataset.
+        """
         self.reload()
         return DataLoader(dataset=self.train_dataset, **self.train_loader_config)
 
     def val_dataloader(self):
+        """
+        Creates and returns DataLoaders for validation.
+
+        Returns:
+            list[DataLoader]: A list of DataLoaders for each validation dataset.
+        """
         val_dataloaders = []
         for val_dataset in self.val_datasets:
             val_dataloaders.append(DataLoader(
@@ -160,6 +219,9 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         return val_dataloaders
 
     def print_stats(self):
+        """
+        Prints statistics about the dataset, including the number of cities, places, images, and details of the training configuration.
+        """
         print()  # print a new line
         table = PrettyTable()
         table.field_names = ['Data', 'Value']

@@ -1,9 +1,15 @@
 
 import pytorch_lightning as pl
+from typing import Tuple, List, Dict, Optional
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR
+import torch.nn as nn
+from torch.optim.optimizer import Optimizer
+from torch.optim.lr_scheduler import _LRScheduler
+
+from argparse import Namespace
 
 from PlaceRec.Training.Contrastive import utils
 from PlaceRec.Training.Contrastive.dataloaders.GSVCitiesDataloader import (
@@ -12,11 +18,39 @@ from PlaceRec.Training.Contrastive.dataloaders.GSVCitiesDataloader import (
 
 
 class VPRModel(pl.LightningModule):
-    """This is the main model for Visual Place Recognition
-    we use Pytorch Lightning for modularity purposes.
+    """
+    A PyTorch Lightning Module for Visual Place Recognition (VPR).
+
+    This model is designed to handle tasks related to identifying and recognizing places based on visual data.
+    It utilizes PyTorch Lightning for efficient training and validation with a modular approach.
+
+    Attributes:
+        args (Namespace): A configuration object containing parameters such as learning rate, weight decay, etc.
+        model (torch.nn.Module): The underlying neural network model for feature extraction or VPR.
+        loss_fn (callable): The loss function used for training.
+        miner (callable): An optional online mining strategy for hard examples in the dataset.
+        batch_acc (list): A list to track the percentage of trivial pairs/triplets at the loss level.
+        faiss_gpu (bool): Flag indicating whether to use GPU with FAISS for efficient similarity search.
+
+    Methods:
+        forward(x): Defines the forward pass of the model.
+        configure_optimizers(): Configures optimizers and learning rate schedulers.
+        loss_function(descriptors, labels): Computes the loss based on model outputs and labels.
+        training_step(batch, batch_idx): Processes a single batch during training.
+        on_train_epoch_end(): Hook called at the end of a training epoch.
+        on_validation_epoch_start(): Hook called at the start of a validation epoch.
+        validation_step(batch, batch_idx, dataloader_idx=None): Processes a single batch during validation.
+        on_validation_epoch_end(): Hook called at the end of a validation epoch.
     """
 
-    def __init__(self, args, model):
+    def __init__(self, args: Namespace, model: nn.Module):
+        """
+        Initializes the VPRModel with the specified arguments and model.
+
+        Args:
+            args (Namespace): A configuration object containing various training and model parameters.
+            model (torch.nn.Module): The neural network model to be used for VPR.
+        """
         super().__init__()
         self.args = args
         self.save_hyperparameters() # write hyperparams into a file
@@ -25,14 +59,28 @@ class VPRModel(pl.LightningModule):
         self.batch_acc = [] # we will keep track of the % of trivial pairs/triplets at the loss level 
         self.faiss_gpu = args.faiss_gpu
         self.model = model
-        
-    # the forward pass of the lightning model
-    def forward(self, x):
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Defines the forward pass of the model.
+
+        Args:
+            x (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: The model's output tensor.
+        """
         x = self.model(x)
         return x
     
-    # configure the optimizer 
-    def configure_optimizers(self):
+
+    def configure_optimizers(self) -> Tuple[List[Optimizer], List[_LRScheduler]]:
+        """
+        Configures the model's optimizers and learning rate schedulers.
+
+        Returns:
+            tuple: A tuple containing the list of optimizers and the list of learning rate schedulers.
+        """
         if self.args.optimizer.lower() == 'sgd':
             optimizer = torch.optim.SGD(self.parameters(), 
                                         lr=self.args.learning_rate, 
@@ -56,9 +104,17 @@ class VPRModel(pl.LightningModule):
         return [optimizer], [warmup_scheduler, scheduler]
 
         
-    #  The loss function call (this method will be called at each training iteration)
-    def loss_function(self, descriptors, labels):
-        # we mine the pairs/triplets if there is an online mining strategy
+    def loss_function(self, descriptors: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        """
+        Computes the loss for a batch of data.
+
+        Args:
+            descriptors (torch.Tensor): The descriptor vectors outputted by the model.
+            labels (torch.Tensor): Ground truth labels corresponding to the input data.
+
+        Returns:
+            torch.Tensor: The computed loss value.
+        """
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -78,7 +134,17 @@ class VPRModel(pl.LightningModule):
         return loss
     
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+        """
+        Processes a single batch of data during the training phase.
+
+        Args:
+            batch (tuple): A tuple containing input data and corresponding labels.
+            batch_idx (int): Index of the batch.
+
+        Returns:
+            dict: A dictionary containing the loss value for the batch.
+        """
         places, labels = batch
         BS, N, ch, h, w = places.shape
         images = places.view(BS*N, ch, h, w)
@@ -88,18 +154,34 @@ class VPRModel(pl.LightningModule):
         self.log('loss', loss.item(), logger=True)
         return {'loss': loss}
     
-    # This is called at the end of eatch training epoch
-    def on_train_epoch_end(self):
+    def on_train_epoch_end(self) -> None:
+        """
+        Hook called at the end of a training epoch to reset or update certain parameters.
+        """
         self.batch_acc = []
 
 
-    def on_validation_epoch_start(self):
+    def on_validation_epoch_start(self) -> None:
+        """
+        Hook called at the start of a validation epoch to initialize or reset parameters.
+        """
         if len(self.trainer.datamodule.val_set_names) == 1:
             self.val_step_outputs = []
         else:
             self.val_step_outputs = [[] for _ in range(len(self.trainer.datamodule.val_set_names))]
 
-    def validation_step(self, batch, batch_idx, dataloader_idx=None):
+    def validation_step(self, batch: Tuple[torch.Tensor, Optional[torch.Tensor]], batch_idx: int, dataloader_idx: Optional[int] = None) -> torch.Tensor:
+        """
+        Processes a single batch of data during the validation phase.
+
+        Args:
+            batch (tuple): A tuple containing input data and optionally labels.
+            batch_idx (int): Index of the batch.
+            dataloader_idx (int, optional): Index of the dataloader (used when multiple validation dataloaders are present).
+
+        Returns:
+            torch.Tensor: The descriptor vectors computed for the batch.
+        """
         places, _ = batch
         # calculate descriptors
         descriptors = self(places).detach().cpu()
@@ -109,22 +191,13 @@ class VPRModel(pl.LightningModule):
             self.val_step_outputs[dataloader_idx].append(descriptors)
         return descriptors
     
-    def on_validation_epoch_end(self):
-        """at the end of each validation epoch
-        descriptors are returned in their order
-        depending on how the validation dataset is implemented 
-        for this project (MSLS val, Pittburg val), it is always references then queries.
-        For example, if we have n references and m queries, we will get 
-        the descriptors for each val_dataset in a list as follows: 
-        [R1, R2, ..., Rn, Q1, Q2, ..., Qm]
-        we then split it to references=[R1, R2, ..., Rn] and queries=[Q1, Q2, ..., Qm]
-        to calculate recall@K using the ground truth provided.
+    def on_validation_epoch_end(self) -> None:
+        """
+        Hook called at the end of a validation epoch to compute and log validation metrics.
         """
         val_step_outputs = self.val_step_outputs
         self.val_step_outputs = []
         dm = self.trainer.datamodule
-        # The following line is a hack: if we have only one validation set, then
-        # we need to put the outputs in a list (Pytorch Lightning does not do it presently)
         if len(dm.val_datasets)==1: # we need to put the outputs in a list
             val_step_outputs = [val_step_outputs]
         
