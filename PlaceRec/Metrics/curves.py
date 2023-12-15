@@ -74,6 +74,8 @@ def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str
     bars = ax.bar(methods, scores)
     plt.xticks(rotation=45)
     ax.set_title(title, fontsize="16")
+    plt.ylim([0, max(scores) + 0.2])
+    plt.subplots_adjust(bottom=0.2)
 
     # Add legend as text annotation to each bar
     for bar, method, score in zip(bars, methods, scores):

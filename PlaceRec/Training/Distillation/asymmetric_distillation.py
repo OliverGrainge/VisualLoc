@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 import torchvision.transforms as T
+import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 import torchvision.transforms.functional as F
 import yaml
@@ -24,9 +25,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-import torchvision.transforms as transforms
-from PlaceRec.utils import ImageIdxDataset
 
+from PlaceRec.utils import ImageIdxDataset
 
 file_directory = os.path.dirname(os.path.abspath(__file__))
 

@@ -1,11 +1,13 @@
 
-from pytorch_metric_learning import losses, miners
-from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
-import numpy as np
 import faiss
 import faiss.contrib.torch_utils
+import numpy as np
 from prettytable import PrettyTable
-
+from pytorch_metric_learning import losses, miners
+from pytorch_metric_learning.distances import (
+    CosineSimilarity,
+    DotProductSimilarity,
+)
 
 
 def get_loss(loss_name):
@@ -48,14 +50,8 @@ def get_validation_recalls(r_list, q_list, k_values, gt, print_results=True, fai
         else:
             faiss_index = faiss.IndexFlatL2(embed_size)
         
-        # add references
         faiss_index.add(r_list)
-
-        # search for queries in the index
         _, predictions = faiss_index.search(q_list, max(k_values))
-        
-        
-        # start calculating recall_at_k
         correct_at_k = np.zeros(len(k_values))
         for q_idx, pred in enumerate(predictions):
             for i, n in enumerate(k_values):
@@ -63,7 +59,6 @@ def get_validation_recalls(r_list, q_list, k_values, gt, print_results=True, fai
                 if np.any(np.in1d(pred[:n], gt[q_idx])):
                     correct_at_k[i:] += 1
                     break
-        
         correct_at_k = correct_at_k / len(predictions)
         d = {k:v for (k,v) in zip(k_values, correct_at_k)}
 

@@ -1,12 +1,13 @@
+import os
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
 from torchvision import models, transforms
 from transformers import AutoModel
-from torchvision import transforms
-import os
 
 from PlaceRec.utils import L2Norm
+
 from .base_method import BaseModelWrapper
 
 filepath = os.path.dirname(os.path.abspath(__file__))

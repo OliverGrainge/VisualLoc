@@ -1,10 +1,13 @@
+import os
+from os.path import join
 from pathlib import Path
+
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
-from os.path import join
+
 from PlaceRec.utils import get_config
-import os
+
 # NOTE: you need to download the Inria dataset from  https://surfdrive.surf.nl/files/index.php/s/sbZRXzYe3l0v67W
 # this link is shared and maintained by the authors of VPR_Bench: https://github.com/MubarizZaffar/VPR-Bench
 # the folders named ref and query should reside in DATASET_ROOT path

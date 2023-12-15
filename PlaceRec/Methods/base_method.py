@@ -9,6 +9,7 @@ import torch
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
+
 from PlaceRec.utils import get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))

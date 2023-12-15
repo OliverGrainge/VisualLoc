@@ -1,14 +1,14 @@
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as T
+import os
+from os.path import join
 
 import matplotlib.pyplot as plt
-import torch
 import numpy as np
+import torch
+import torchvision.transforms as T
 from PIL import Image
-from os.path import join
-from PlaceRec.utils import get_config
-import os
+from torch.utils.data import DataLoader, Dataset
 
+from PlaceRec.utils import get_config
 
 config = get_config()
 DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "msls_val")

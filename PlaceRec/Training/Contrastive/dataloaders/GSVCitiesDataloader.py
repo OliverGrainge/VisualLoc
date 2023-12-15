@@ -1,18 +1,30 @@
 import pytorch_lightning as pl
+from prettytable import PrettyTable
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
 
-from PlaceRec.Training.Contrastive.dataloaders.train.GSVCitiesDataset import GSVCitiesDataset
-from PlaceRec.Training.Contrastive.dataloaders.val.PittsburghDataset import PittsburghDataset
+from PlaceRec.Training.Contrastive.dataloaders.train.GSVCitiesDataset import (
+    GSVCitiesDataset,
+)
+from PlaceRec.Training.Contrastive.dataloaders.val.CrossSeasonDataset import (
+    CrossSeasonDataset,
+)
+from PlaceRec.Training.Contrastive.dataloaders.val.EssexDataset import (
+    EssexDataset,
+)
+from PlaceRec.Training.Contrastive.dataloaders.val.InriaDataset import (
+    InriaDataset,
+)
 from PlaceRec.Training.Contrastive.dataloaders.val.MapillaryDataset import MSLS
-from PlaceRec.Training.Contrastive.dataloaders.val.NordlandDataset import NordlandDataset
-from PlaceRec.Training.Contrastive.dataloaders.val.SPEDDataset import SPEDDataset
-from PlaceRec.Training.Contrastive.dataloaders.val.EssexDataset import EssexDataset
-from PlaceRec.Training.Contrastive.dataloaders.val.InriaDataset import InriaDataset
-from PlaceRec.Training.Contrastive.dataloaders.val.CrossSeasonDataset import CrossSeasonDataset
-
-
-from prettytable import PrettyTable
+from PlaceRec.Training.Contrastive.dataloaders.val.NordlandDataset import (
+    NordlandDataset,
+)
+from PlaceRec.Training.Contrastive.dataloaders.val.PittsburghDataset import (
+    PittsburghDataset,
+)
+from PlaceRec.Training.Contrastive.dataloaders.val.SPEDDataset import (
+    SPEDDataset,
+)
 
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}

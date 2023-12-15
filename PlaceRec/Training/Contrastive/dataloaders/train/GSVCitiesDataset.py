@@ -1,11 +1,13 @@
-import pandas as pd
-from pathlib import Path
-from PIL import Image
-import torch
-from torch.utils.data import Dataset
-import torchvision.transforms as T
-from PlaceRec.utils import get_config
 from os.path import join
+from pathlib import Path
+
+import pandas as pd
+import torch
+import torchvision.transforms as T
+from PIL import Image
+from torch.utils.data import Dataset
+
+from PlaceRec.utils import get_config
 
 config = get_config()
 

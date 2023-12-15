@@ -1,1 +1,1 @@
-from .vprmodule import VPRModel, GSVCitiesDataModule
+from .vprmodule import GSVCitiesDataModule, VPRModel

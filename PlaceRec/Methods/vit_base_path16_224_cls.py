@@ -1,10 +1,12 @@
-from transformers import ViTModel
-import os 
-from torchvision import transforms
-import torch
-from PlaceRec.Methods import BaseModelWrapper
-import torch.nn as nn
+import os
 from collections import OrderedDict
+
+import torch
+import torch.nn as nn
+from torchvision import transforms
+from transformers import ViTModel
+
+from PlaceRec.Methods import BaseModelWrapper
 
 filepath = os.path.dirname(os.path.abspath(__file__))
 

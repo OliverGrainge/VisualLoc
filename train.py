@@ -6,9 +6,9 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import argparse
 from glob import glob
 from os.path import join
-import matplotlib.pyplot as plt
 
 import faiss
+import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -28,10 +28,11 @@ from tqdm import tqdm
 
 import wandb
 from parsers import train_arguments
-
 from PlaceRec.Training.Contrastive import GSVCitiesDataModule, VPRModel
-from PlaceRec.Training.Distillation import DistillationDataModule, DistillationModule
-
+from PlaceRec.Training.Distillation import (
+    DistillationDataModule,
+    DistillationModule,
+)
 from PlaceRec.utils import ImageDataset, get_config, get_method
 
 

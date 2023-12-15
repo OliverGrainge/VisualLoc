@@ -1,13 +1,12 @@
-import torch
-import torch.nn as nn
-from transformers import ViTModel
+import os
+
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-import os
 from torchvision import transforms
-from PlaceRec.Methods import BaseModelWrapper
+from transformers import ViTModel
 
+from PlaceRec.Methods import BaseModelWrapper
 
 preprocess = transforms.Compose(
     [

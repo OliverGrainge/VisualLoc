@@ -1,23 +1,29 @@
-from torch.hub import load_state_dict_from_url
-import torch.nn as nn
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import math
+import os
+from collections import OrderedDict
+
+import faiss
+import numpy as np
 import torch
-import torch.nn.functional as F
-import torch
-from torch.nn import Module, ModuleList, Linear, Dropout, LayerNorm, Identity, Parameter, init
+import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.registry import register_model
-import numpy as np
+from torch.hub import load_state_dict_from_url
+from torch.nn import (
+    Dropout,
+    Identity,
+    LayerNorm,
+    Linear,
+    Module,
+    ModuleList,
+    Parameter,
+    init,
+)
 from torch.utils.data import DataLoader, SubsetRandomSampler
-from tqdm import tqdm
-import faiss
 from torchvision import transforms
-import os
+from tqdm import tqdm
+
 from PlaceRec.Methods import BaseModelWrapper
-from collections import OrderedDict
 from PlaceRec.utils import L2Norm
 
 filepath = os.path.dirname(os.path.abspath(__file__))
