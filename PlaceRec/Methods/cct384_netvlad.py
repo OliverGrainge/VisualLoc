@@ -1103,14 +1103,9 @@ preprocess = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-
-
-
-
 def cct_8(arch, pretrained, progress, aggregation=None, *args, **kwargs):
     return _cct(arch, pretrained, progress, num_layers=8, num_heads=6, mlp_ratio=3, embedding_dim=384,
                 aggregation=aggregation, *args, **kwargs)
-
 
 @register_model
 def cct_8_7x2_384(pretrained=False, progress=False,

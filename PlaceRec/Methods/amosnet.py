@@ -160,7 +160,6 @@ preprocess = transforms.Compose(
     ]
 )
 
-
 class AmosNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = False):
         if pretrained:

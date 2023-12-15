@@ -17,14 +17,14 @@ preprocess = transforms.Compose(
 )
 
 class NetVLAD(nn.Module):
-    def __init__(self, num_clusters, dim):
+    def __init__(self, num_clusters: int, dim: int):
         super(NetVLAD, self).__init__()
         self.num_clusters = num_clusters
         self.dim = dim
         self.clusters = nn.Parameter(torch.randn(num_clusters, dim))
         self.clusters2 = nn.Parameter(torch.randn(1, num_clusters, dim))
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.unsqueeze(-1)  # Add a dimension for clusters
         assignment = torch.softmax(torch.sum(x * self.clusters, dim=2), dim=2)
         a_sum = assignment.sum(-2).unsqueeze(-2)
@@ -34,13 +34,13 @@ class NetVLAD(nn.Module):
         return vlad
 
 class ViTNetVLAD(nn.Module):
-    def __init__(self, num_clusters):
+    def __init__(self, num_clusters: int):
         super(ViTNetVLAD, self).__init__()
         self.vit_backbone = ViTModel.from_pretrained("google/vit-base-patch16-224")
         dim = self.vit_backbone.config.hidden_size  # Dimension of the token embeddings from ViT
         self.netvlad = NetVLAD(num_clusters, dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         outputs = self.vit_backbone(x)
         tokens = outputs.last_hidden_state
         vlad = self.netvlad(tokens)

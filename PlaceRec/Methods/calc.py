@@ -73,9 +73,7 @@ class ConvertToYUVandEqualizeHist:
         img_rgb = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
         return Image.fromarray(img_rgb)
 
-
 ############################ CALC VPR Model ####################################################
-
 preprocess = transforms.Compose(
     [
         ConvertToYUVandEqualizeHist(),
@@ -87,7 +85,6 @@ preprocess = transforms.Compose(
 
 if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
     s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
-
 
 class CALC(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):

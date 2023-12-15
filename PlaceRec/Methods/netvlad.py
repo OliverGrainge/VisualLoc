@@ -133,10 +133,6 @@ class ResNet_NetVLAD(nn.Module):
 
 
 # ============================================================= NetVLAD ==================================================================
-
-model = ResNet_NetVLAD()
-
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -148,6 +144,7 @@ preprocess = transforms.Compose(
 
 class NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
+        model = ResNet_NetVLAD()
         if pretrained:
             try:
                 model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
