@@ -18,7 +18,7 @@ class vit_base_patch16_224_cls(nn.Module):
         encoder_layers = list(self.backbone.encoder.layer.children())
         self.backbone.encoder.layer = nn.ModuleList(encoder_layers[:10])
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x).last_hidden_state[:, 0, :]
 
 

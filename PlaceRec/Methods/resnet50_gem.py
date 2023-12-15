@@ -14,12 +14,12 @@ filepath = os.path.dirname(os.path.abspath(__file__))
 
 
 class GeM(nn.Module):
-    def __init__(self, p=3, eps=1e-6):
+    def __init__(self, p: int=3, eps: float=1e-6):
         super().__init__()
         self.p = nn.Parameter(torch.ones(1) * p)
         self.eps = eps
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1))).pow(1.0 / self.p).view(x.shape[0], -1)
 
 
@@ -31,7 +31,7 @@ class Resnet50gemModel(nn.Module):
         self.backbone = torch.nn.Sequential(*layers)
         self.aggregation = nn.Sequential(GeM(), nn.Flatten(), L2Norm())
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         return x

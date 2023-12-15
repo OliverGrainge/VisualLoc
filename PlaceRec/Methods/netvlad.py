@@ -13,6 +13,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from torchvision.models import resnet18
+from argparse import Namespace
+from torch.utils.data import Dataset 
 from tqdm import tqdm
 
 from ..utils import s3_bucket_download
@@ -24,7 +26,7 @@ netvlad_directory = os.path.dirname(os.path.abspath(__file__))
 class NetVLAD_Aggregation(nn.Module):
     """NetVLAD layer implementation"""
 
-    def __init__(self, clusters_num=64, dim=128, normalize_input=True, work_with_tokens=False):
+    def __init__(self, clusters_num: int=64, dim: int=128, normalize_input: bool=True, work_with_tokens: bool=False):
         """
         Args:
             clusters_num : int
@@ -48,7 +50,7 @@ class NetVLAD_Aggregation(nn.Module):
             self.conv = nn.Conv2d(dim, clusters_num, kernel_size=(1, 1), bias=False)
         self.centroids = nn.Parameter(torch.rand(clusters_num, dim))
 
-    def init_params(self, centroids, descriptors):
+    def init_params(self, centroids: np.ndarray, descriptors: np.ndarray) -> None:
         centroids_assign = centroids / np.linalg.norm(centroids, axis=1, keepdims=True)
         dots = np.dot(centroids_assign, descriptors.T)
         dots.sort(0)
@@ -62,7 +64,7 @@ class NetVLAD_Aggregation(nn.Module):
             self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha * centroids_assign).unsqueeze(2).unsqueeze(3))
         self.conv.bias = None
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.work_with_tokens:
             x = x.permute(0, 2, 1)
             N, D, _ = x.shape[:]
@@ -85,7 +87,7 @@ class NetVLAD_Aggregation(nn.Module):
         vlad = F.normalize(vlad, p=2, dim=1)  # L2 normalize
         return vlad
 
-    def initialize_netvlad_layer(self, args, cluster_ds, backbone):
+    def initialize_netvlad_layer(self, args: Namespace, cluster_ds: Dataset, backbone: nn.Module) -> None:
         descriptors_num = 50000
         descs_num_per_image = 100
         images_num = math.ceil(descriptors_num / descs_num_per_image)
@@ -126,7 +128,7 @@ class ResNet_NetVLAD(nn.Module):
         # get the aggregation
         self.aggregation = NetVLAD_Aggregation(dim=256)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         return x

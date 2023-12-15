@@ -23,7 +23,7 @@ preprocess = transforms.Compose(
 
 
 class vit_base_patch16_224_gap(nn.Module):
-    def __init__(self, feature_dim=2048, num_trainable_blocks=3):
+    def __init__(self, feature_dim: int=2048, num_trainable_blocks: int=3):
         super().__init__()
         self.vit_backbone = ViTModel.from_pretrained("google/vit-base-patch16-224")
 
@@ -36,7 +36,7 @@ class vit_base_patch16_224_gap(nn.Module):
 
         self.fc = nn.Linear(768, feature_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.vit_backbone(x).last_hidden_state
         x = x.mean(1)
         x = self.fc(x)
