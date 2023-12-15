@@ -28,13 +28,9 @@ from tqdm import tqdm
 
 import wandb
 from parsers import train_arguments
-from PlaceRec.Training import (
-    DistillationDataModule,
-    DistillationModule,
-    train,
-    recallvsresolution,
-    ContrastiveLearningModel,
-)
+
+from PlaceRec.Training.Contrastive import GSVCitiesDataModule, VPRModel
+from PlaceRec.Training.Distillation import DistillationDataModule, DistillationModule
 
 from PlaceRec.utils import ImageDataset, get_config, get_method
 
@@ -53,51 +49,51 @@ def main(args, config):
     torch.set_float32_matmul_precision("medium")  # Initiate Training
     ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
+        from PlaceRec.Training.Contrastive import GSVCitiesDataModule, VPRModel
         method = get_method(args.method, pretrained=False)
         model = method.model.to(args.device)
 
         args.features_dim = features_size(args, model, method.preprocess)
-        # Early Stopping CallBack
-        early_stop_callback = EarlyStopping(
-            monitor="recallat" + str(args.recall_values[1]),
-            min_delta=0.00,
-            patience=args.patience,
-            verbose=False,
-            mode="max",
-        )
+        args = train_arguments()
 
+        datamodule = GSVCitiesDataModule(args)
+        model = VPRModel(args, model)
+        
         # Checkpointing the Model
         checkpoint_callback = ModelCheckpoint(
-            monitor="recallat" + str(args.recall_values[1]),
+            monitor='pitts30k_val/R1',
             filename=join(
-                os.getcwd(), "PlaceRec/Training/checkpoints/", args.training_type, method.name, method.name + "-{epoch:02d}-{recallat1:.2f}"
-            ),
-            save_top_k=1,
-            verbose=False,
-            mode="max",
-        )
-
-        logger = WandbLogger(project=method.name, log_model="all")  # need to login to a WandB account
+                os.getcwd(),
+                "PlaceRec/Training/Contrastive/checkpoints/",
+                method.name,
+                f'{method.name}' + '_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]'),
+                auto_insert_metric_name=False,
+                save_top_k=1,
+                verbose=False,
+                mode="max",
+            )
+            
+        logger = WandbLogger(project="contrastive")  # need to login to a WandB account
         logger.experiment.config.update(config["train"])  # Log the training configuration
-
-        contrastivemodule = ContrastiveLearningModel(args, model, method.preprocess, method.preprocess)
+        
 
         trainer = pl.Trainer(
-            check_val_every_n_epoch=args.val_check_interval,
-            reload_dataloaders_every_n_epochs=1,
-            log_every_n_steps=20,
-            max_epochs=args.max_epochs,
-            accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
+            accelerator='gpu', devices=[0],
+            default_root_dir=f'PlaceRec/Training/Contrastive/Logs/{method.name}', # Tensorflow can be used to viz 
+            num_sanity_val_steps=0, # runs N validation steps before stating training
+            precision=16, # we use half precision to reduce  memory usage (and 2x speed on RTX)
+            max_epochs=30,
+            check_val_every_n_epoch=1, # run validation every epoch
+            callbacks=[checkpoint_callback],# we run the checkpointing callback (you can add more)
             logger=logger,
-            callbacks=[checkpoint_callback],
+            reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
+            log_every_n_steps=20,
+            #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
         )
+        trainer.fit(model=model, datamodule=datamodule)
 
-        # Initiate Training
-        trainer.fit(contrastivemodule)
-        trainer.validate(contrastivemodule)
-
-    ###################### Asymmetric Distillation Training #######################
-    elif args.training_type == "asymmetric_distillation":
+    ###################### Distillation Training #######################
+    elif args.training_type == "distillation":
         student_method = get_method(args.student_method, pretrained=False)
         teacher_method = get_method(args.teacher_method, pretrained=True)
         # Early Stopping CallBack

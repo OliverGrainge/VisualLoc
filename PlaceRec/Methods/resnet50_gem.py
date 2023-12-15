@@ -27,7 +27,7 @@ class Resnet50gemModel(nn.Module):
         backbone = models.resnet50(weights=ResNet50_Weights.DEFAULT)
         layers = list(backbone.children())[:-3]
         self.backbone = torch.nn.Sequential(*layers)
-        self.aggregation = nn.Sequential(L2Norm(), GeM(), nn.Flatten())
+        self.aggregation = nn.Sequential(GeM(), nn.Flatten(), L2Norm())
 
     def forward(self, x):
         x = self.backbone(x)

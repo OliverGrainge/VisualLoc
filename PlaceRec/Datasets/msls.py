@@ -24,7 +24,7 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class MSLS(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
-        if not os.path.isdir(join(config["train"]["datasets_folder"], "msls", "images")):
+        if not os.path.isdir(join(config["train"]["datasets_folder"], "datasets_vg", "datasets", "msls", "images")):
             # download dataset as zip file
             raise Exception("MSLS Not Downloaded")
 

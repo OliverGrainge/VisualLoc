@@ -9,8 +9,11 @@ import torch
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
+from PlaceRec.utils import get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
+
+config = get_config()
 
 
 class BaseTechnique(ABC):
@@ -202,9 +205,15 @@ class BaseFunctionality(BaseTechnique):
             map_descriptors (dict): A dictionary containing map descriptors.
         """
         self.map_desc = map_descriptors
-        self.map = faiss.IndexFlatIP(map_descriptors["map_descriptors"].shape[1])
-        faiss.normalize_L2(map_descriptors["map_descriptors"])
-        self.map.add(map_descriptors["map_descriptors"])
+        if config["eval"]["distance"] == "cosine":
+            self.map = faiss.IndexFlatIP(map_descriptors["map_descriptors"].shape[1])
+            faiss.normalize_L2(map_descriptors["map_descriptors"])
+            self.map.add(map_descriptors["map_descriptors"])
+        elif config["eval"]["distance"] == "l2":
+            self.map = faiss.IndexFlatL2(map_descriptors["map_descriptors"].shape[1])
+            self.map.add(map_descriptors["map_descriptors"])
+        else: 
+            raise NotImplementedError("Distance Measure Not Implemented")
 
     def place_recognise(
         self,
@@ -227,7 +236,8 @@ class BaseFunctionality(BaseTechnique):
         """
         if query_desc == None and dataloader is not None:
             query_desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
-        faiss.normalize_L2(query_desc["query_descriptors"])
+        if config["eval"]["distance"] == "cosine":
+            faiss.normalize_L2(query_desc["query_descriptors"])
         dist, idx = self.map.search(query_desc["query_descriptors"], k)
         return idx, dist
 

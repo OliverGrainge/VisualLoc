@@ -24,11 +24,11 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 class StLucia_large(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
-        if not os.path.isdir(join(config["train"]["datasets_folder"], "stlucia", "images")):
+        if not os.path.isdir(join(config["train"]["datasets_folder"], "datasets_vg", "datasets", "stlucia", "images")):
             # download dataset as zip file
             raise Exception("St Lucia Not Downloaded")
 
-        self.dataset_folder = join(config["train"]["datasets_folder"], "stlucia", "images", "test")
+        self.dataset_folder = join(config["train"]["datasets_folder"], "datasets_vg", "datasets", "stlucia", "images", "test")
 
         if not os.path.exists(self.dataset_folder):
             raise FileNotFoundError(f"Folder {self.dataset_folder} does not exist")
