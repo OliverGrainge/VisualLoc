@@ -4,10 +4,10 @@ from glob import glob
 
 import pytest
 
-current_directory = os.getcwd()
-new_directory = os.path.abspath(os.path.join(current_directory, "..", ".."))
-sys.path.insert(0, new_directory)
-os.chdir(new_directory)
+
+sys.path.insert(0, os.getcwd())
+os.chdir(os.getcwd())
+
 
 from PlaceRec import Datasets
 
