@@ -3,6 +3,7 @@ from prettytable import PrettyTable
 from typing import List, Dict, Tuple, Union
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
+from argparse import Namespace
 
 from PlaceRec.Training.Contrastive.dataloaders.train.GSVCitiesDataset import (
     GSVCitiesDataset,

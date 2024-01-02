@@ -1,7 +1,7 @@
 import os
 import zipfile
 from glob import glob
-
+from os.path import join
 import numpy as np
 import torch
 import torchvision
@@ -9,80 +9,35 @@ from PIL import Image
 from torch.utils.data import DataLoader
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
-
+config = get_config()
 
 class SFU(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
-        if not os.path.isdir(package_directory + "/raw_images/SFU"):
+        if not os.path.isdir(join(config["datasets_directory"], "SFU")):
             # download dataset as zip file
-            s3_bucket_download("placerecdata/datasets/SFU.zip", package_directory + "/raw_images/SFU.zip")
-            # unzip the dataset
-            with zipfile.ZipFile(package_directory + "/raw_images/SFU.zip", "r") as zip_ref:
-                os.makedirs(package_directory + "/raw_images/SFU")
-                zip_ref.extractall(package_directory + "/raw_images/")
+            raise Exception("SFU is not Downloaded")
 
         # load images
-        self.map_paths = np.array(sorted(glob(package_directory + "/raw_images/SFU/dry/*.jpg")))
-        self.query_paths = np.array(sorted(glob(package_directory + "/raw_images/SFU/jan/*.jpg")))
+        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/raw_images/SFU/dry/*.jpg"))))
+        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"], "/raw_images/SFU/jan/*.jpg"))))
 
         self.name = "sfu"
 
-    def query_partition(self, partition: str) -> np.ndarray:
-        # get the required partition of the dataset
-        size = len(self.query_paths)
-        if partition == "train":
-            paths = self.query_paths[: int(size * 0.6)]
-        elif partition == "val":
-            paths = self.query_paths[int(size * 0.6) : int(size * 0.8)]
-        elif partition == "test":
-            paths = self.query_paths[int(size * 0.8) :]
-        elif partition == "all":
-            paths = self.query_paths
-        else:
-            raise Exception("Partition must be 'train', 'val' or 'all'")
-        return paths
-
-    def map_partition(self, partition: str) -> np.ndarray:
-        return self.map_paths
-
-    def query_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ) -> np.ndarray:
-        # get the required partition of the dataset
-        paths = self.query_partition(partition)
-
-        if preprocess == None:
-            return np.array([np.array(Image.open(pth)) for pth in paths])
-        else:
-            imgs = np.array([np.array(Image.open(pth)) for pth in paths])
-            return torch.stack([preprocess(q) for q in imgs])
-
-    def map_images(self, partition: str, preprocess: torchvision.transforms.transforms.Compose = None):
-        if preprocess == None:
-            return np.array([np.array(Image.open(pth)) for pth in self.map_paths])
-        else:
-            imgs = np.array([np.array(Image.open(pth)) for pth in self.map_paths])
-            return torch.stack([preprocess(q) for q in imgs])
 
     def query_images_loader(
         self,
-        partition: str,
         batch_size: int = 16,
         shuffle: bool = False,
         preprocess: torchvision.transforms.transforms.Compose = None,
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        paths = self.query_partition(partition)
 
-        # build the dataloader
-        dataset = ImageIdxDataset(paths, preprocess=preprocess)
+        dataset = ImageIdxDataset(self.query_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,
@@ -94,14 +49,13 @@ class SFU(BaseDataset):
 
     def map_images_loader(
         self,
-        partition: str,
         batch_size: int = 16,
         shuffle: bool = False,
         preprocess: torchvision.transforms.transforms.Compose = None,
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        # build the dataloader
+
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
@@ -112,12 +66,9 @@ class SFU(BaseDataset):
         )
         return dataloader
 
-    def ground_truth(self, partition: str) -> list:
-        query_images = self.query_partition(partition=partition)
-        map_images = self.map_partition(partition)
-
-        query_images = [img.split("/")[-1] for img in query_images]
-        map_images = [img.split("/")[-1] for img in map_images]
+    def ground_truth(self) -> list:
+        query_images = [img.split("/")[-1] for img in self.query_images]
+        map_images = [img.split("/")[-1] for img in self.map_images]
 
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}

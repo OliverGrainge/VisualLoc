@@ -1,33 +1,37 @@
-from glob import glob
 import os
 import zipfile
+from glob import glob
 from os.path import join
+
 import numpy as np
 import torch
 import torchvision
+import yaml
 from PIL import Image
 from scipy.signal import convolve2d
-from torch.utils.data import DataLoader
-from os.path import join
+from sklearn.neighbors import NearestNeighbors
+from torch.utils.data import DataLoader, Dataset
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
 from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
 
-package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
+package_directory = os.path.dirname(os.path.abspath(__file__))
 
-class GardensPointWalking(BaseDataset):
+
+class SpedTest(BaseDataset):
     def __init__(self):
         # check to see if dataset is downloaded
-        if not os.path.isdir(join(config["datasets_directory"], "GardensPointWalking")):
+        if not os.path.isdir(join(config["datasets_directory"], "SPEDTEST")):
             # download dataset as zip file
-            raise Exception("GardensPointWalking dataset is not downloaded")
+            raise Exception("Pitts30k Not Downloaded")
 
-        # load images
-        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"], "/GardensPointWalking/night_right/*"))))
-        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"], "/GardensPointWalking/day_right/*"))))
+        self.root = join(config["datasets_directory"], "SPEDTEST")
+        self.map_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "SPED_dbImages.npy"))])
+        self.query_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "SPED_qImages.npy"))])
+        self.gt = np.load(join(self.root, "SPED_gt.npy"), allow_pickle=True)
+        self.name = "spedtest"
 
-        self.name = "gardenspointwalking"
 
     def query_images_loader(
         self,
@@ -37,7 +41,7 @@ class GardensPointWalking(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
+        # build the dataloader
         dataset = ImageIdxDataset(self.query_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
@@ -56,8 +60,9 @@ class GardensPointWalking(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
+        
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
+
         dataloader = DataLoader(
             dataset,
             shuffle=shuffle,
@@ -67,19 +72,9 @@ class GardensPointWalking(BaseDataset):
         )
         return dataloader
 
-    def ground_truth(self) -> list:
-        query_images = [img.split("/")[-1] for img in self.query_images]
-        map_images = [img.split("/")[-1] for img in self.map_images]
-
-        # Create a dictionary mapping image names to a list of their indices in map_images
-        map_dict = {}
-        for idx, img in enumerate(map_images):
-            map_dict.setdefault(img, []).append(idx)
-
-        # Get the indices using the dictionary
-        ground_truth = [map_dict.get(query, []) for query in query_images]
-        return ground_truth
+    def ground_truth(self) -> np.ndarray:
+        return self.gt
 
 
 if __name__ == "__main__":
-    ds = GardensPointWalking()
+    ds = SpedTest()

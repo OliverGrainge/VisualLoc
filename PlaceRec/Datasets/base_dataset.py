@@ -16,57 +16,14 @@ class BaseDataset(ABC):
         map_paths (np.ndarray): A vector of type string providing relative paths to the map images
         name (str): a name for the dataset
     """
-
     query_paths = None
     map_paths = None
     name = None
 
-    @abstractmethod
-    def query_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ) -> np.ndarray:
-        """
-        This function returns the query images from the relevant partition of the dataset.
-        The partitions are either "train", "val", "test" or "all"
-
-        args:
-            partition (str): determines which partition the datasets query images to return.
-                             must bet either "train", "val", "test", or "all"
-            preprocess (torchvision.transforms.transforms.Compose): A torchvision preprocessing
-                             pipeline that returns a tensor.
-
-        Returns:
-            np.ndarray: The query images as a numpy array in [N, H, W, C] format with datatype uint8
-
-        """
-        pass
-
-    @abstractmethod
-    def map_images(
-        self,
-        partition: str,
-        preprocess: torchvision.transforms.transforms.Compose = None,
-    ):
-        """
-        This function returns the map images from the relevant partition of the dataset.
-        The partitions are either "train", "val", "test" or "all"
-
-        args:
-            preprocess (torchvision.transforms.transforms.Compose): A torchvision preprocessing
-                    pipeline that returns a tensor.
-
-        Returns:
-            np.ndarray: The query images as a numpy array in [N, H, W, C] format with datatype uint8
-
-        """
-        pass
 
     @abstractmethod
     def query_images_loader(
         self,
-        partition: str,
         batch_size: int = 16,
         shuffle: bool = False,
         preprocess: torchvision.transforms.transforms.Compose = None,
@@ -98,7 +55,6 @@ class BaseDataset(ABC):
     @abstractmethod
     def map_images_loader(
         self,
-        partition: str,
         batch_size: int = 16,
         shuffle: bool = False,
         preprocess: torchvision.transforms.transforms.Compose = None,

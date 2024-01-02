@@ -18,7 +18,6 @@ def run_arguments():
 
     parser.add_argument(
         "--datasets",
-        choices=("gsvcities", "sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "pitts30k", "stlucia_large", "msls"),
         help="specify one of the datasets from PlaceRec.Datasets",
         type=str,
         default=config["run"]["datasets"],
@@ -63,7 +62,6 @@ def eval_arguments():
 
     parser.add_argument(
         "--datasets",
-        choices=("gsvcities", "sfu", "gardenspointwalking", "stlucia_small", "essex3in1", "nordlands", "pitts30k", "stlucia_large", "msls"),
         help="specify one of the datasets from PlaceRec.Datasets",
         type=str,
         default=config["eval"]["datasets"],

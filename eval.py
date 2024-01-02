@@ -23,7 +23,7 @@ args = eval_arguments()
 
 for dataset_name in args.datasets:
     ds = get_dataset(dataset_name)
-    ground_truth = ds.ground_truth(partition=args.partition)
+    ground_truth = ds.ground_truth()
     all_methods = []
 
     all_similarity = {}
@@ -136,7 +136,7 @@ for dataset_name in args.datasets:
             methods=all_methods,
             ground_truth=ground_truth,
             show=False,
-            title="PR Curve for " + ds.name + " partition: " + args.partition,
+            title="PR Curve for " + ds.name,
             dataset_name=ds.name,
         )
 

@@ -79,6 +79,7 @@ def s3_bucket_download(remote_path: str, local_path: str):
 
 
 def get_dataset(name: str = None):
+    name = name.lower()
     if name == "gardenspointwalking":
         from PlaceRec.Datasets import GardensPointWalking
 
@@ -87,18 +88,6 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import Pitts30k
 
         dataset = Pitts30k()
-    elif name == "msls":
-        from PlaceRec.Datasets import MSLS
-
-        dataset = MSLS()
-    elif name == "stlucia_large":
-        from PlaceRec.Datasets import StLucia_large
-
-        dataset = StLucia_large()
-    elif name == "stlucia_small":
-        from PlaceRec.Datasets import StLucia_small
-
-        dataset = StLucia_small()
     elif name == "sfu":
         from PlaceRec.Datasets import SFU
 
@@ -111,10 +100,18 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import Nordlands
 
         dataset = Nordlands()
-    elif name == "gsvcities":
-        from PlaceRec.Datasets import GsvCities
+    elif name == "crossseasons": 
+        from PlaceRec.Datasets import CrossSeason
 
-        dataset = GsvCities()
+        dataset = CrossSeason()
+    elif name == "spedtest": 
+        from PlaceRec.Datasets import SpedTest
+
+        dataset = SpedTest()
+    elif name == "inriaholidays": 
+        from PlaceRec.Datasets import InriaHolidays
+
+        dataset = InriaHolidays()
     else:
         raise Exception("Dataset '" + name + "' not implemented")
     return dataset
