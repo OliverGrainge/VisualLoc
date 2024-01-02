@@ -44,10 +44,10 @@ class ImageIdxDataset(Dataset):
             img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
             img = Image.fromarray(img)
             img = self.preprocess(img)
-            return img, idx
+            return idx, img
 
-        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
-        return img, idx
+        img = np.array(Image.open(self.img_paths[idx]).resize((224, 224)))[:, :, :3]
+        return idx, img
 
 
 # ============== S3 Bucket ===========================================================================
