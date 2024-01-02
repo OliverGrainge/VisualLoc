@@ -11,8 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 from PlaceRec.utils import get_config
 
 config = get_config()
-DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "msls_val")
-GT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace("dataloaders/val", "datasets/")
+GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "msls_val/")
 
 
 class MSLS(Dataset):
@@ -21,10 +20,10 @@ class MSLS(Dataset):
 
         self.input_transform = input_transform
 
-        self.dbImages = np.load(GT_ROOT+'msls_val/msls_val_dbImages.npy')
-        self.qIdx = np.load(GT_ROOT+'msls_val/msls_val_qIdx.npy')
-        self.qImages = np.load(GT_ROOT+'msls_val/msls_val_qImages.npy')
-        self.ground_truth = np.load(GT_ROOT+'msls_val/msls_val_pIdx.npy', allow_pickle=True)
+        self.dbImages = np.load(GT_ROOT+'msls_val_dbImages.npy')
+        self.qIdx = np.load(GT_ROOT+'msls_val_qIdx.npy')
+        self.qImages = np.load(GT_ROOT+'msls_val_qImages.npy')
+        self.ground_truth = np.load(GT_ROOT+'msls_val_pIdx.npy', allow_pickle=True)
         
         # reference images then query images
         self.images = np.concatenate((self.dbImages, self.qImages[self.qIdx]))

@@ -16,14 +16,11 @@ config = get_config()
 
 class SFU(BaseDataset):
     def __init__(self):
-        # check to see if dataset is downloaded
         if not os.path.isdir(join(config["datasets_directory"], "SFU")):
-            # download dataset as zip file
             raise Exception("SFU is not Downloaded")
 
-        # load images
-        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/raw_images/SFU/dry/*.jpg"))))
-        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"], "/raw_images/SFU/jan/*.jpg"))))
+        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/SFU/dry/*.jpg"))))
+        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/SFU/jan/*.jpg"))))
 
         self.name = "sfu"
 
@@ -67,8 +64,8 @@ class SFU(BaseDataset):
         return dataloader
 
     def ground_truth(self) -> list:
-        query_images = [img.split("/")[-1] for img in self.query_images]
-        map_images = [img.split("/")[-1] for img in self.map_images]
+        query_images = [img.split("/")[-1] for img in self.query_paths]
+        map_images = [img.split("/")[-1] for img in self.map_paths]
 
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}
@@ -76,5 +73,5 @@ class SFU(BaseDataset):
             map_dict.setdefault(img, []).append(idx)
 
         # Get the indices using the dictionary
-        ground_truth = [map_dict.get(query, []) for query in query_images]
+        ground_truth = [np.array(map_dict.get(query, [])) for query in query_images]
         return ground_truth

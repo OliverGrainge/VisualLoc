@@ -118,41 +118,6 @@ def train_arguments():
 
     parser.add_argument("--distillation_type", type=str, default=config["train"]["distillation_type"])
 
-    parser.add_argument(
-        "--dataset_name",
-        type=str,
-        default=config["train"]["dataset_name"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-    parser.add_argument(
-        "--datasets_folder",
-        type=str,
-        default=join(config["train"]["datasets_folder"], "datasets_vg"),
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-
-    parser.add_argument(
-        "--val_positive_dist_threshold",
-        type=int,
-        default=config["train"]["val_positive_dist_threshold"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-    parser.add_argument(
-        "--train_positive_dist_threshold",
-        type=int,
-        default=config["train"]["train_positive_dist_threshold"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-    parser.add_argument(
-        "--mining",
-        type=str,
-        default=config["train"]["mining"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
 
     parser.add_argument(
         "--infer_batch_size",
@@ -161,31 +126,11 @@ def train_arguments():
         help="Choose the number of processing the threads for the dataloader",
     )
 
-    parser.add_argument(
-        "--cache_refresh_rate",
-        type=int,
-        default=config["train"]["cache_refresh_rate"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
 
     parser.add_argument(
         "--device",
         type=str,
         default=config["train"]["device"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-    parser.add_argument(
-        "--neg_num_per_query",
-        type=int,
-        default=config["train"]["neg_num_per_query"],
-        help="Choose the number of processing the threads for the dataloader",
-    )
-
-    parser.add_argument(
-        "--margin",
-        type=float,
-        default=config["train"]["margin"],
         help="Choose the number of processing the threads for the dataloader",
     )
 
@@ -245,11 +190,6 @@ def train_arguments():
         "--loss_distance", 
         type=str, 
         default=config["train"]["loss_distance"])
-
-    parser.add_argument(
-        "--val_check_interval", 
-        type=int, 
-        default=config["train"]["val_check_interval"])
 
     parser.add_argument(
         "--teacher_method", 

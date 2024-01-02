@@ -15,8 +15,7 @@ from PlaceRec.utils import get_config
 # performance is exactly the same as if you use VPR-Bench.
 
 config = get_config()
-DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "inria_holidays") + '/'
-GT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace("dataloaders/val", "datasets/")
+GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "inria_holidays/")
 
 path_obj = Path(DATASET_ROOT)
 if not path_obj.exists():
@@ -32,13 +31,13 @@ class InriaDataset(Dataset):
         self.input_transform = input_transform
 
         # reference images names
-        self.dbImages = np.load(GT_ROOT+'/InriaHolidays/Inria_dbImages.npy')
+        self.dbImages = np.load(GT_ROOT+'Inria_dbImages.npy')
         
         # query images names
-        self.qImages = np.load(GT_ROOT+'/InriaHolidays/Inria_qImages.npy')
+        self.qImages = np.load(GT_ROOT+'Inria_qImages.npy')
         
         # ground truth
-        self.ground_truth = np.load(GT_ROOT+'/InriaHolidays/Inria_gt.npy', allow_pickle=True)
+        self.ground_truth = np.load(GT_ROOT+'Inria_gt.npy', allow_pickle=True)
         
         # reference images then query images
         self.images = np.concatenate((self.dbImages, self.qImages))

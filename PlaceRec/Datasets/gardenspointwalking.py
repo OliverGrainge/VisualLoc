@@ -24,8 +24,8 @@ class GardensPointWalking(BaseDataset):
             raise Exception("GardensPointWalking dataset is not downloaded")
 
         # load images
-        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"], "/GardensPointWalking/night_right/*"))))
-        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"], "/GardensPointWalking/day_right/*"))))
+        self.map_paths = np.array(sorted(glob(config["datasets_directory"] + "/GardensPointWalking/night_right/*")))
+        self.query_paths = np.array(sorted(glob(config["datasets_directory"] + "/GardensPointWalking/day_right/*")))
 
         self.name = "gardenspointwalking"
 
@@ -68,8 +68,10 @@ class GardensPointWalking(BaseDataset):
         return dataloader
 
     def ground_truth(self) -> list:
-        query_images = [img.split("/")[-1] for img in self.query_images]
-        map_images = [img.split("/")[-1] for img in self.map_images]
+        query_images = [img.split("/")[-1] for img in self.query_paths]
+        map_images = [img.split("/")[-1] for img in self.map_paths]
+
+        print(len(query_images), len(map_images))
 
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}
@@ -77,7 +79,8 @@ class GardensPointWalking(BaseDataset):
             map_dict.setdefault(img, []).append(idx)
 
         # Get the indices using the dictionary
-        ground_truth = [map_dict.get(query, []) for query in query_images]
+        ground_truth = [np.array(map_dict.get(query, [])) for query in query_images]
+        print(len(ground_truth))
         return ground_truth
 
 

@@ -15,7 +15,7 @@ from PlaceRec.utils import get_config
 # performance is exactly the same as if you use VPR-Bench.
 
 config = get_config()
-DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "Pittsburgh-Query") + '/'
+DATASET_ROOT = join(config["datasets_directory"], "Pittsburgh-Query/")
 GT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace("dataloaders/val", "datasets/")
 
 path_obj = Path(DATASET_ROOT)

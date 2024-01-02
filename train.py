@@ -25,6 +25,7 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
+from PlaceRec.utils import get_training_logger
 
 import wandb
 from parsers import train_arguments
@@ -74,8 +75,7 @@ def main(args, config):
                 mode="max",
             )
             
-        logger = WandbLogger(project="contrastive")  # need to login to a WandB account
-        logger.experiment.config.update(config["train"])  # Log the training configuration
+        logger = get_training_logger(config, project_name="Contrastive")
         
 
         trainer = pl.Trainer(
@@ -89,6 +89,7 @@ def main(args, config):
             logger=logger,
             reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
             log_every_n_steps=20,
+            limit_train_batches=10,
             #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
         )
         trainer.fit(model=model, datamodule=datamodule)
@@ -111,7 +112,7 @@ def main(args, config):
             monitor="val_loss",
             filename=join(
                 os.getcwd(),
-                "PlaceRec/Training/checkpoints/",
+                "PlaceRec/Distillation/Training/checkpoints/",
                 args.training_type,
                 student_method.name,
                 student_method.name + "-{epoch:02d}-{recallat1:.2f}",
@@ -121,8 +122,7 @@ def main(args, config):
             mode="min",
         )
 
-        logger = WandbLogger(project="asymmetric distillation")  # need to login to a WandB account
-        logger.experiment.config.update(config["train"])  # Log the training configuration
+        logger = get_training_logger(config, project="Distillation")
 
         # Build the Datamodule
         distillationdatamodule = DistillationDataModule(args, teacher_method, teacher_method.preprocess, reload=args.reload)
@@ -137,8 +137,8 @@ def main(args, config):
             callbacks=[early_stop_callback, checkpoint_callback],
         )
 
-        # trainer.fit(distillationmodule, datamodule=distillationdatamodule)
-        recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
+        trainer.fit(distillationmodule, datamodule=distillationdatamodule)
+        #recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
 
         for col in range(recalls.shape[1]):
             rec = recalls[:, col]

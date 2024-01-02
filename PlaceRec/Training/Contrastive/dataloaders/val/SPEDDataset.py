@@ -17,8 +17,7 @@ from PlaceRec.utils import get_config
 
 
 config = get_config()
-DATASET_ROOT = join(config["train"]["datasets_folder"], "gsv_cities", "validation_data", "SPEDTEST") + "/"
-GT_ROOT = GT_ROOT = os.path.dirname(os.path.abspath(__file__)).replace("dataloaders/val", "datasets/")
+GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "SPEDTEST/")
 
 path_obj = Path(DATASET_ROOT)
 if not path_obj.exists():
@@ -34,13 +33,13 @@ class SPEDDataset(Dataset):
         self.input_transform = input_transform
 
         # reference images names
-        self.dbImages = np.load(GT_ROOT+'SPED/SPED_dbImages.npy')
+        self.dbImages = np.load(GT_ROOT+'SPED_dbImages.npy')
         
         # query images names
-        self.qImages = np.load(GT_ROOT+'SPED/SPED_qImages.npy')
+        self.qImages = np.load(GT_ROOT+'SPED_qImages.npy')
         
         # ground truth
-        self.ground_truth = np.load(GT_ROOT+'SPED/SPED_gt.npy', allow_pickle=True)
+        self.ground_truth = np.load(GT_ROOT+'SPED_gt.npy', allow_pickle=True)
         
         # reference images then query images
         self.images = np.concatenate((self.dbImages, self.qImages))

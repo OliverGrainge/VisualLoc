@@ -127,7 +127,7 @@ class HOG(BaseFunctionality):
             all_desc = np.array(ref_desc_list).astype(np.float32)
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
+            for indicies, batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
                 batch = list(np.array(batch).transpose(0, 2, 3, 1))
                 ref_desc_list = []
                 for ref_image in batch:
@@ -168,7 +168,7 @@ class HOG(BaseFunctionality):
             all_desc = np.array(ref_desc_list).astype(np.float32)
         elif dataloader is not None and images is None:
             all_desc = []
-            for batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
+            for indicies, batch in tqdm(dataloader, desc="Computing HOG Query Desc", disable=not pbar):
                 batch = list(np.array(batch).transpose(0, 2, 3, 1))
                 ref_desc_list = []
                 for ref_image in batch:

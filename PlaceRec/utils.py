@@ -10,7 +10,9 @@ import yaml
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+from typing import Union
+from argparse import Namespace
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -187,6 +189,15 @@ def get_method(name: str = None, pretrained: bool = True):
         raise Exception("Method not implemented")
     return method
 
+
+def get_training_logger(config: dict, project_name: Union[str, None] = None):
+    if config["train"]["logger"].lower() == "wandb": 
+        logger = WandbLogger(project=project_name)
+    elif config["train"]["logger"].lower() == "tensorboard":
+        logger = TensorBoardLogger("tb_logs", name=project_name)
+    else: 
+        raise NotImplementedError()
+    return logger
 
 def cosine_distance(x1, x2):
     # Cosine similarity ranges from -1 to 1, so we add 1 to make it non-negative

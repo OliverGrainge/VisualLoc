@@ -375,7 +375,7 @@ class BaseModelWrapper(BaseFunctionality):
 
         all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
         with torch.no_grad():
-            for batch, indicies in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
+            for indicies, batch in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
@@ -402,7 +402,7 @@ class BaseModelWrapper(BaseFunctionality):
 
         all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
         with torch.no_grad():
-            for batch, indicies in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
+            for indicies, batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 

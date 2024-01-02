@@ -21,7 +21,7 @@ default_transform = T.Compose([
 ])
 
 # NOTE: Hard coded path to dataset folder 
-BASE_PATH = join(config["train"]["datasets_folder"], "gsv_cities")
+BASE_PATH = join(config["datasets_directory"], "gsv_cities")
 
 if not Path(BASE_PATH).exists():
     raise FileNotFoundError(

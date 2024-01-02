@@ -20,9 +20,7 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 
 class CrossSeason(BaseDataset):
     def __init__(self):
-        # check to see if dataset is downloaded
         if not os.path.isdir(join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")):
-                # download dataset as zip file
                 raise Exception("Pitts30k Not Downloaded")
 
         self.root = join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")
