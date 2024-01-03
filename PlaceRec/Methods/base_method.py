@@ -66,7 +66,7 @@ class BaseTechnique(ABC):
         pass
 
     @abstractmethod
-    def set_map(self, map_descriptors: dict) -> None:
+    def set_map(self, map_descriptors: np.ndarray) -> None:
         """
         Sets the map attribute of this class with the map descriptors computed with "compute_map_desc". This
         map is searched by "place_recognise" to perform place recognition.
@@ -81,7 +81,7 @@ class BaseTechnique(ABC):
         pass
 
     @abstractmethod
-    def set_query(self, query_descriptors: dict) -> None:
+    def set_query(self, query_descriptors: np.ndarray) -> None:
         """
         Sets the query_descriptor of the class.
 
@@ -207,12 +207,12 @@ class BaseFunctionality(BaseTechnique):
         """
         self.map_desc = map_descriptors
         if config["eval"]["distance"] == "cosine":
-            self.map = faiss.IndexFlatIP(map_descriptors["map_descriptors"].shape[1])
-            faiss.normalize_L2(map_descriptors["map_descriptors"])
-            self.map.add(map_descriptors["map_descriptors"])
+            self.map = faiss.IndexFlatIP(map_descriptors.shape[1])
+            faiss.normalize_L2(map_descriptors)
+            self.map.add(map_descriptors)
         elif config["eval"]["distance"] == "l2":
-            self.map = faiss.IndexFlatL2(map_descriptors["map_descriptors"].shape[1])
-            self.map.add(map_descriptors["map_descriptors"])
+            self.map = faiss.IndexFlatL2(map_descriptors.shape[1])
+            self.map.add(map_descriptors)
         else: 
             raise NotImplementedError("Distance Measure Not Implemented")
 
@@ -238,11 +238,11 @@ class BaseFunctionality(BaseTechnique):
         if query_desc == None and dataloader is not None:
             query_desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
         if config["eval"]["distance"] == "cosine":
-            faiss.normalize_L2(query_desc["query_descriptors"])
-        dist, idx = self.map.search(query_desc["query_descriptors"], k)
+            faiss.normalize_L2(query_desc)
+        dist, idx = self.map.search(query_desc, k)
         return idx, dist
 
-    def similarity_matrix(self, query_descriptors: dict, map_descriptors: dict) -> np.ndarray:
+    def similarity_matrix(self, query_descriptors: dict, map_descriptors: np.ndarray) -> np.ndarray:
         """
         Compute the similarity matrix between query and map descriptors.
 
@@ -253,7 +253,7 @@ class BaseFunctionality(BaseTechnique):
         Returns:
             np.ndarray: A similarity matrix.
         """
-        return cosine_similarity(map_descriptors["map_descriptors"], query_descriptors["query_descriptors"]).astype(np.float32)
+        return cosine_similarity(map_descriptors, query_descriptors).astype(np.float32)
 
     def save_descriptors(self, dataset_name: str) -> None:
         """
@@ -379,10 +379,9 @@ class BaseModelWrapper(BaseFunctionality):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
-        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
-        query_desc = {"query_descriptors": all_desc}
-        self.set_query(query_desc)
-        return query_desc
+        all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
+        self.set_query(all_desc)
+        return all_desc
 
     def compute_map_desc(
         self,
@@ -406,7 +405,6 @@ class BaseModelWrapper(BaseFunctionality):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
-        all_desc = all_desc / np.linalg.norm(all_desc, axis=0, keepdims=True)
-        map_desc = {"map_descriptors": all_desc}
-        self.set_map(map_desc)
-        return map_desc
+        all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
+        self.set_map(all_desc)
+        return all_desc

@@ -10,6 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from tqdm import tqdm
+from torch import nn
 
 from .base_method import BaseModelWrapper
 
@@ -35,9 +36,15 @@ preprocess = transforms.Compose(
     ]
 )
 
+def init_weights(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        # Example: Kaiming Initialization for Conv2D and Linear layers
+        nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 
 class CosPlace(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if not pretrained:
-            raise Warning("Cosplace model cannot be loaded untrained")
+            model.apply(init_weights)
         super().__init__(model=model, preprocess=preprocess, name="cosplace")
