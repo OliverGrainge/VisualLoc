@@ -1,13 +1,11 @@
 
+from pytorch_metric_learning import losses, miners
+from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
+import numpy as np
 import faiss
 import faiss.contrib.torch_utils
-import numpy as np
 from prettytable import PrettyTable
-from pytorch_metric_learning import losses, miners
-from pytorch_metric_learning.distances import (
-    CosineSimilarity,
-    DotProductSimilarity,
-)
+
 
 
 def get_loss(loss_name):
@@ -30,12 +28,6 @@ def get_miner(miner_name, margin=0.1):
     if miner_name == 'MultiSimilarityMiner' : return miners.MultiSimilarityMiner(epsilon=margin, distance=CosineSimilarity())
     if miner_name == 'PairMarginMiner' : return miners.PairMarginMiner(pos_margin=0.7, neg_margin=0.3, distance=DotProductSimilarity())
     return None
-
-
-
-
-
-
 
 def get_validation_recalls(r_list, q_list, k_values, gt, print_results=True, faiss_gpu=False, dataset_name='dataset without name ?'):
         

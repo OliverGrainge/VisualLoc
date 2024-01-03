@@ -1,9 +1,5 @@
-datasets_directory: "/home/oliver/Documents/github/Datasets"
-
-
-
-
-
+#datasets_directory: "/home/oliver/Documents/github/Datasets"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 
 #####################################################################################################################################################
 ################################################               RUN CONFIGURATION          #####################################################

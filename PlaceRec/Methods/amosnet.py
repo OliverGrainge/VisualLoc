@@ -165,10 +165,14 @@ class AmosNet(BaseModelWrapper):
         if pretrained:
             model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
 
+        self.device = "cpu"
+        model.to("cpu")
+
         super().__init__(model=model, preprocess=preprocess, name="amosnet")
         # some layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
+
 
         self.model.to(self.device)
         self.model.eval()

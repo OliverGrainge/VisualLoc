@@ -15,7 +15,7 @@ from PlaceRec.Datasets import CrossSeason
 def dataset():
     return CrossSeason()
 
-@pytest.fixutre
+@pytest.fixture
 def amosnet():
     return Methods.AmosNet()
 
