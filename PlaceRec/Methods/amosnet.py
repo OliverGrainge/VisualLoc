@@ -1,5 +1,6 @@
 import os
 import pickle
+from os.path import join
 from typing import List, Tuple
 
 import numpy as np
@@ -12,10 +13,11 @@ from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import s3_bucket_download
+from ..utils import get_config, s3_bucket_download
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class AmosNetModel(nn.Module):
@@ -138,32 +140,42 @@ scale_transform = transforms.Lambda(lambda x: x * 255.0)
 
 
 ######################################### AMOSNET #######################################################
-
-if not os.path.exists(package_directory + "/weights/AmosNet.caffemodel.pt"):
-    s3_bucket_download("placerecdata/weights/AmosNet.caffemodel.pt", package_directory + "/weights/AmosNet.caffemodel.pt")
-
-if not os.path.exists(package_directory + "/weights/amosnet_mean.npy"):
-    s3_bucket_download("placerecdata/weights/amosnet_mean.npy", package_directory + "/weights/amosnet_mean.npy")
-
 model = AmosNetModel()
 
-mean_image = torch.Tensor(np.load(package_directory + "/weights/amosnet_mean.npy"))
+try:
+    mean_image = torch.Tensor(np.load(join(config["weights_directory"], "amosnet_mean.npy")))
+except:
+    mean_image = 0
 
-preprocess = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        scale_transform,
-        transforms.Resize((256, 256), antialias=True),
-        SubtractMean(mean_image=mean_image),
-        ChannelSwap(),
-        transforms.Resize((227, 227), antialias=True),
-    ]
-)
+
+if isinstance(mean_image, torch.Tensor):
+    preprocess = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            scale_transform,
+            transforms.Resize((256, 256), antialias=True),
+            SubtractMean(mean_image=mean_image),
+            ChannelSwap(),
+            transforms.Resize((227, 227), antialias=True),
+        ]
+    )
+else:
+    preprocess = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            transforms.Resize((227, 227), antialias=True),
+        ]
+    )
+
 
 class AmosNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = False):
         if pretrained:
-            model.load_state_dict(torch.load(package_directory + "/weights/AmosNet.caffemodel.pt"))
+            if os.path.exists(config["weights_directory"]):
+                model.load_state_dict(torch.load(join(config["weights_directory"], "AmosNet.caffemodel.pt")))
+            else:
+                raise Exception(f'Could not find weights at {config["weights_directory"]}')
 
         self.device = "cpu"
         model.to("cpu")
@@ -172,7 +184,6 @@ class AmosNet(BaseModelWrapper):
         # some layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"
-
 
         self.model.to(self.device)
         self.model.eval()

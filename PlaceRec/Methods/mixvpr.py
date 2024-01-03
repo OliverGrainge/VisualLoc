@@ -1,5 +1,6 @@
 import os
 import pickle
+from os.path import join
 from typing import Tuple
 
 import numpy as np
@@ -18,10 +19,11 @@ from torch.utils.data import DataLoader
 from torchvision.models import ResNet50_Weights
 from tqdm import tqdm
 
-from ..utils import s3_bucket_download
+from ..utils import get_config, s3_bucket_download
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class ResNet(nn.Module):
@@ -313,21 +315,6 @@ class VPRModel(pl.LightningModule):
 # -------------------------------------------------------------------------------
 
 
-weight_pth = package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt"
-
-if not os.path.exists(weight_pth):
-    s3_bucket_download(
-        "placerecdata/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-        package_directory + "/weights/resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-    )
-
-
-if torch.cuda.is_available == "cuda":
-    state_dict = torch.load(weight_pth)
-else:
-    state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
-
-
 # Note that images must be resized to 320x320
 model = VPRModel(
     backbone_arch="resnet50",
@@ -359,5 +346,13 @@ preprocess = transforms.Compose(
 class MixVPR(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
+            weight_pth = join(config["weights_directory"], "resnet50_MixVPR_512_channels(256)_rows(2).ckpt")
+            if not os.path.exists(weight_pth):
+                raise Exception(f"Could not find weights at {weight_pth}")
+
+            if torch.cuda.is_available == "cuda":
+                state_dict = torch.load(weight_pth)
+            else:
+                state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
             model.load_state_dict(state_dict)
         super().__init__(model=model, preprocess=preprocess, name="mixvpr")

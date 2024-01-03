@@ -1,7 +1,7 @@
 import os
 import sys
-import pytest 
 
+import pytest
 
 sys.path.insert(0, os.getcwd())
 os.chdir(os.getcwd())
@@ -14,6 +14,7 @@ from PlaceRec.Datasets import CrossSeason
 @pytest.fixture
 def dataset():
     return CrossSeason()
+
 
 @pytest.fixture
 def amosnet():
@@ -29,9 +30,11 @@ def calc():
 def cct_netvlad():
     return Methods.CCT384_NetVLAD(pretrained=False)
 
+
 @pytest.fixture
 def convap():
     return Methods.ConvAP(pretrained=False)
+
 
 @pytest.fixture
 def cosplace():
@@ -52,6 +55,7 @@ def mixvpr():
 def netvlad():
     return Methods.NetVLAD(pretrained=False)
 
+
 @pytest.fixture
 def resnet18_gem():
     return Methods.ResNet18GeM(pretrained=False)
@@ -60,10 +64,3 @@ def resnet18_gem():
 @pytest.fixture
 def resnet50_gem():
     return Methods.ResNet50GeM(pretrained=False)
-
-
-
-
-
-
-

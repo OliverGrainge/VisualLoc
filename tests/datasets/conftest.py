@@ -4,7 +4,6 @@ from glob import glob
 
 import pytest
 
-
 sys.path.insert(0, os.getcwd())
 os.chdir(os.getcwd())
 

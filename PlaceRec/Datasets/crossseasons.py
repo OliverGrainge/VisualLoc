@@ -13,15 +13,16 @@ from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
+from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
 
 config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
+
 class CrossSeason(BaseDataset):
     def __init__(self):
         if not os.path.isdir(join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")):
-                raise Exception("Pitts30k Not Downloaded")
+            raise Exception("Pitts30k Not Downloaded")
 
         self.root = join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")
         self.map_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "CrossSeason_dbImages.npy"))])
@@ -29,7 +30,6 @@ class CrossSeason(BaseDataset):
         self.gt = np.load(join(self.root, "CrossSeason_gt.npy"), allow_pickle=True)
 
         self.name = "crossseasons"
-
 
     def query_images_loader(
         self,
@@ -58,7 +58,6 @@ class CrossSeason(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
 
         dataloader = DataLoader(

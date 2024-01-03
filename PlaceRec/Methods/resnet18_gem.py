@@ -1,4 +1,5 @@
 import os
+from os.path import join
 
 import torch
 import torch.nn as nn
@@ -6,11 +7,12 @@ from torch.nn import functional as F
 from torchvision import models, transforms
 from torchvision.models import ResNet18_Weights
 
-from PlaceRec.utils import L2Norm
+from PlaceRec.utils import L2Norm, get_config
 
 from .base_method import BaseModelWrapper
 
 filepath = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class GeM(nn.Module):
@@ -50,7 +52,10 @@ class ResNet18GeM(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = Resnet18gemModel()
         if pretrained:
-            model.load_state_dict(torch.load(os.path.join(filepath, "weights", "msls_r18l3_gem_partial.pth")))
+            weights_pth = join(config["weights_directory"], "msls_r18l3_gem_partial.pth")
+            if not os.path.exists(weights_pth):
+                raise Exception(f'Could not find weights at {weights_pth}')
+            model.load_state_dict(torch.load(weights_pth))
 
         super().__init__(model=model, preprocess=preprocess, name="resnet18_gem")
 

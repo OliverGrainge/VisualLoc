@@ -1,5 +1,4 @@
 from .amosnet import AmosNet
-
 from .base_method import BaseModelWrapper
 from .calc import CALC
 from .cct384_netvlad import CCT384_NetVLAD

@@ -1,5 +1,7 @@
 import os
 import pathlib
+from argparse import Namespace
+from typing import Union
 
 import boto3
 import botocore
@@ -8,11 +10,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import yaml
 from PIL import Image
+from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from typing import Union
-from argparse import Namespace
-from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
+
 
 class ImageDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -102,15 +103,15 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import Nordlands
 
         dataset = Nordlands()
-    elif name == "crossseasons": 
+    elif name == "crossseasons":
         from PlaceRec.Datasets import CrossSeason
 
         dataset = CrossSeason()
-    elif name == "spedtest": 
+    elif name == "spedtest":
         from PlaceRec.Datasets import SpedTest
 
         dataset = SpedTest()
-    elif name == "inriaholidays": 
+    elif name == "inriaholidays":
         from PlaceRec.Datasets import InriaHolidays
 
         dataset = InriaHolidays()
@@ -191,13 +192,14 @@ def get_method(name: str = None, pretrained: bool = True):
 
 
 def get_training_logger(config: dict, project_name: Union[str, None] = None):
-    if config["train"]["logger"].lower() == "wandb": 
+    if config["train"]["logger"].lower() == "wandb":
         logger = WandbLogger(project=project_name)
     elif config["train"]["logger"].lower() == "tensorboard":
         logger = TensorBoardLogger("tb_logs", name=project_name)
-    else: 
+    else:
         raise NotImplementedError()
     return logger
+
 
 def cosine_distance(x1, x2):
     # Cosine similarity ranges from -1 to 1, so we add 1 to make it non-negative

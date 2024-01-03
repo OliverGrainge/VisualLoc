@@ -1,5 +1,6 @@
 import os
 import pickle
+from os.path import join
 from typing import Tuple
 
 import numpy as np
@@ -11,10 +12,11 @@ import torchvision
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import s3_bucket_download
+from ..utils import get_config, s3_bucket_download
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class ResNet(nn.Module):
@@ -255,22 +257,10 @@ class VPRModel(pl.LightningModule):
 
 
 ######################################### CONVAP MODEL ########################################################
-weights_path = package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt"
-# download the weights
-if not os.path.exists(weights_path):
-    s3_bucket_download("placerecdata/weights/resnet50_ConvAP_1024_2x2.ckpt", package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
 
-
-# read in the state dict
-if not torch.cuda.is_available():
-    state_dict = torch.load(weights_path, map_location=torch.device("cpu"))
-else:
-    state_dict = torch.load(weights_path)
 
 
 # Note that images must be resized to 320x320
-
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -287,7 +277,8 @@ preprocess = transforms.Compose(
 class ConvAP(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
-
+            if not os.path.exists(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")):
+                raise Exception(f'Could not find weights at {join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")}')
             model = VPRModel(backbone_arch='resnet50', 
                             layers_to_crop=[],
                             agg_arch='ConvAP',
@@ -296,7 +287,11 @@ class ConvAP(BaseModelWrapper):
                                         's1' : 2,
                                         's2' : 2},
                             )
-            state_dict = torch.load(package_directory + "/weights/resnet50_ConvAP_1024_2x2.ckpt")
+            if not torch.cuda.is_available():
+                state_dict = torch.load(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"), map_location=torch.device("cpu"))
+            else: 
+                state_dict = torch.load(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"))
+
             model.load_state_dict(state_dict)
         else:
             model = VPRModel(backbone_arch='resnet50', 

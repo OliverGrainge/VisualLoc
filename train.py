@@ -25,7 +25,6 @@ from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 from torchvision.transforms import v2
 from tqdm import tqdm
-from PlaceRec.utils import get_training_logger
 
 import wandb
 from parsers import train_arguments
@@ -34,7 +33,12 @@ from PlaceRec.Training.Distillation import (
     DistillationDataModule,
     DistillationModule,
 )
-from PlaceRec.utils import ImageDataset, get_config, get_method
+from PlaceRec.utils import (
+    ImageDataset,
+    get_config,
+    get_method,
+    get_training_logger,
+)
 
 
 def features_size(args, model, preprocess):
@@ -52,6 +56,7 @@ def main(args, config):
     ################################# Contrastive Training ################################
     if args.training_type == "contrastive":
         from PlaceRec.Training.Contrastive import GSVCitiesDataModule, VPRModel
+
         method = get_method(args.method, pretrained=False)
         model = method.model.to(args.device)
 
@@ -60,40 +65,41 @@ def main(args, config):
 
         datamodule = GSVCitiesDataModule(args)
         model = VPRModel(args, model)
-        
+
         # Checkpointing the Model
         checkpoint_callback = ModelCheckpoint(
-            monitor='pitts30k_val/R1',
+            monitor="pitts30k_val/R1",
             filename=join(
                 os.getcwd(),
                 "PlaceRec/Training/Contrastive/checkpoints/",
                 method.name,
-                f'{method.name}' + '_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]'),
-                auto_insert_metric_name=False,
-                save_top_k=1,
-                verbose=False,
-                mode="max",
-            )
-            
+                f"{method.name}" + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
+            ),
+            auto_insert_metric_name=False,
+            save_top_k=1,
+            verbose=False,
+            mode="max",
+        )
+
         logger = get_training_logger(config, project_name="Contrastive")
-        
 
         trainer = pl.Trainer(
-            accelerator='gpu', devices=[0],
-            default_root_dir=f'PlaceRec/Training/Contrastive/Logs/{method.name}', # Tensorflow can be used to viz 
-            num_sanity_val_steps=0, # runs N validation steps before stating training
-            precision=16, # we use half precision to reduce  memory usage (and 2x speed on RTX)
+            accelerator="gpu",
+            devices=[0],
+            default_root_dir=f"PlaceRec/Training/Contrastive/Logs/{method.name}",  # Tensorflow can be used to viz
+            num_sanity_val_steps=0,  # runs N validation steps before stating training
+            precision=16,  # we use half precision to reduce  memory usage (and 2x speed on RTX)
             max_epochs=30,
-            check_val_every_n_epoch=1, # run validation every epoch
-            callbacks=[checkpoint_callback],# we run the checkpointing callback (you can add more)
+            check_val_every_n_epoch=1,  # run validation every epoch
+            callbacks=[checkpoint_callback],  # we run the checkpointing callback (you can add more)
             logger=logger,
-            reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
+            reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
             log_every_n_steps=20,
             limit_train_batches=10,
-            #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
+            # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
         )
         trainer.fit(model=model, datamodule=datamodule)
-        
+
     ###################### Distillation Training #######################
     elif args.training_type == "distillation":
         student_method = get_method(args.student_method, pretrained=False)
@@ -138,7 +144,7 @@ def main(args, config):
         )
 
         trainer.fit(distillationmodule, datamodule=distillationdatamodule)
-        #recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
+        # recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
 
         for col in range(recalls.shape[1]):
             rec = recalls[:, col]

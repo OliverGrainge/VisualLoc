@@ -213,7 +213,7 @@ class BaseFunctionality(BaseTechnique):
         elif config["eval"]["distance"] == "l2":
             self.map = faiss.IndexFlatL2(map_descriptors.shape[1])
             self.map.add(map_descriptors)
-        else: 
+        else:
             raise NotImplementedError("Distance Measure Not Implemented")
 
     def place_recognise(

@@ -1,20 +1,21 @@
-from glob import glob
 import os
 import zipfile
+from glob import glob
 from os.path import join
+
 import numpy as np
 import torch
 import torchvision
 from PIL import Image
 from scipy.signal import convolve2d
 from torch.utils.data import DataLoader
-from os.path import join
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
+from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
+
 
 class GardensPointWalking(BaseDataset):
     def __init__(self):
@@ -37,7 +38,6 @@ class GardensPointWalking(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
         dataset = ImageIdxDataset(self.query_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
@@ -56,7 +56,6 @@ class GardensPointWalking(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,

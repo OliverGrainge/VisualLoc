@@ -13,7 +13,7 @@ from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
+from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
 
 config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +31,6 @@ class SpedTest(BaseDataset):
         self.query_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "SPED_qImages.npy"))])
         self.gt = np.load(join(self.root, "SPED_gt.npy"), allow_pickle=True)
         self.name = "spedtest"
-
 
     def query_images_loader(
         self,
@@ -60,7 +59,6 @@ class SpedTest(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-        
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
 
         dataloader = DataLoader(

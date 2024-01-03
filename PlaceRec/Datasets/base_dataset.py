@@ -16,10 +16,10 @@ class BaseDataset(ABC):
         map_paths (np.ndarray): A vector of type string providing relative paths to the map images
         name (str): a name for the dataset
     """
+
     query_paths = None
     map_paths = None
     name = None
-
 
     @abstractmethod
     def query_images_loader(

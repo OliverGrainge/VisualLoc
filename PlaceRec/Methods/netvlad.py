@@ -1,6 +1,8 @@
 import os
 import pickle
 import zipfile
+from argparse import Namespace
+from os.path import join
 from typing import Tuple
 
 import numpy as np
@@ -11,22 +13,22 @@ import torch.nn.functional as F
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
+from torch.utils.data import Dataset
 from torchvision import transforms
 from torchvision.models import resnet18
-from argparse import Namespace
-from torch.utils.data import Dataset 
 from tqdm import tqdm
 
-from ..utils import s3_bucket_download
+from ..utils import get_config, s3_bucket_download
 from .base_method import BaseModelWrapper
 
 netvlad_directory = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class NetVLAD_Aggregation(nn.Module):
     """NetVLAD layer implementation"""
 
-    def __init__(self, clusters_num: int=64, dim: int=128, normalize_input: bool=True, work_with_tokens: bool=False):
+    def __init__(self, clusters_num: int = 64, dim: int = 128, normalize_input: bool = True, work_with_tokens: bool = False):
         """
         Args:
             clusters_num : int
@@ -148,13 +150,9 @@ class NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = ResNet_NetVLAD()
         if pretrained:
-            try:
-                model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
-            except:
-                s3_bucket_download(
-                    "placerecdata/weights/msls_r18l3_netvlad_partial.pth", netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"
-                )
-
-                model.load_state_dict(torch.load(netvlad_directory + "/weights/msls_r18l3_netvlad_partial.pth"))
+            weights_pth = join(config["weights_directory"], "msls_r18l3_netvlad_partial.pth")
+            if not os.path.exists(weights_pth):
+                raise Exception(f"Could not find weights at {weights_pth}")
+            model.load_state_dict(torch.load(weights_pth))
 
         super().__init__(model=model, preprocess=preprocess, name="netvlad")

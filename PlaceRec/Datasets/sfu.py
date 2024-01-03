@@ -2,6 +2,7 @@ import os
 import zipfile
 from glob import glob
 from os.path import join
+
 import numpy as np
 import torch
 import torchvision
@@ -9,10 +10,11 @@ from PIL import Image
 from torch.utils.data import DataLoader
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
+from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
+
 
 class SFU(BaseDataset):
     def __init__(self):
@@ -24,7 +26,6 @@ class SFU(BaseDataset):
 
         self.name = "sfu"
 
-
     def query_images_loader(
         self,
         batch_size: int = 16,
@@ -33,7 +34,6 @@ class SFU(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
         dataset = ImageIdxDataset(self.query_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,
@@ -52,7 +52,6 @@ class SFU(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
-
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
         dataloader = DataLoader(
             dataset,

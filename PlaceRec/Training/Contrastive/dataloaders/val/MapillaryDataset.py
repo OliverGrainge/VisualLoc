@@ -15,21 +15,19 @@ GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "msls_val/")
 
 
 class MSLS(Dataset):
-    def __init__(self, input_transform = None):
-        
-
+    def __init__(self, input_transform=None):
         self.input_transform = input_transform
 
-        self.dbImages = np.load(GT_ROOT+'msls_val_dbImages.npy')
-        self.qIdx = np.load(GT_ROOT+'msls_val_qIdx.npy')
-        self.qImages = np.load(GT_ROOT+'msls_val_qImages.npy')
-        self.ground_truth = np.load(GT_ROOT+'msls_val_pIdx.npy', allow_pickle=True)
-        
+        self.dbImages = np.load(GT_ROOT + "msls_val_dbImages.npy")
+        self.qIdx = np.load(GT_ROOT + "msls_val_qIdx.npy")
+        self.qImages = np.load(GT_ROOT + "msls_val_qImages.npy")
+        self.ground_truth = np.load(GT_ROOT + "msls_val_pIdx.npy", allow_pickle=True)
+
         # reference images then query images
         self.images = np.concatenate((self.dbImages, self.qImages[self.qIdx]))
         self.num_references = len(self.dbImages)
         self.num_queries = len(self.qImages[self.qIdx])
-    
+
     def __getitem__(self, index):
         img = Image.open(DATASET_ROOT + self.images[index])
 

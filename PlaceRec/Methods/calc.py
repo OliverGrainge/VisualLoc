@@ -2,6 +2,7 @@ import os
 import pickle
 import random
 from glob import glob
+from os.path import join
 from typing import Tuple
 
 import cv2
@@ -22,17 +23,18 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import s3_bucket_download
+from ..utils import get_config, s3_bucket_download
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
+config = get_config()
 
 
 class CalcModel(nn.Module):
     def __init__(
         self,
         pretrained=True,
-        weights=package_directory + "/weights/calc.caffemodel.pt",
+        weights=join(config["weights_directory"], "calc.caffemodel.pt"),
     ):
         super().__init__()
 
@@ -45,12 +47,15 @@ class CalcModel(nn.Module):
         self.lrn2 = nn.LocalResponseNorm(5, alpha=0.0001, beta=0.75)
 
         if pretrained:
-            state_dict = torch.load(weights)
-            my_new_state_dict = {}
-            my_layers = list(self.state_dict().keys())
-            for layer in my_layers:
-                my_new_state_dict[layer] = state_dict[layer]
-            self.load_state_dict(my_new_state_dict)
+            if os.path.exists(weights):
+                state_dict = torch.load(weights)
+                my_new_state_dict = {}
+                my_layers = list(self.state_dict().keys())
+                for layer in my_layers:
+                    my_new_state_dict[layer] = state_dict[layer]
+                self.load_state_dict(my_new_state_dict)
+            else:
+                raise Exception(f"Could not find weights at {weights}")
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -73,6 +78,7 @@ class ConvertToYUVandEqualizeHist:
         img_rgb = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
         return Image.fromarray(img_rgb)
 
+
 ############################ CALC VPR Model ####################################################
 preprocess = transforms.Compose(
     [
@@ -83,8 +89,6 @@ preprocess = transforms.Compose(
     ]
 )
 
-if not os.path.exists(package_directory + "/weights/calc.caffemodel.pt"):
-    s3_bucket_download("placerecdata/weights/calc.caffemodel.pt", package_directory + "/weights/calc.caffemodel.pt")
 
 class CALC(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
