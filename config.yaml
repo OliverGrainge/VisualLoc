@@ -13,7 +13,7 @@ run:
   num_workers: 12
   pin_memory: False
   batchsize: 10
-  device: None
+  device: "cpu"
 
 eval: 
   datasets: ["amosnet", "hybridnet"]
