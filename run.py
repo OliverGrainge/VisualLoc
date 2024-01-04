@@ -10,7 +10,6 @@ args = run_arguments()
 
 
 #################################### Computing Descriptors ###########################################
-
 for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
     for dataset_name in args.datasets:
