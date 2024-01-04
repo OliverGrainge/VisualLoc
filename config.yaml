@@ -1,7 +1,7 @@
-#datasets_directory: "/home/oliver/Documents/github/Datasets"
-#weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
-datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
-weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/home/oliver/Documents/github/Datasets"
+weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
+#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 
 #####################################################################################################################################################
 ################################################               RUN CONFIGURATION          #####################################################
