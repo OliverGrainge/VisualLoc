@@ -2,11 +2,11 @@ from .amosnet import AmosNet
 from .base_method import BaseModelWrapper
 from .calc import CALC
 from .cct384_netvlad import CCT384_NetVLAD
-from .resnet50_convap import ResNet50ConvAP
-from .resnet34_convap import ResNet34ConvAP
 from .cosplace import CosPlace
 from .hybridnet import HybridNet
 from .mixvpr import MixVPR
 from .netvlad import NetVLAD
 from .resnet18_gem import ResNet18GeM
+from .resnet34_convap import ResNet34ConvAP
+from .resnet50_convap import ResNet50ConvAP
 from .resnet50_gem import ResNet50GeM

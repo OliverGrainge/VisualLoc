@@ -59,14 +59,23 @@ class ImageIdxDataset(Dataset):
 class ProgressPercentage(tqdm):
     def __init__(self, client, bucket, filename):
         self._size = client.head_object(Bucket=bucket, Key=filename)["ContentLength"]
-        super(ProgressPercentage, self).__init__(total=self._size, unit="B", unit_scale=True, desc="Downloading " + filename.split("/")[-1])
+        super(ProgressPercentage, self).__init__(
+            total=self._size,
+            unit="B",
+            unit_scale=True,
+            desc="Downloading " + filename.split("/")[-1],
+        )
 
     def __call__(self, bytes_amount):
         self.update(bytes_amount)
 
 
 def s3_bucket_download(remote_path: str, local_path: str):
-    s3 = boto3.client("s3", region_name="eu-north-1", config=boto3.session.Config(signature_version=botocore.UNSIGNED))
+    s3 = boto3.client(
+        "s3",
+        region_name="eu-north-1",
+        config=boto3.session.Config(signature_version=botocore.UNSIGNED),
+    )
 
     # Define the bucket name and the datasets to download
     bucket_name = "visuallocbucket"
@@ -92,7 +101,7 @@ def get_dataset(name: str = None):
 
         dataset = Pitts250k()
     elif name == "mapillarysls":
-        from PlaceRec.Datasets import MapillarySLS 
+        from PlaceRec.Datasets import MapillarySLS
 
         dataset = MapillarySLS()
     elif name == "pitts30k":
@@ -199,7 +208,9 @@ def get_loss_function(args):
     if args.loss_distance == "l2":
         return nn.TripletMarginLoss(args.margin, p=2, reduction="sum")
     elif args.loss_distance == "cosine":
-        return nn.TripletMarginWithDistanceLoss(distance_function=cosine_distance, margin=args.margin)
+        return nn.TripletMarginWithDistanceLoss(
+            distance_function=cosine_distance, margin=args.margin
+        )
 
 
 def get_config():

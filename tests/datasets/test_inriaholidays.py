@@ -64,7 +64,9 @@ def test_query_num_workers(inriaholidays):
 
 
 def test_query_preprocess(inriaholidays):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = inriaholidays.query_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -74,7 +76,9 @@ def test_query_preprocess(inriaholidays):
 
 
 def test_map_preprocess(inriaholidays):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = inriaholidays.map_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -97,7 +101,9 @@ def test_gt_minrange(inriaholidays):
     assert inriaholidays.ground_truth()[0].dtype == int
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_query_pin_memory(inriaholidays):
     loader = inriaholidays.query_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:
@@ -105,7 +111,9 @@ def test_query_pin_memory(inriaholidays):
         break
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_map_pin_memory(inriaholidays):
     loader = inriaholidays.map_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:

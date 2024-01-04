@@ -64,7 +64,9 @@ def test_query_num_workers(sfu):
 
 
 def test_query_preprocess(sfu):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = sfu.query_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -74,7 +76,9 @@ def test_query_preprocess(sfu):
 
 
 def test_map_preprocess(sfu):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = sfu.map_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -97,7 +101,9 @@ def test_gt_minrange(sfu):
     assert sfu.ground_truth()[0].dtype == int
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_query_pin_memory(sfu):
     loader = sfu.query_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:
@@ -105,7 +111,9 @@ def test_query_pin_memory(sfu):
         break
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_map_pin_memory(sfu):
     loader = sfu.map_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:

@@ -24,8 +24,18 @@ class ESSEX3IN1(BaseDataset):
 
         self.root = join(config["datasets_directory"], "ESSEX3IN1_dataset")
 
-        self.map_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "ESSEX_dbImages.npy"))])
-        self.query_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "ESSEX_qImages.npy"))])
+        self.map_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "ESSEX_dbImages.npy"))
+            ]
+        )
+        self.query_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "ESSEX_qImages.npy"))
+            ]
+        )
         self.gt = np.load(join(self.root, "ESSEX_gt.npy"), allow_pickle=True)
         self.name = "essex3in1"
 

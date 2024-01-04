@@ -40,6 +40,7 @@ def nordlands():
 def pitts30k():
     return Datasets.Pitts30k()
 
+
 @pytest.fixture
 def pitts250k():
     return Datasets.Pitts250k()

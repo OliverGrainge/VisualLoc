@@ -66,7 +66,9 @@ class HybridNetModel(nn.Module):
         self.pool6 = nn.MaxPool2d(kernel_size=3, stride=2)
 
         # FC7
-        self.fc7_new = nn.Linear(256 * 6 * 6, 4096)  # Assuming the spatial size is 6x6 after the pooling layers
+        self.fc7_new = nn.Linear(
+            256 * 6 * 6, 4096
+        )  # Assuming the spatial size is 6x6 after the pooling layers
         init.normal_(self.fc7_new.weight, std=0.005)
         init.constant_(self.fc7_new.bias, 1)
         self.relu7 = nn.ReLU(inplace=True)
@@ -153,7 +155,9 @@ model = HybridNetModel()
 
 
 try:
-    mean_image = torch.Tensor(np.load(join(config["weights_directory"], "hybridnet_mean.npy")))
+    mean_image = torch.Tensor(
+        np.load(join(config["weights_directory"], "hybridnet_mean.npy"))
+    )
 except:
     mean_image = 0
 
@@ -182,9 +186,15 @@ else:
 class HybridNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
-            if not os.path.exists(join(config["weights_directory"], "HybridNet.caffemodel.pt")):
-                raise Exception(f'Could not find weights at {join(config["weights_directory"], "HybridNet.caffemodel.pt")}')
-            model.load_state_dict(torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt")))
+            if not os.path.exists(
+                join(config["weights_directory"], "HybridNet.caffemodel.pt")
+            ):
+                raise Exception(
+                    f'Could not find weights at {join(config["weights_directory"], "HybridNet.caffemodel.pt")}'
+                )
+            model.load_state_dict(
+                torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
+            )
         super().__init__(model=model, preprocess=preprocess, name="hybridnet")
         # hybridnet layers not implemented on metal
         # some layers not implemented on metal
@@ -194,6 +204,6 @@ class HybridNet(BaseModelWrapper):
 
     def set_device(self, device: str) -> None:
         if "mps" in device:
-            device = "cpu" 
+            device = "cpu"
         self.device = device
         self.model.to(device)

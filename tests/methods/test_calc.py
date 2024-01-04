@@ -11,6 +11,7 @@ from PlaceRec.utils import get_config
 
 config = get_config()
 
+
 def test_name(calc):
     assert isinstance(calc.name, str)
     assert calc.name.islower()
@@ -91,7 +92,9 @@ def test_compute_map_desc(dataset, calc):
     assert desc.shape[1] == calc.features_dim
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU"
+)
 def test_cuda_acceleration(dataset, calc):
     calc.set_device("cuda")
     dataloader = dataset.map_images_loader(batch_size=1, preprocess=calc.preprocess)
@@ -101,7 +104,10 @@ def test_cuda_acceleration(dataset, calc):
     desc = calc.compute_map_desc(dataloader=dataloader, pbar=False)
 
 
-@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="Full training tests require a apple GPU")
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="Full training tests require a apple GPU",
+)
 def test_mps_acceleration(dataset, calc):
     calc.set_device("mps")
     dataloader = dataset.map_images_loader(batch_size=1, preprocess=calc.preprocess)
@@ -110,6 +116,10 @@ def test_mps_acceleration(dataset, calc):
     dataloader = DataLoader(dataset, batch_size=1)
     desc = calc.compute_map_desc(dataloader=dataloader, pbar=False)
 
-@pytest.mark.skipif(not os.path.exists(config["weights_directory"]), reason="Full training tests require downloaded weights")
+
+@pytest.mark.skipif(
+    not os.path.exists(config["weights_directory"]),
+    reason="Full training tests require downloaded weights",
+)
 def test_loading_weights():
     obj = Methods.CALC(pretrained=True)

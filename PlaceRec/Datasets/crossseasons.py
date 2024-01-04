@@ -21,12 +21,24 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 
 class CrossSeason(BaseDataset):
     def __init__(self):
-        if not os.path.isdir(join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")):
+        if not os.path.isdir(
+            join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")
+        ):
             raise Exception("Pitts30k Not Downloaded")
 
         self.root = join(config["datasets_directory"], "CrossSeason_CoHOG_Dataset")
-        self.map_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "CrossSeason_dbImages.npy"))])
-        self.query_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "CrossSeason_qImages.npy"))])
+        self.map_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "CrossSeason_dbImages.npy"))
+            ]
+        )
+        self.query_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "CrossSeason_qImages.npy"))
+            ]
+        )
         self.gt = np.load(join(self.root, "CrossSeason_gt.npy"), allow_pickle=True)
 
         self.name = "crossseasons"

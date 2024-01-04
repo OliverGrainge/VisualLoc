@@ -67,7 +67,9 @@ def test_load_descriptors(amosnet):
 
 
 def test_compute_query_desc(dataset, amosnet):
-    dataloader = dataset.query_images_loader(batch_size=1, preprocess=amosnet.preprocess)
+    dataloader = dataset.query_images_loader(
+        batch_size=1, preprocess=amosnet.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -92,7 +94,9 @@ def test_compute_map_desc(dataset, amosnet):
     assert desc.shape[1] == amosnet.features_dim
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU"
+)
 def test_cuda_acceleration(dataset, amosnet):
     amosnet.set_device("cuda")
     dataloader = dataset.map_images_loader(batch_size=1, preprocess=amosnet.preprocess)
@@ -102,7 +106,10 @@ def test_cuda_acceleration(dataset, amosnet):
     desc = amosnet.compute_map_desc(dataloader=dataloader, pbar=False)
 
 
-@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="Full training tests require a apple GPU")
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="Full training tests require a apple GPU",
+)
 def test_mps_acceleration(dataset, amosnet):
     amosnet.set_device("mps")
     dataloader = dataset.map_images_loader(batch_size=1, preprocess=amosnet.preprocess)
@@ -112,9 +119,9 @@ def test_mps_acceleration(dataset, amosnet):
     desc = amosnet.compute_map_desc(dataloader=dataloader, pbar=False)
 
 
-
-@pytest.mark.skipif(not os.path.exists(config["weights_directory"]), reason="Full training tests require downloaded weights")
+@pytest.mark.skipif(
+    not os.path.exists(config["weights_directory"]),
+    reason="Full training tests require downloaded weights",
+)
 def test_loading_weights():
     obj = Methods.AmosNet(pretrained=True)
-
-

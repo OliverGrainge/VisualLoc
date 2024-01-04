@@ -86,7 +86,9 @@ class CCT(nn.Module):
         )
 
         self.classifier = TransformerClassifier(
-            sequence_length=self.tokenizer.sequence_length(n_channels=n_input_channels, height=img_size, width=img_size),
+            sequence_length=self.tokenizer.sequence_length(
+                n_channels=n_input_channels, height=img_size, width=img_size
+            ),
             embedding_dim=embedding_dim,
             seq_pool=True,
             dropout=dropout,
@@ -109,7 +111,9 @@ class CCT(nn.Module):
         if self.aggregation == "cls":
             return x[:, 0]
         elif self.aggregation == "seqpool":
-            x = torch.matmul(F.softmax(self.classifier.attention_pool(x), dim=1).transpose(-1, -2), x).squeeze(-2)
+            x = torch.matmul(
+                F.softmax(self.classifier.attention_pool(x), dim=1).transpose(-1, -2), x
+            ).squeeze(-2)
             return x
         else:
             # x = x.permute(0, 2, 1)
@@ -157,27 +161,91 @@ def _cct(
 
 
 def cct_2(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=2, num_heads=2, mlp_ratio=1, embedding_dim=128, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=2,
+        num_heads=2,
+        mlp_ratio=1,
+        embedding_dim=128,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 def cct_4(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=4, num_heads=2, mlp_ratio=1, embedding_dim=128, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=4,
+        num_heads=2,
+        mlp_ratio=1,
+        embedding_dim=128,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 def cct_6(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=6, num_heads=4, mlp_ratio=2, embedding_dim=256, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=6,
+        num_heads=4,
+        mlp_ratio=2,
+        embedding_dim=256,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 def cct_7(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=7, num_heads=4, mlp_ratio=2, embedding_dim=256, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=7,
+        num_heads=4,
+        mlp_ratio=2,
+        embedding_dim=256,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 def cct_14(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=14, num_heads=6, mlp_ratio=3, embedding_dim=384, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=14,
+        num_heads=6,
+        mlp_ratio=3,
+        embedding_dim=384,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 @register_model
-def cct_2_3x2_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_2_3x2_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_2(
         "cct_2_3x2_32",
         pretrained,
@@ -194,7 +262,16 @@ def cct_2_3x2_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_2_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_2_3x2_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_2(
         "cct_2_3x2_32_sine",
         pretrained,
@@ -211,7 +288,16 @@ def cct_2_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 
 @register_model
-def cct_4_3x2_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_4_3x2_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_4(
         "cct_4_3x2_32",
         pretrained,
@@ -228,7 +314,16 @@ def cct_4_3x2_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_4_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_4_3x2_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_4(
         "cct_4_3x2_32_sine",
         pretrained,
@@ -245,7 +340,16 @@ def cct_4_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 
 @register_model
-def cct_6_3x1_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_6_3x1_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_6(
         "cct_6_3x1_32",
         pretrained,
@@ -262,7 +366,16 @@ def cct_6_3x1_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_6_3x1_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_6_3x1_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_6(
         "cct_6_3x1_32_sine",
         pretrained,
@@ -279,7 +392,16 @@ def cct_6_3x1_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 
 @register_model
-def cct_6_3x2_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_6_3x2_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_6(
         "cct_6_3x2_32",
         pretrained,
@@ -296,7 +418,16 @@ def cct_6_3x2_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_6_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_6_3x2_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_6(
         "cct_6_3x2_32_sine",
         pretrained,
@@ -313,7 +444,16 @@ def cct_6_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 
 @register_model
-def cct_7_3x1_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_7_3x1_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_7(
         "cct_7_3x1_32",
         pretrained,
@@ -330,7 +470,16 @@ def cct_7_3x1_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_7_3x1_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_7_3x1_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_7(
         "cct_7_3x1_32_sine",
         pretrained,
@@ -348,7 +497,14 @@ def cct_7_3x1_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 @register_model
 def cct_7_3x1_32_c100(
-    pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=100, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=100,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_7(
         "cct_7_3x1_32_c100",
@@ -367,7 +523,14 @@ def cct_7_3x1_32_c100(
 
 @register_model
 def cct_7_3x1_32_sine_c100(
-    pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=100, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=100,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_7(
         "cct_7_3x1_32_sine_c100",
@@ -385,7 +548,16 @@ def cct_7_3x1_32_sine_c100(
 
 
 @register_model
-def cct_7_3x2_32(pretrained=False, progress=False, img_size=32, positional_embedding="learnable", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_7_3x2_32(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="learnable",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_7(
         "cct_7_3x2_32",
         pretrained,
@@ -402,7 +574,16 @@ def cct_7_3x2_32(pretrained=False, progress=False, img_size=32, positional_embed
 
 
 @register_model
-def cct_7_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_embedding="sine", num_classes=10, aggregation=None, *args, **kwargs):
+def cct_7_3x2_32_sine(
+    pretrained=False,
+    progress=False,
+    img_size=32,
+    positional_embedding="sine",
+    num_classes=10,
+    aggregation=None,
+    *args,
+    **kwargs,
+):
     return cct_7(
         "cct_7_3x2_32_sine",
         pretrained,
@@ -420,7 +601,14 @@ def cct_7_3x2_32_sine(pretrained=False, progress=False, img_size=32, positional_
 
 @register_model
 def cct_7_7x2_224(
-    pretrained=False, progress=False, img_size=224, positional_embedding="learnable", num_classes=102, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=224,
+    positional_embedding="learnable",
+    num_classes=102,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_7(
         "cct_7_7x2_224",
@@ -439,7 +627,14 @@ def cct_7_7x2_224(
 
 @register_model
 def cct_7_7x2_224_sine(
-    pretrained=False, progress=False, img_size=224, positional_embedding="sine", num_classes=102, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=224,
+    positional_embedding="sine",
+    num_classes=102,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_7(
         "cct_7_7x2_224_sine",
@@ -458,7 +653,14 @@ def cct_7_7x2_224_sine(
 
 @register_model
 def cct_14_7x2_224(
-    pretrained=False, progress=False, img_size=224, positional_embedding="learnable", num_classes=1000, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=224,
+    positional_embedding="learnable",
+    num_classes=1000,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_14(
         "cct_14_7x2_224",
@@ -477,7 +679,14 @@ def cct_14_7x2_224(
 
 @register_model
 def cct_14_7x2_384(
-    pretrained=False, progress=False, img_size=384, positional_embedding="learnable", num_classes=1000, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=384,
+    positional_embedding="learnable",
+    num_classes=1000,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_14(
         "cct_14_7x2_384",
@@ -496,7 +705,14 @@ def cct_14_7x2_384(
 
 @register_model
 def cct_14_7x2_384_fl(
-    pretrained=False, progress=False, img_size=384, positional_embedding="learnable", num_classes=102, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=384,
+    positional_embedding="learnable",
+    num_classes=102,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_14(
         "cct_14_7x2_384_fl",
@@ -514,7 +730,16 @@ def cct_14_7x2_384_fl(
 
 
 class Embedder(nn.Module):
-    def __init__(self, word_embedding_dim=300, vocab_size=100000, padding_idx=1, pretrained_weight=None, embed_freeze=False, *args, **kwargs):
+    def __init__(
+        self,
+        word_embedding_dim=300,
+        vocab_size=100000,
+        padding_idx=1,
+        pretrained_weight=None,
+        embed_freeze=False,
+        *args,
+        **kwargs,
+    ):
         super(Embedder, self).__init__()
         self.embeddings = (
             nn.Embedding.from_pretrained(pretrained_weight, freeze=embed_freeze)
@@ -532,7 +757,11 @@ class Embedder(nn.Module):
 
     def forward(self, x, mask=None):
         embed = self.embeddings(x)
-        embed = embed if mask is None else embed * self.forward_mask(mask).unsqueeze(-1).float()
+        embed = (
+            embed
+            if mask is None
+            else embed * self.forward_mask(mask).unsqueeze(-1).float()
+        )
         return embed, mask
 
     @staticmethod
@@ -566,9 +795,17 @@ def resize_pos_embed(posemb, posemb_new, num_tokens=1):
 
 
 def pe_check(model, state_dict, pe_key="classifier.positional_emb"):
-    if pe_key is not None and pe_key in state_dict.keys() and pe_key in model.state_dict().keys():
+    if (
+        pe_key is not None
+        and pe_key in state_dict.keys()
+        and pe_key in model.state_dict().keys()
+    ):
         if model.state_dict()[pe_key].shape != state_dict[pe_key].shape:
-            state_dict[pe_key] = resize_pos_embed(state_dict[pe_key], model.state_dict()[pe_key], num_tokens=model.classifier.num_tokens)
+            state_dict[pe_key] = resize_pos_embed(
+                state_dict[pe_key],
+                model.state_dict()[pe_key],
+                num_tokens=model.classifier.num_tokens,
+            )
     return state_dict
 
 
@@ -585,7 +822,9 @@ def drop_path(x, drop_prob: float = 0.0, training: bool = False):
     if drop_prob == 0.0 or not training:
         return x
     keep_prob = 1 - drop_prob
-    shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # work with diff dim tensors, not just 2D ConvNets
+    shape = (x.shape[0],) + (1,) * (
+        x.ndim - 1
+    )  # work with diff dim tensors, not just 2D ConvNets
     random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
     random_tensor.floor_()  # binarize
     output = x.div(keep_prob) * random_tensor
@@ -625,7 +864,11 @@ class Tokenizer(nn.Module):
     ):
         super(Tokenizer, self).__init__()
 
-        n_filter_list = [n_input_channels] + [in_planes for _ in range(n_conv_layers - 1)] + [n_output_channels]
+        n_filter_list = (
+            [n_input_channels]
+            + [in_planes for _ in range(n_conv_layers - 1)]
+            + [n_output_channels]
+        )
 
         self.conv_layers = nn.Sequential(
             *[
@@ -639,7 +882,13 @@ class Tokenizer(nn.Module):
                         bias=conv_bias,
                     ),
                     nn.Identity() if activation is None else activation(),
-                    nn.MaxPool2d(kernel_size=pooling_kernel_size, stride=pooling_stride, padding=pooling_padding) if max_pool else nn.Identity(),
+                    nn.MaxPool2d(
+                        kernel_size=pooling_kernel_size,
+                        stride=pooling_stride,
+                        padding=pooling_padding,
+                    )
+                    if max_pool
+                    else nn.Identity(),
                 )
                 for i in range(n_conv_layers)
             ]
@@ -680,9 +929,20 @@ class TextTokenizer(nn.Module):
 
         self.max_pool = max_pool
         self.conv_layers = nn.Sequential(
-            nn.Conv2d(1, n_output_channels, kernel_size=(kernel_size, embedding_dim), stride=(stride, 1), padding=(padding, 0), bias=False),
+            nn.Conv2d(
+                1,
+                n_output_channels,
+                kernel_size=(kernel_size, embedding_dim),
+                stride=(stride, 1),
+                padding=(padding, 0),
+                bias=False,
+            ),
             nn.Identity() if activation is None else activation(),
-            nn.MaxPool2d(kernel_size=(pooling_kernel_size, 1), stride=(pooling_stride, 1), padding=(pooling_padding, 0))
+            nn.MaxPool2d(
+                kernel_size=(pooling_kernel_size, 1),
+                stride=(pooling_stride, 1),
+                padding=(pooling_padding, 0),
+            )
             if max_pool
             else nn.Identity(),
         )
@@ -694,11 +954,29 @@ class TextTokenizer(nn.Module):
 
     def forward_mask(self, mask):
         new_mask = mask.unsqueeze(1).float()
-        cnn_weight = torch.ones((1, 1, self.conv_layers[0].kernel_size[0]), device=mask.device, dtype=torch.float)
-        new_mask = F.conv1d(new_mask, cnn_weight, None, self.conv_layers[0].stride[0], self.conv_layers[0].padding[0], 1, 1)
+        cnn_weight = torch.ones(
+            (1, 1, self.conv_layers[0].kernel_size[0]),
+            device=mask.device,
+            dtype=torch.float,
+        )
+        new_mask = F.conv1d(
+            new_mask,
+            cnn_weight,
+            None,
+            self.conv_layers[0].stride[0],
+            self.conv_layers[0].padding[0],
+            1,
+            1,
+        )
         if self.max_pool:
             new_mask = F.max_pool1d(
-                new_mask, self.conv_layers[2].kernel_size[0], self.conv_layers[2].stride[0], self.conv_layers[2].padding[0], 1, False, False
+                new_mask,
+                self.conv_layers[2].kernel_size[0],
+                self.conv_layers[2].stride[0],
+                self.conv_layers[2].padding[0],
+                1,
+                False,
+                False,
             )
         new_mask = new_mask.squeeze(1)
         new_mask = new_mask > 0
@@ -735,7 +1013,11 @@ class Attention(nn.Module):
 
     def forward(self, x):
         B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv = (
+            self.qkv(x)
+            .reshape(B, N, 3, self.num_heads, C // self.num_heads)
+            .permute(2, 0, 3, 1, 4)
+        )
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
@@ -762,7 +1044,11 @@ class MaskedAttention(Module):
 
     def forward(self, x, mask=None):
         B, N, C = x.shape
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        qkv = (
+            self.qkv(x)
+            .reshape(B, N, 3, self.num_heads, C // self.num_heads)
+            .permute(2, 0, 3, 1, 4)
+        )
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q @ k.transpose(-2, -1)) * self.scale
@@ -788,10 +1074,23 @@ class TransformerEncoderLayer(Module):
     Inspired by torch.nn.TransformerEncoderLayer and timm.
     """
 
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, attention_dropout=0.1, drop_path_rate=0.1):
+    def __init__(
+        self,
+        d_model,
+        nhead,
+        dim_feedforward=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        drop_path_rate=0.1,
+    ):
         super(TransformerEncoderLayer, self).__init__()
         self.pre_norm = LayerNorm(d_model)
-        self.self_attn = Attention(dim=d_model, num_heads=nhead, attention_dropout=attention_dropout, projection_dropout=dropout)
+        self.self_attn = Attention(
+            dim=d_model,
+            num_heads=nhead,
+            attention_dropout=attention_dropout,
+            projection_dropout=dropout,
+        )
 
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout1 = Dropout(dropout)
@@ -816,10 +1115,23 @@ class MaskedTransformerEncoderLayer(Module):
     Inspired by torch.nn.TransformerEncoderLayer and timm.
     """
 
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1, attention_dropout=0.1, drop_path_rate=0.1):
+    def __init__(
+        self,
+        d_model,
+        nhead,
+        dim_feedforward=2048,
+        dropout=0.1,
+        attention_dropout=0.1,
+        drop_path_rate=0.1,
+    ):
         super(MaskedTransformerEncoderLayer, self).__init__()
         self.pre_norm = LayerNorm(d_model)
-        self.self_attn = MaskedAttention(dim=d_model, num_heads=nhead, attention_dropout=attention_dropout, projection_dropout=dropout)
+        self.self_attn = MaskedAttention(
+            dim=d_model,
+            num_heads=nhead,
+            attention_dropout=attention_dropout,
+            projection_dropout=dropout,
+        )
 
         self.linear1 = Linear(d_model, dim_feedforward)
         self.dropout1 = Dropout(dropout)
@@ -855,28 +1167,40 @@ class TransformerClassifier(Module):
         sequence_length=None,
     ):
         super().__init__()
-        positional_embedding = positional_embedding if positional_embedding in ["sine", "learnable", "none"] else "sine"
+        positional_embedding = (
+            positional_embedding
+            if positional_embedding in ["sine", "learnable", "none"]
+            else "sine"
+        )
         dim_feedforward = int(embedding_dim * mlp_ratio)
         self.embedding_dim = embedding_dim
         self.sequence_length = sequence_length
         self.seq_pool = seq_pool
 
         assert sequence_length is not None or positional_embedding == "none", (
-            f"Positional embedding is set to {positional_embedding} and" f" the sequence length was not specified."
+            f"Positional embedding is set to {positional_embedding} and"
+            f" the sequence length was not specified."
         )
 
         if not seq_pool:
             sequence_length += 1
-            self.class_emb = Parameter(torch.zeros(1, 1, self.embedding_dim), requires_grad=True)
+            self.class_emb = Parameter(
+                torch.zeros(1, 1, self.embedding_dim), requires_grad=True
+            )
         else:
             self.attention_pool = Linear(self.embedding_dim, 1)
 
         if positional_embedding != "none":
             if positional_embedding == "learnable":
-                self.positional_emb = Parameter(torch.zeros(1, sequence_length, embedding_dim), requires_grad=True)
+                self.positional_emb = Parameter(
+                    torch.zeros(1, sequence_length, embedding_dim), requires_grad=True
+                )
                 init.trunc_normal_(self.positional_emb, std=0.2)
             else:
-                self.positional_emb = Parameter(self.sinusoidal_embedding(sequence_length, embedding_dim), requires_grad=False)
+                self.positional_emb = Parameter(
+                    self.sinusoidal_embedding(sequence_length, embedding_dim),
+                    requires_grad=False,
+                )
         else:
             self.positional_emb = None
 
@@ -902,7 +1226,9 @@ class TransformerClassifier(Module):
 
     def forward(self, x):
         if self.positional_emb is None and x.size(1) < self.sequence_length:
-            x = F.pad(x, (0, 0, 0, self.n_channels - x.size(1)), mode="constant", value=0)
+            x = F.pad(
+                x, (0, 0, 0, self.n_channels - x.size(1)), mode="constant", value=0
+            )
 
         if not self.seq_pool:
             cls_token = self.class_emb.expand(x.shape[0], -1, -1)
@@ -936,7 +1262,12 @@ class TransformerClassifier(Module):
 
     @staticmethod
     def sinusoidal_embedding(n_channels, dim):
-        pe = torch.FloatTensor([[p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)] for p in range(n_channels)])
+        pe = torch.FloatTensor(
+            [
+                [p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)]
+                for p in range(n_channels)
+            ]
+        )
         pe[:, 0::2] = torch.sin(pe[:, 0::2])
         pe[:, 1::2] = torch.cos(pe[:, 1::2])
         return pe.unsqueeze(0)
@@ -960,29 +1291,41 @@ class MaskedTransformerClassifier(Module):
         **kwargs,
     ):
         super().__init__()
-        positional_embedding = positional_embedding if positional_embedding in ["sine", "learnable", "none"] else "sine"
+        positional_embedding = (
+            positional_embedding
+            if positional_embedding in ["sine", "learnable", "none"]
+            else "sine"
+        )
         dim_feedforward = int(embedding_dim * mlp_ratio)
         self.embedding_dim = embedding_dim
         self.seq_len = seq_len
         self.seq_pool = seq_pool
 
         assert seq_len is not None or positional_embedding == "none", (
-            f"Positional embedding is set to {positional_embedding} and" f" the sequence length was not specified."
+            f"Positional embedding is set to {positional_embedding} and"
+            f" the sequence length was not specified."
         )
 
         if not seq_pool:
             seq_len += 1
-            self.class_emb = Parameter(torch.zeros(1, 1, self.embedding_dim), requires_grad=True)
+            self.class_emb = Parameter(
+                torch.zeros(1, 1, self.embedding_dim), requires_grad=True
+            )
         else:
             self.attention_pool = Linear(self.embedding_dim, 1)
 
         if positional_embedding != "none":
             if positional_embedding == "learnable":
                 seq_len += 1  # padding idx
-                self.positional_emb = Parameter(torch.zeros(1, seq_len, embedding_dim), requires_grad=True)
+                self.positional_emb = Parameter(
+                    torch.zeros(1, seq_len, embedding_dim), requires_grad=True
+                )
                 init.trunc_normal_(self.positional_emb, std=0.2)
             else:
-                self.positional_emb = Parameter(self.sinusoidal_embedding(seq_len, embedding_dim, padding_idx=True), requires_grad=False)
+                self.positional_emb = Parameter(
+                    self.sinusoidal_embedding(seq_len, embedding_dim, padding_idx=True),
+                    requires_grad=False,
+                )
         else:
             self.positional_emb = None
 
@@ -1008,13 +1351,21 @@ class MaskedTransformerClassifier(Module):
 
     def forward(self, x, mask=None):
         if self.positional_emb is None and x.size(1) < self.seq_len:
-            x = F.pad(x, (0, 0, 0, self.n_channels - x.size(1)), mode="constant", value=0)
+            x = F.pad(
+                x, (0, 0, 0, self.n_channels - x.size(1)), mode="constant", value=0
+            )
 
         if not self.seq_pool:
             cls_token = self.class_emb.expand(x.shape[0], -1, -1)
             x = torch.cat((cls_token, x), dim=1)
             if mask is not None:
-                mask = torch.cat([torch.ones(size=(mask.shape[0], 1), device=mask.device), mask.float()], dim=1)
+                mask = torch.cat(
+                    [
+                        torch.ones(size=(mask.shape[0], 1), device=mask.device),
+                        mask.float(),
+                    ],
+                    dim=1,
+                )
                 mask = mask > 0
 
         if self.positional_emb is not None:
@@ -1027,7 +1378,9 @@ class MaskedTransformerClassifier(Module):
         x = self.norm(x)
 
         if self.seq_pool:
-            x = torch.matmul(F.softmax(self.attention_pool(x), dim=1).transpose(-1, -2), x).squeeze(-2)
+            x = torch.matmul(
+                F.softmax(self.attention_pool(x), dim=1).transpose(-1, -2), x
+            ).squeeze(-2)
         else:
             x = x[:, 0]
 
@@ -1046,7 +1399,12 @@ class MaskedTransformerClassifier(Module):
 
     @staticmethod
     def sinusoidal_embedding(n_channels, dim, padding_idx=False):
-        pe = torch.FloatTensor([[p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)] for p in range(n_channels)])
+        pe = torch.FloatTensor(
+            [
+                [p / (10000 ** (2 * (i // 2) / dim)) for i in range(dim)]
+                for p in range(n_channels)
+            ]
+        )
         pe[:, 0::2] = torch.sin(pe[:, 0::2])
         pe[:, 1::2] = torch.cos(pe[:, 1::2])
         pe = pe.unsqueeze(0)
@@ -1058,7 +1416,9 @@ class MaskedTransformerClassifier(Module):
 class NetVLAD(nn.Module):
     """NetVLAD layer implementation"""
 
-    def __init__(self, clusters_num=64, dim=128, normalize_input=True, work_with_tokens=False):
+    def __init__(
+        self, clusters_num=64, dim=128, normalize_input=True, work_with_tokens=False
+    ):
         """
         Args:
             clusters_num : int
@@ -1091,9 +1451,15 @@ class NetVLAD(nn.Module):
         self.alpha = (-np.log(0.01) / np.mean(dots[0, :] - dots[1, :])).item()
         self.centroids = nn.Parameter(torch.from_numpy(centroids))
         if self.work_with_tokens:
-            self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha * centroids_assign).unsqueeze(2))
+            self.conv.weight = nn.Parameter(
+                torch.from_numpy(self.alpha * centroids_assign).unsqueeze(2)
+            )
         else:
-            self.conv.weight = nn.Parameter(torch.from_numpy(self.alpha * centroids_assign).unsqueeze(2).unsqueeze(3))
+            self.conv.weight = nn.Parameter(
+                torch.from_numpy(self.alpha * centroids_assign)
+                .unsqueeze(2)
+                .unsqueeze(3)
+            )
         self.conv.bias = None
 
     def forward(self, x):
@@ -1107,11 +1473,15 @@ class NetVLAD(nn.Module):
         x_flatten = x.view(N, D, -1)
         soft_assign = self.conv(x).view(N, self.clusters_num, -1)
         soft_assign = F.softmax(soft_assign, dim=1)
-        vlad = torch.zeros([N, self.clusters_num, D], dtype=x_flatten.dtype, device=x_flatten.device)
-        for D in range(self.clusters_num):  # Slower than non-looped, but lower memory usage
-            residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - self.centroids[D : D + 1, :].expand(x_flatten.size(-1), -1, -1).permute(
-                1, 2, 0
-            ).unsqueeze(0)
+        vlad = torch.zeros(
+            [N, self.clusters_num, D], dtype=x_flatten.dtype, device=x_flatten.device
+        )
+        for D in range(
+            self.clusters_num
+        ):  # Slower than non-looped, but lower memory usage
+            residual = x_flatten.unsqueeze(0).permute(1, 0, 2, 3) - self.centroids[
+                D : D + 1, :
+            ].expand(x_flatten.size(-1), -1, -1).permute(1, 2, 0).unsqueeze(0)
             residual = residual * soft_assign[:, D : D + 1, :].unsqueeze(2)
             vlad[:, D : D + 1, :] = residual.sum(dim=-1)
         vlad = F.normalize(vlad, p=2, dim=2)  # intra-normalization
@@ -1123,23 +1493,40 @@ class NetVLAD(nn.Module):
         descriptors_num = 50000
         descs_num_per_image = 100
         images_num = math.ceil(descriptors_num / descs_num_per_image)
-        random_sampler = SubsetRandomSampler(np.random.choice(len(cluster_ds), images_num, replace=False))
-        random_dl = DataLoader(dataset=cluster_ds, num_workers=args.num_workers, batch_size=args.infer_batch_size, sampler=random_sampler)
+        random_sampler = SubsetRandomSampler(
+            np.random.choice(len(cluster_ds), images_num, replace=False)
+        )
+        random_dl = DataLoader(
+            dataset=cluster_ds,
+            num_workers=args.num_workers,
+            batch_size=args.infer_batch_size,
+            sampler=random_sampler,
+        )
         with torch.no_grad():
             backbone = backbone.eval()
-            descriptors = np.zeros(shape=(descriptors_num, args.features_dim), dtype=np.float32)
+            descriptors = np.zeros(
+                shape=(descriptors_num, args.features_dim), dtype=np.float32
+            )
             for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100)):
                 inputs = inputs.to(args.device)
                 outputs = backbone(inputs)
                 norm_outputs = F.normalize(outputs, p=2, dim=1)
-                image_descriptors = norm_outputs.view(norm_outputs.shape[0], args.features_dim, -1).permute(0, 2, 1)
+                image_descriptors = norm_outputs.view(
+                    norm_outputs.shape[0], args.features_dim, -1
+                ).permute(0, 2, 1)
                 image_descriptors = image_descriptors.cpu().numpy()
                 batchix = iteration * args.infer_batch_size * descs_num_per_image
                 for ix in range(image_descriptors.shape[0]):
-                    sample = np.random.choice(image_descriptors.shape[1], descs_num_per_image, replace=False)
+                    sample = np.random.choice(
+                        image_descriptors.shape[1], descs_num_per_image, replace=False
+                    )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[startix : startix + descs_num_per_image, :] = image_descriptors[ix, sample, :]
-        kmeans = faiss.Kmeans(args.features_dim, self.clusters_num, niter=100, verbose=False)
+                    descriptors[
+                        startix : startix + descs_num_per_image, :
+                    ] = image_descriptors[ix, sample, :]
+        kmeans = faiss.Kmeans(
+            args.features_dim, self.clusters_num, niter=100, verbose=False
+        )
         kmeans.train(descriptors)
         self.init_params(kmeans.centroids, descriptors)
         self = self.to(args.device)
@@ -1157,12 +1544,30 @@ preprocess = transforms.Compose(
 
 
 def cct_8(arch, pretrained, progress, aggregation=None, *args, **kwargs):
-    return _cct(arch, pretrained, progress, num_layers=8, num_heads=6, mlp_ratio=3, embedding_dim=384, aggregation=aggregation, *args, **kwargs)
+    return _cct(
+        arch,
+        pretrained,
+        progress,
+        num_layers=8,
+        num_heads=6,
+        mlp_ratio=3,
+        embedding_dim=384,
+        aggregation=aggregation,
+        *args,
+        **kwargs,
+    )
 
 
 @register_model
 def cct_8_7x2_384(
-    pretrained=False, progress=False, img_size=384, positional_embedding="learnable", num_classes=1000, aggregation=None, *args, **kwargs
+    pretrained=False,
+    progress=False,
+    img_size=384,
+    positional_embedding="learnable",
+    num_classes=1000,
+    aggregation=None,
+    *args,
+    **kwargs,
 ):
     return cct_8(
         "cct_14_7x2_384",
@@ -1182,7 +1587,9 @@ def cct_8_7x2_384(
 class cct384_netvlad(nn.Module):
     def __init__(self):
         super().__init__()
-        self.backbone = cct_8_7x2_384(pretrained=False, progress=True, aggregation="netvlad")
+        self.backbone = cct_8_7x2_384(
+            pretrained=False, progress=True, aggregation="netvlad"
+        )
         self.aggregation = NetVLAD(clusters_num=64, dim=384, work_with_tokens=True)
 
     def forward(self, x):
@@ -1195,15 +1602,26 @@ class CCT384_NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = cct384_netvlad()
         if pretrained:
-            if not os.path.exists(join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth")):
-                raise Exception(f'Could not find weights at {join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth")}')
+            if not os.path.exists(
+                join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth")
+            ):
+                raise Exception(
+                    f'Could not find weights at {join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth")}'
+                )
             if torch.cuda.is_available():
-                state_dict = torch.load(join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth"))["model_state_dict"]
+                state_dict = torch.load(
+                    join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth")
+                )["model_state_dict"]
             else:
-                state_dict = torch.load(join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth"), map_location="cpu")["model_state_dict"]
+                state_dict = torch.load(
+                    join(config["weights_directory"], "msls_cct384tr8fz1_netvlad.pth"),
+                    map_location="cpu",
+                )["model_state_dict"]
 
             if list(state_dict.keys())[0].startswith("module"):
-                state_dict = OrderedDict({k.replace("module.", ""): v for (k, v) in state_dict.items()})
+                state_dict = OrderedDict(
+                    {k.replace("module.", ""): v for (k, v) in state_dict.items()}
+                )
             self.model.load_state_dict(state_dict)
 
         super().__init__(model=self.model, preprocess=preprocess, name="cct384_netvlad")

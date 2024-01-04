@@ -8,8 +8,9 @@ import numpy as np
 import torch
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 from PlaceRec.utils import get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -118,7 +119,9 @@ class BaseTechnique(ABC):
         pass
 
     @abstractmethod
-    def similarity_matrix(self, query_descriptors: np.ndarray, map_descriptors: np.ndarray) -> np.ndarray:
+    def similarity_matrix(
+        self, query_descriptors: np.ndarray, map_descriptors: np.ndarray
+    ) -> np.ndarray:
         """
         computes the similarity matrix using the cosine similarity metric. It returns
         a numpy matrix M. where M[i, j] determines how similar query i is to map image j.
@@ -242,7 +245,9 @@ class BaseFunctionality(BaseTechnique):
         dist, idx = self.map.search(query_desc, k)
         return idx, dist
 
-    def similarity_matrix(self, query_descriptors: dict, map_descriptors: np.ndarray) -> np.ndarray:
+    def similarity_matrix(
+        self, query_descriptors: dict, map_descriptors: np.ndarray
+    ) -> np.ndarray:
         """
         Compute the similarity matrix between query and map descriptors.
 
@@ -265,12 +270,22 @@ class BaseFunctionality(BaseTechnique):
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             os.makedirs(package_directory + "/descriptors/" + dataset_name)
         with open(
-            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
+            package_directory
+            + "/descriptors/"
+            + dataset_name
+            + "/"
+            + self.name
+            + "_query.pkl",
             "wb",
         ) as f:
             pickle.dump(self.query_desc, f)
         with open(
-            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
+            package_directory
+            + "/descriptors/"
+            + dataset_name
+            + "/"
+            + self.name
+            + "_map.pkl",
             "wb",
         ) as f:
             pickle.dump(self.map_desc, f)
@@ -288,12 +303,22 @@ class BaseFunctionality(BaseTechnique):
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
             raise Exception("Descriptor not yet computed for: " + dataset_name)
         with open(
-            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_query.pkl",
+            package_directory
+            + "/descriptors/"
+            + dataset_name
+            + "/"
+            + self.name
+            + "_query.pkl",
             "rb",
         ) as f:
             self.query_desc = pickle.load(f)
         with open(
-            package_directory + "/descriptors/" + dataset_name + "/" + self.name + "_map.pkl",
+            package_directory
+            + "/descriptors/"
+            + dataset_name
+            + "/"
+            + self.name
+            + "_map.pkl",
             "rb",
         ) as f:
             self.map_desc = pickle.load(f)
@@ -374,9 +399,13 @@ class BaseModelWrapper(BaseFunctionality):
             dict: A dictionary containing the computed query descriptors.
         """
 
-        all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
+        all_desc = np.empty(
+            (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
+        )
         with torch.no_grad():
-            for indicies, batch in tqdm(dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar):
+            for indicies, batch in tqdm(
+                dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar
+            ):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
@@ -400,9 +429,13 @@ class BaseModelWrapper(BaseFunctionality):
             dict: A dictionary containing the computed map descriptors.
         """
 
-        all_desc = np.empty((dataloader.dataset.__len__(), self.features_dim), dtype=np.float32)
+        all_desc = np.empty(
+            (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
+        )
         with torch.no_grad():
-            for indicies, batch in tqdm(dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar):
+            for indicies, batch in tqdm(
+                dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar
+            ):
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 

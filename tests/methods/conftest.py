@@ -40,6 +40,7 @@ def resnet50convap():
 def resnet34convap():
     return Methods.ResNet34ConvAP(pretrained=False)
 
+
 @pytest.fixture
 def cosplace():
     return Methods.CosPlace(pretrained=False)

@@ -67,10 +67,13 @@ for dataset_name in args.datasets:
         results_id = method_name + "_" + dataset_name
         method = get_method(method_name)
         method.load_descriptors(ds.name)
+        method.set_device(args.device)
 
         all_methods.append(method)
 
-        table_data["descriptor_bytes"] = method.query_desc.nbytes / method.query_desc.shape[0]
+        table_data["descriptor_bytes"] = (
+            method.query_desc.nbytes / method.query_desc.shape[0]
+        )
         table_data["descriptor_dim"] = method.query_desc.shape[1]
 
         if "count_flops" in args.metrics:
@@ -94,7 +97,9 @@ for dataset_name in args.datasets:
             table_data["cpu_latency"] = latency_cpu[method.name]
 
         if "average_precision" in args.metrics:
-            aupr[method.name] = average_precision(method=method, ground_truth=ground_truth)
+            aupr[method.name] = average_precision(
+                method=method, ground_truth=ground_truth
+            )
             table_data["average_precision"] = aupr[method.name]
 
         if "recall@1" in args.metrics:

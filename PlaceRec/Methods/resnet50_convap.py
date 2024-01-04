@@ -53,7 +53,9 @@ class ResNet(nn.Module):
 
         if "swsl" in model_name or "ssl" in model_name:
             # These are the semi supervised and weakly semi supervised weights from Facebook
-            self.model = torch.hub.load("facebookresearch/semi-supervised-ImageNet1K-models", model_name)
+            self.model = torch.hub.load(
+                "facebookresearch/semi-supervised-ImageNet1K-models", model_name
+            )
         else:
             if "resnext50" in model_name:
                 self.model = torchvision.models.resnext50_32x4d(weights=weights)
@@ -98,8 +100,12 @@ class ResNet(nn.Module):
         if "34" in model_name or "18" in model_name:
             out_channels = 512
 
-        self.out_channels = out_channels // 2 if self.model.layer4 is None else out_channels
-        self.out_channels = self.out_channels // 2 if self.model.layer3 is None else self.out_channels
+        self.out_channels = (
+            out_channels // 2 if self.model.layer4 is None else out_channels
+        )
+        self.out_channels = (
+            self.out_channels // 2 if self.model.layer3 is None else self.out_channels
+        )
 
     def forward(self, x):
         x = self.model.conv1(x)
@@ -127,7 +133,9 @@ class ConvAPModel(nn.Module):
 
     def __init__(self, in_channels, out_channels=512, s1=2, s2=2):
         super(ConvAPModel, self).__init__()
-        self.channel_pool = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True)
+        self.channel_pool = nn.Conv2d(
+            in_channels=in_channels, out_channels=out_channels, kernel_size=1, bias=True
+        )
         self.AAP = nn.AdaptiveAvgPool2d((s1, s2))
 
     def forward(self, x):
@@ -240,13 +248,17 @@ class VPRModel(pl.LightningModule):
 
         self.save_hyperparameters()  # write hyperparams into a file
 
-        self.batch_acc = []  # we will keep track of the % of trivial pairs/triplets at the loss level
+        self.batch_acc = (
+            []
+        )  # we will keep track of the % of trivial pairs/triplets at the loss level
 
         self.faiss_gpu = faiss_gpu
 
         # ----------------------------------
         # get the backbone and the aggregator
-        self.backbone = get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+        self.backbone = get_backbone(
+            backbone_arch, pretrained, layers_to_freeze, layers_to_crop
+        )
         self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
@@ -257,7 +269,6 @@ class VPRModel(pl.LightningModule):
 
 
 ######################################### CONVAP MODEL ########################################################
-
 
 
 # Note that images must be resized to 320x320
@@ -277,31 +288,46 @@ preprocess = transforms.Compose(
 class ResNet50ConvAP(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
-            if not os.path.exists(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")):
-                raise Exception(f'Could not find weights at {join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")}')
-            model = VPRModel(backbone_arch='resnet50', 
-                            layers_to_crop=[],
-                            agg_arch='ConvAP',
-                            agg_config={'in_channels': 2048,
-                                        'out_channels': 1024,
-                                        's1' : 2,
-                                        's2' : 2},
-                            )
+            if not os.path.exists(
+                join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
+            ):
+                raise Exception(
+                    f'Could not find weights at {join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")}'
+                )
+            model = VPRModel(
+                backbone_arch="resnet50",
+                layers_to_crop=[],
+                agg_arch="ConvAP",
+                agg_config={
+                    "in_channels": 2048,
+                    "out_channels": 1024,
+                    "s1": 2,
+                    "s2": 2,
+                },
+            )
             if not torch.cuda.is_available():
-                state_dict = torch.load(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"), map_location=torch.device("cpu"))
-            else: 
-                state_dict = torch.load(join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"))
+                state_dict = torch.load(
+                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"),
+                    map_location=torch.device("cpu"),
+                )
+            else:
+                state_dict = torch.load(
+                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
+                )
 
             model.load_state_dict(state_dict)
         else:
-            model = VPRModel(backbone_arch='resnet50', 
-                            layers_to_crop=[],
-                            agg_arch='ConvAP',
-                            agg_config={'in_channels': 2048,
-                                        'out_channels': 1024,
-                                        's1' : 2,
-                                        's2' : 2},
-                            )
+            model = VPRModel(
+                backbone_arch="resnet50",
+                layers_to_crop=[],
+                agg_arch="ConvAP",
+                agg_config={
+                    "in_channels": 2048,
+                    "out_channels": 1024,
+                    "s1": 2,
+                    "s2": 2,
+                },
+            )
 
         super().__init__(model=model, preprocess=preprocess, name="resnet50convap")
 
@@ -313,6 +339,6 @@ class ResNet50ConvAP(BaseModelWrapper):
 
     def set_device(self, device: str) -> None:
         if "mps" in device:
-            device = "cpu" 
+            device = "cpu"
         self.device = device
         self.model.to(device)

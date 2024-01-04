@@ -21,8 +21,12 @@ class SFU(BaseDataset):
         if not os.path.isdir(join(config["datasets_directory"], "SFU")):
             raise Exception("SFU is not Downloaded")
 
-        self.map_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/SFU/dry/*.jpg"))))
-        self.query_paths = np.array(sorted(glob(join(config["datasets_directory"] + "/SFU/jan/*.jpg"))))
+        self.map_paths = np.array(
+            sorted(glob(join(config["datasets_directory"] + "/SFU/dry/*.jpg")))
+        )
+        self.query_paths = np.array(
+            sorted(glob(join(config["datasets_directory"] + "/SFU/jan/*.jpg")))
+        )
 
         self.name = "sfu"
 

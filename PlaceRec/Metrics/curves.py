@@ -11,7 +11,9 @@ def pr_curve(method, ground_truth: list, n_thresh=100):
     Return the precision and recalls over a number of thesholds
     """
     preds, dist = method.place_recognise(query_desc=method.query_desc, k=1)
-    ground_truth = np.array([1 if set(p).intersection(set(gt)) else 0 for p, gt in zip(preds, ground_truth)])
+    ground_truth = np.array(
+        [1 if set(p).intersection(set(gt)) else 0 for p, gt in zip(preds, ground_truth)]
+    )
     similarity = preds.flatten()
     ground_truth = ground_truth.astype("bool")
 
@@ -34,7 +36,6 @@ def pr_curve(method, ground_truth: list, n_thresh=100):
         P.append(TP / (TP + FP))  # precision
         R.append(TP / GTP)  # recall
     return np.array(P), np.array(R)
-
 
 
 def plot_pr_curve(
@@ -70,7 +71,14 @@ def plot_pr_curve(
     return ax
 
 
-def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str, show: bool = True, metric_name="no_name_given"):
+def plot_metric(
+    methods: list,
+    scores: np.ndarray,
+    dataset_name: str,
+    title: str,
+    show: bool = True,
+    metric_name="no_name_given",
+):
     fig, ax = plt.subplots()
     bars = ax.bar(methods, scores)
     plt.xticks(rotation=45)
@@ -81,7 +89,15 @@ def plot_metric(methods: list, scores: np.ndarray, dataset_name: str, title: str
     # Add legend as text annotation to each bar
     for bar, method, score in zip(bars, methods, scores):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, height + 0.02, f"{method}={score:.2f}", ha="center", va="bottom", rotation=0, fontsize=8)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            height + 0.02,
+            f"{method}={score:.2f}",
+            ha="center",
+            va="bottom",
+            rotation=0,
+            fontsize=8,
+        )
 
     pth = os.getcwd() + "/Plots/PlaceRec/" + metric_name
     if not os.path.exists(pth):

@@ -22,7 +22,11 @@ class GeM(nn.Module):
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1))).pow(1.0 / self.p).view(x.shape[0], -1)
+        return (
+            F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1)))
+            .pow(1.0 / self.p)
+            .view(x.shape[0], -1)
+        )
 
 
 class Resnet50gemModel(nn.Module):
@@ -52,7 +56,9 @@ class ResNet50GeM(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = Resnet50gemModel()
         if pretrained:
-            weights_pth = os.path.join(config["weights_directory"], "t2_msls_r50l3_gem.pth")
+            weights_pth = os.path.join(
+                config["weights_directory"], "t2_msls_r50l3_gem.pth"
+            )
             if not os.path.exists(weights_pth):
                 raise Exception(f"Could not find weights at {weights_pth}")
             model.load_state_dict(torch.load(weights_pth))

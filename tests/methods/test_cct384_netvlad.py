@@ -12,7 +12,6 @@ from PlaceRec.utils import get_config
 config = get_config()
 
 
-
 def test_name(cct_netvlad):
     assert isinstance(cct_netvlad.name, str)
     assert cct_netvlad.name.islower()
@@ -68,7 +67,9 @@ def test_load_descriptors(cct_netvlad):
 
 
 def test_compute_query_desc(dataset, cct_netvlad):
-    dataloader = dataset.query_images_loader(batch_size=1, preprocess=cct_netvlad.preprocess)
+    dataloader = dataset.query_images_loader(
+        batch_size=1, preprocess=cct_netvlad.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -80,7 +81,9 @@ def test_compute_query_desc(dataset, cct_netvlad):
 
 
 def test_compute_map_desc(dataset, cct_netvlad):
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=cct_netvlad.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=cct_netvlad.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -93,27 +96,38 @@ def test_compute_map_desc(dataset, cct_netvlad):
     assert desc.shape[1] == cct_netvlad.features_dim
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU"
+)
 def test_cuda_acceleration(dataset, cct_netvlad):
     cct_netvlad.set_device("cuda")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=cct_netvlad.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=cct_netvlad.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
     desc = cct_netvlad.compute_map_desc(dataloader=dataloader, pbar=False)
 
 
-@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="Full training tests require a apple GPU")
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="Full training tests require a apple GPU",
+)
 def test_mps_acceleration(dataset, cct_netvlad):
     cct_netvlad.set_device("mps")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=cct_netvlad.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=cct_netvlad.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
     desc = cct_netvlad.compute_map_desc(dataloader=dataloader, pbar=False)
 
-@pytest.mark.skipif(not os.path.exists(config["weights_directory"]), reason="Full training tests require downloaded weights")
+
+@pytest.mark.skipif(
+    not os.path.exists(config["weights_directory"]),
+    reason="Full training tests require downloaded weights",
+)
 def test_loading_weights():
     obj = Methods.CCT384_NetVLAD(pretrained=True)
-
-

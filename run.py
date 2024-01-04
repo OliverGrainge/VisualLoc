@@ -14,7 +14,11 @@ for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
-        map_loader = ds.map_images_loader(preprocess=method.preprocess, num_workers=args.num_workers, pin_memory=args.pin_memory)
+        map_loader = ds.map_images_loader(
+            preprocess=method.preprocess,
+            num_workers=args.num_workers,
+            pin_memory=args.pin_memory,
+        )
         _ = method.compute_map_desc(dataloader=map_loader)
         del map_loader
         query_loader = ds.query_images_loader(

@@ -1,14 +1,15 @@
+import os
+
 import numpy as np
 import pytest
 import torch
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, Subset
+
 from PlaceRec import Methods
-from PlaceRec.utils import get_config 
-import os
+from PlaceRec.utils import get_config
 
 config = get_config()
-
 
 
 def test_name(hybridnet):
@@ -66,7 +67,9 @@ def test_load_descriptors(hybridnet):
 
 
 def test_compute_query_desc(dataset, hybridnet):
-    dataloader = dataset.query_images_loader(batch_size=1, preprocess=hybridnet.preprocess)
+    dataloader = dataset.query_images_loader(
+        batch_size=1, preprocess=hybridnet.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -78,7 +81,9 @@ def test_compute_query_desc(dataset, hybridnet):
 
 
 def test_compute_map_desc(dataset, hybridnet):
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=hybridnet.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=hybridnet.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -91,25 +96,38 @@ def test_compute_map_desc(dataset, hybridnet):
     assert desc.shape[1] == hybridnet.features_dim
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a Nvidia GPU"
+)
 def test_cuda_acceleration(dataset, hybridnet):
     hybridnet.set_device("cuda")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=hybridnet.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=hybridnet.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
     desc = hybridnet.compute_map_desc(dataloader=dataloader, pbar=False)
 
 
-@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="Full training tests require a apple GPU")
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="Full training tests require a apple GPU",
+)
 def test_mps_acceleration(dataset, hybridnet):
     hybridnet.set_device("mps")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=hybridnet.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=hybridnet.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
     desc = hybridnet.compute_map_desc(dataloader=dataloader, pbar=False)
 
-@pytest.mark.skipif(not os.path.exists(config["weights_directory"]), reason="Full training tests require downloaded weights")
+
+@pytest.mark.skipif(
+    not os.path.exists(config["weights_directory"]),
+    reason="Full training tests require downloaded weights",
+)
 def test_loading_weights():
     obj = Methods.HybridNet(pretrained=True)

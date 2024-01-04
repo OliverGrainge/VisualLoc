@@ -68,7 +68,9 @@ def test_query_num_workers(essex3in1):
 
 
 def test_query_preprocess(essex3in1):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = essex3in1.query_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -78,7 +80,9 @@ def test_query_preprocess(essex3in1):
 
 
 def test_map_preprocess(essex3in1):
-    preprocess = transforms.Compose([transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)])
+    preprocess = transforms.Compose(
+        [transforms.ToTensor(), transforms.Resize((100, 50), antialias=True)]
+    )
     loader = essex3in1.map_images_loader(preprocess=preprocess)
     for idx, batch in loader:
         assert len(batch.shape) == 4
@@ -101,7 +105,9 @@ def test_gt_minrange(essex3in1):
     assert essex3in1.ground_truth()[0].dtype == int
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_query_pin_memory(essex3in1):
     loader = essex3in1.query_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:
@@ -109,7 +115,9 @@ def test_query_pin_memory(essex3in1):
         break
 
 
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="Full training tests require a GPU")
+@pytest.mark.skipif(
+    not torch.cuda.is_available(), reason="Full training tests require a GPU"
+)
 def test_map_pin_memory(essex3in1):
     loader = essex3in1.map_images_loader(batch_size=10, pin_memory=True)
     for idx, batch in loader:

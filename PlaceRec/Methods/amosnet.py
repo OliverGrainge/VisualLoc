@@ -66,7 +66,9 @@ class AmosNetModel(nn.Module):
         self.pool6 = nn.MaxPool2d(kernel_size=3, stride=2)
 
         # FC7
-        self.fc7_new = nn.Linear(256 * 6 * 6, 4096)  # Assuming the spatial size is 6x6 after the pooling layers
+        self.fc7_new = nn.Linear(
+            256 * 6 * 6, 4096
+        )  # Assuming the spatial size is 6x6 after the pooling layers
         init.normal_(self.fc7_new.weight, std=0.005)
         init.constant_(self.fc7_new.bias, 1)
         self.relu7 = nn.ReLU(inplace=True)
@@ -143,7 +145,9 @@ scale_transform = transforms.Lambda(lambda x: x * 255.0)
 model = AmosNetModel()
 
 try:
-    mean_image = torch.Tensor(np.load(join(config["weights_directory"], "amosnet_mean.npy")))
+    mean_image = torch.Tensor(
+        np.load(join(config["weights_directory"], "amosnet_mean.npy"))
+    )
 except:
     mean_image = 0
 
@@ -173,9 +177,15 @@ class AmosNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = False):
         if pretrained:
             if os.path.exists(config["weights_directory"]):
-                model.load_state_dict(torch.load(join(config["weights_directory"], "AmosNet.caffemodel.pt")))
+                model.load_state_dict(
+                    torch.load(
+                        join(config["weights_directory"], "AmosNet.caffemodel.pt")
+                    )
+                )
             else:
-                raise Exception(f'Could not find weights at {config["weights_directory"]}')
+                raise Exception(
+                    f'Could not find weights at {config["weights_directory"]}'
+                )
 
         self.device = "cpu"
         model.to("cpu")
@@ -189,6 +199,6 @@ class AmosNet(BaseModelWrapper):
 
     def set_device(self, device: str) -> None:
         if "mps" in device:
-            device = "cpu" 
+            device = "cpu"
         self.device = device
         self.model.to(device)
