@@ -23,6 +23,7 @@ default_transform = T.Compose(
 # NOTE: Hard coded path to dataset folder
 BASE_PATH = join(config["datasets_directory"], "gsv_cities")
 
+
 if not Path(BASE_PATH).exists():
     raise FileNotFoundError("BASE_PATH is hardcoded, please adjust to point to gsv_cities")
 

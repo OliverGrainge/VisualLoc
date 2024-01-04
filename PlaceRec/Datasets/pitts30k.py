@@ -11,9 +11,8 @@ from PIL import Image
 from scipy.signal import convolve2d
 from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
-
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
 
 config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -21,10 +20,8 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 
 class Pitts30k(BaseDataset):
     def __init__(self):
-        # check to see if dataset is downloaded
         if not os.path.isdir(join(config["datasets_directory"], "Pittsburgh-Query")):
-            # download dataset as zip file
-            raise Exception("Pitts30k Not Downloaded")
+                raise Exception("Pitts30k Not Downloaded")
 
         self.root = join(config["datasets_directory"], "Pittsburgh-Query")
         self.map_paths = np.array([join(self.root, pth) for pth in np.load(join(self.root, "pitts30k_test_dbImages.npy"))])
@@ -32,6 +29,7 @@ class Pitts30k(BaseDataset):
         self.gt = np.load(join(self.root, "pitts30k_test_gt.npy"), allow_pickle=True)
 
         self.name = "pitts30k"
+
 
     def query_images_loader(
         self,
@@ -60,6 +58,7 @@ class Pitts30k(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
+        
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
 
         dataloader = DataLoader(

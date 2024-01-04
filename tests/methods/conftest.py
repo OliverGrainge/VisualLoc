@@ -32,9 +32,13 @@ def cct_netvlad():
 
 
 @pytest.fixture
-def convap():
-    return Methods.ConvAP(pretrained=False)
+def resnet50convap():
+    return Methods.ResNet50ConvAP(pretrained=False)
 
+
+@pytest.fixture
+def resnet34convap():
+    return Methods.ResNet34ConvAP(pretrained=False)
 
 @pytest.fixture
 def cosplace():

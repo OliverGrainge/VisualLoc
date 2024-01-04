@@ -36,6 +36,7 @@ def pr_curve(method, ground_truth: list, n_thresh=100):
     return np.array(P), np.array(R)
 
 
+
 def plot_pr_curve(
     methods: list,
     ground_truth: list,

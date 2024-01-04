@@ -87,6 +87,14 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import GardensPointWalking
 
         dataset = GardensPointWalking()
+    elif name == "pitts250k":
+        from PlaceRec.Datasets import Pitts250k
+
+        dataset = Pitts250k()
+    elif name == "mapillarysls":
+        from PlaceRec.Datasets import MapillarySLS 
+
+        dataset = MapillarySLS()
     elif name == "pitts30k":
         from PlaceRec.Datasets import Pitts30k
 
@@ -129,18 +137,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import NetVLAD
 
         method = NetVLAD(pretrained=pretrained)
-    elif name == "hog":
-        from PlaceRec.Methods import HOG
-
-        method = HOG(pretrained=pretrained)
     elif name == "cosplace":
         from PlaceRec.Methods import CosPlace
 
         method = CosPlace(pretrained=pretrained)
-    elif name == "alexnet":
-        from PlaceRec.Methods import AlexNet
-
-        method = AlexNet(pretrained=pretrained)
     elif name == "hybridnet":
         from PlaceRec.Methods import HybridNet
 
@@ -149,18 +149,18 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import AmosNet
 
         method = AmosNet(pretrained=pretrained)
-    elif name == "convap":
-        from PlaceRec.Methods import ConvAP
+    elif name == "resnet50convap":
+        from PlaceRec.Methods import ResNet50ConvAP
 
-        method = ConvAP(pretrained=pretrained)
+        method = ResNet50ConvAP(pretrained=pretrained)
+    elif name == "resnet34convap":
+        from PlaceRec.Methods import ResNet34ConvAP
+
+        method = ResNet34ConvAP(pretrained=pretrained)
     elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 
         method = MixVPR(pretrained=pretrained)
-    elif name == "regionvlad":
-        from PlaceRec.Methods import RegionVLAD
-
-        method = RegionVLAD(pretrained=pretrained)
     elif name == "resnet18_gem":
         from PlaceRec.Methods import ResNet18GeM
 
@@ -169,23 +169,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet50GeM
 
         method = ResNet50GeM(pretrained=pretrained)
-
-    elif name == "vit_base_patch16_224_gap":
-        from PlaceRec.Methods import ViT_base_patch16_224_gap
-
-        method = ViT_base_patch16_224_gap(pretrained=pretrained)
-    elif name == "dinov2_base_patch16_224_gap":
-        from PlaceRec.Methods import DinoV2_base_patch16_224_gap
-
-        method = DinoV2_base_patch16_224_gap(pretrained=pretrained)
     elif name == "cct384_netvlad":
         from PlaceRec.Methods import CCT384_NetVLAD
 
         method = CCT384_NetVLAD(pretrained=pretrained)
-    elif name == "vit_base_patch16_224_cls":
-        from PlaceRec.Methods import ViT_base_patch16_224_cls
-
-        method = ViT_base_patch16_224_cls(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method

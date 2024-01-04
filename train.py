@@ -118,17 +118,17 @@ def main(args, config):
             monitor="val_loss",
             filename=join(
                 os.getcwd(),
-                "PlaceRec/Distillation/Training/checkpoints/",
+                "PlaceRec/Training/Distillation/checkpoints/",
                 args.training_type,
                 student_method.name,
-                student_method.name + "-{epoch:02d}-{recallat1:.2f}",
+                student_method.name + "_" + args.distillation_type + "_" + str(args.min_size) + "_" + str(args.max_size) + "-{epoch:02d}-{val_loss:.2f}",
             ),
             save_top_k=1,
             verbose=False,
             mode="min",
         )
 
-        logger = get_training_logger(config, project="Distillation")
+        logger = get_training_logger(config, project_name="Distillation")
 
         # Build the Datamodule
         distillationdatamodule = DistillationDataModule(args, teacher_method, teacher_method.preprocess, reload=args.reload)
@@ -141,20 +141,11 @@ def main(args, config):
             accelerator="gpu" if args.device in ["mps", "cuda"] else "cpu",
             logger=logger,
             callbacks=[early_stop_callback, checkpoint_callback],
+            val_check_interval=50
+            #limit_train_batches=20
         )
 
         trainer.fit(distillationmodule, datamodule=distillationdatamodule)
-        # recalls, resolutions = recallvsresolution(args, teacher_method.model, test_preprocess=student_method.preprocess, n_points=4)
-
-        for col in range(recalls.shape[1]):
-            rec = recalls[:, col]
-            plt.plot(rec, resolutions, label=f"Recall@{args.recall_values[col]}")
-
-        plt.plot(recalls, resolutions)
-        plt.xlabel("Recall@N")
-        plt.ylabel("Image Resolution")
-        plt.show()
-
 
 if __name__ == "__main__":
     config = get_config()

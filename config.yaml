@@ -16,10 +16,9 @@ run:
     - "hybridnet" 
     - "mixvpr"
     - "calc"
-  partition: "test"
-  num_workers: 0
+  num_workers: 12
   pin_memory: False
-  batch_size: 10
+  batchsize: 10
   device: None
 
 
@@ -38,6 +37,18 @@ eval:
   distance: "l2" # either l2 or cosine
 
 
+eval_resolution:
+  datasets: "inriaholidays"
+  student_methods: ["resnet34convap", "resnet50convap"]
+  teacher_method: "resnet50convap"
+  student_weights: None
+  training_type: ["single_resolution", ""]
+  device: "cuda"
+  min_mult: 0.2
+  max_mult: 1.8
+  n_points: 10
+
+
 #####################################################################################################################################################
 ################################################               TRAINING CONFIGURATION          #####################################################
 #####################################################################################################################################################
@@ -45,7 +56,7 @@ eval:
 train: 
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
-  training_type: "contrastive" # training type either contrastive or asymmetric_distillation
+  training_type: "distillation" # training type either contrastive or asymmetric_distillation
   logger: "wandb" # either wandb or tensorboard
   train_batch_size: 32 # training batch size
   infer_batch_size: 20 # inference batch size 
@@ -86,9 +97,10 @@ train:
   
   
   ###################### Asymmetric Training Configuration ############################
-  student_method: "resnet18_gem" # student method for knowledge distillation 
-  teacher_method: "resnet18_gem" # teacher method for knowledge distillation
-  distillation_type: "uniform_random_resize" # either uniform_random_resize, **** 
+  student_method: "resnet34convap" # student method for knowledge distillation 
+  teacher_method: "resnet50convap" # teacher method for knowledge distillation
+  distillation_type: "single_resolution" # either uniform_random_resize, single_resolution
+  size: [480, 640]
   min_size: 320 # minimum image size to sample from
   max_size: 420 # maximum image size to sample from
   reload: True # whether to reload the teacher's supervision features or compute new ones 

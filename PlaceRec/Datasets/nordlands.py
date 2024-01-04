@@ -13,7 +13,7 @@ from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
+from PlaceRec.utils import ImageIdxDataset, s3_bucket_download, get_config
 
 config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -21,9 +21,7 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 
 class Nordlands(BaseDataset):
     def __init__(self):
-        # check to see if dataset is downloaded
         if not os.path.isdir(join(config["datasets_directory"], "Nordland")):
-            # download dataset as zip file
             raise Exception("Nordland Not Downloaded")
 
         self.root = join(config["datasets_directory"], "Nordland")
@@ -32,6 +30,7 @@ class Nordlands(BaseDataset):
         self.gt = np.load(join(self.root, "Nordland_gt.npy"), allow_pickle=True)
 
         self.name = "nordlands"
+
 
     def query_images_loader(
         self,
@@ -60,6 +59,7 @@ class Nordlands(BaseDataset):
         pin_memory: bool = False,
         num_workers: int = 0,
     ) -> torch.utils.data.DataLoader:
+        
         dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
 
         dataloader = DataLoader(

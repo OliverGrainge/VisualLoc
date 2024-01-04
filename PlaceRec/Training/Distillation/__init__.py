@@ -1,1 +1,1 @@
-from .asymmetric_distillation import DistillationDataModule, DistillationModule
+from .distillation import DistillationDataModule, DistillationModule

@@ -70,8 +70,8 @@ for dataset_name in args.datasets:
 
         all_methods.append(method)
 
-        table_data["descriptor_bytes"] = method.query_desc["query_descriptors"].nbytes / method.query_desc["query_descriptors"].shape[0]
-        table_data["descriptor_dim"] = method.query_desc["query_descriptors"].shape[1]
+        table_data["descriptor_bytes"] = method.query_desc.nbytes / method.query_desc.shape[0]
+        table_data["descriptor_dim"] = method.query_desc.shape[1]
 
         if "count_flops" in args.metrics:
             all_flops[method.name] = count_flops(method)
@@ -240,4 +240,4 @@ for dataset_name in args.datasets:
             dataset_name=ds.name,
         )
 
-df.to_csv("Plots/results.csv")
+df.to_csv("Plots/PlaceRec/data/results.csv")

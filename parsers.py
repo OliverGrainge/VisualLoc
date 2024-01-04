@@ -32,13 +32,11 @@ def run_arguments():
         nargs="+",
     )
 
-    parser.add_argument("--batchsize", type=int, default=config["run"]["batch_size"], help="Choose the Batchsize for VPR processing")
-
     parser.add_argument(
-        "--partition",
-        type=str,
-        default=config["run"]["partition"],
-        help="choose from 'train', 'val', 'test' or 'all'",
+        "--batchsize",
+        type=int,
+        default=config["run"]["batchsize"],
+        help="Choose the Batchsize for VPR processing"
     )
 
     parser.add_argument(
@@ -48,7 +46,102 @@ def run_arguments():
         help="Choose the number of processing the threads for the dataloader",
     )
 
-    parser.add_argument("--pin_memory", type=bool, default=config["run"]["pin_memory"], help="Choose whether to pin memory in GPU")
+    parser.add_argument(
+        "--pin_memory",
+        type=bool,
+        default=config["run"]["pin_memory"],
+        help="Choose whether to pin memory in GPU"
+    )
+
+    args = parser.parse_args()
+    return args
+
+
+
+def eval_resolution_arguments():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="run",
+    )
+
+    parser.add_argument(
+        "--student_weights",
+        type=str,
+        default=config["eval_resolution"]["student_weights"],
+        nargs="+"
+    )
+
+    parser.add_argument(
+        "--datasets",
+        help="specify one of the datasets from PlaceRec.Datasets",
+        type=str,
+        default=config["run"]["datasets"],
+        nargs="+",
+    )
+
+    parser.add_argument(
+        "--training_type",
+        type=str,
+        default=config["eval_resolution"]["training_type"],
+        nargs="+",
+    )
+
+    parser.add_argument(
+        "--student_methods",
+        help="specify one of the techniques from vpr/vpr_tecniques",
+        type=str,
+        default=config["eval_resolution"]["student_methods"],
+        nargs="+",
+    )
+
+    parser.add_argument(
+        "--teacher_method",
+        help="specify one of the techniques from vpr/vpr_tecniques",
+        type=str,
+        default=config["eval_resolution"]["teacher_method"],
+    )
+
+    parser.add_argument(
+        "--batchsize",
+        type=int,
+        default=config["run"]["batchsize"],
+        help="Choose the Batchsize for VPR processing"
+    )
+
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=config["run"]["num_workers"],
+        help="Choose the number of processing the threads for the dataloader",
+    )
+
+    parser.add_argument(
+        "--pin_memory",
+        type=bool,
+        default=config["run"]["pin_memory"],
+        help="Choose whether to pin memory in GPU"
+    )
+
+    parser.add_argument(
+        "--min_mult",
+        type=float,
+        default=config["eval_resolution"]["min_mult"],
+    )
+
+    parser.add_argument(
+        "--max_mult",
+        type=float,
+        default=config["eval_resolution"]["max_mult"],
+    )
+
+    parser.add_argument(
+        "--n_points",
+        type=int,
+        default=config["eval_resolution"]["n_points"]
+    )
 
     args = parser.parse_args()
     return args
@@ -119,6 +212,11 @@ def train_arguments():
     parser.add_argument("--distillation_type", type=str, default=config["train"]["distillation_type"])
 
     parser.add_argument(
+        "--datasets_directory",
+        type=str,
+        default=config["datasets_directory"]
+    )
+    parser.add_argument(
         "--infer_batch_size",
         type=int,
         default=config["train"]["infer_batch_size"],
@@ -185,7 +283,7 @@ def train_arguments():
 
     parser.add_argument("--teacher_method", type=str, default=config["train"]["teacher_method"])
 
-    parser.add_argument("--student_method", type=str, default=config["train"]["teacher_method"])
+    parser.add_argument("--student_method", type=str, default=config["train"]["student_method"])
 
     parser.add_argument("--reload", type=bool, default=config["train"]["reload"])
 
@@ -236,6 +334,8 @@ def train_arguments():
     parser.add_argument("--val_set_names", type=str, nargs="+", default=config["train"]["val_set_names"])
 
     parser.add_argument("--batch_sampler", type=bool, default=config["train"]["batch_sampler"])
+
+    parser.add_argument("--size", type=int, default=config["train"]["size"], nargs="+")
 
     args = parser.parse_args()
     return args

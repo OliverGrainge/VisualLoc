@@ -9,7 +9,7 @@ import torch
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from tqdm import tqdm
-
+from torch.utils.data import DataLoader
 from PlaceRec.utils import get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -235,7 +235,7 @@ class BaseFunctionality(BaseTechnique):
         Returns:
             Tuple[np.ndarray, np.ndarray]: Indices and distances of recognized places.
         """
-        if query_desc == None and dataloader is not None:
+        if isinstance(dataloader, DataLoader):
             query_desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
         if config["eval"]["distance"] == "cosine":
             faiss.normalize_L2(query_desc)
