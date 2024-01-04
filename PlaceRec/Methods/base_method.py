@@ -345,16 +345,17 @@ class BaseModelWrapper(BaseFunctionality):
         self.name = name
         self.model = model
         self.preprocess = preprocess
-        self.model.to(self.device)
         self.model.eval()
         self.features_dim = self.features_size()
+        self.model.to(self.device)
 
     def features_size(self):
         img = np.random.rand(224, 224, 3) * 255
         img = Image.fromarray(img.astype(np.uint8))
         img = self.preprocess(img)
+        self.model = self.model.to("cpu")
         with torch.no_grad():
-            features = self.model(img[None, :].to(self.device)).detach().cpu()
+            features = self.model(img[None, :].to("cpu")).detach().cpu()
         return features.size(1)
 
     def compute_query_desc(

@@ -100,6 +100,10 @@ class CALC(BaseModelWrapper):
 
         if self.device == "mps":
             self.device = "cpu"
-
         self.model.to(self.device)
-        self.model.eval()
+
+    def set_device(self, device: str) -> None:
+        if "mps" in device:
+            device = "cpu" 
+        self.device = device
+        self.model.to(device)
