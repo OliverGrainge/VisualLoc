@@ -162,10 +162,6 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet50ConvAP
 
         method = ResNet50ConvAP(pretrained=pretrained)
-    elif name == "resnet34convap":
-        from PlaceRec.Methods import ResNet34ConvAP
-
-        method = ResNet34ConvAP(pretrained=pretrained)
     elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 

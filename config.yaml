@@ -10,13 +10,13 @@ weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 run: 
   datasets: ["inriaholidays"]
   methods: ["amosnet", "hybridnet"]
-  num_workers: 12
+  num_workers: 0
   pin_memory: False
   batchsize: 10
   device: "cpu"
 
 eval: 
-  datasets: ["amosnet", "hybridnet"]
+  datasets: ["inriaholidays"]
   methods: ["amosnet", "hybridnet"]
   partition: "test"
   device: "cpu"

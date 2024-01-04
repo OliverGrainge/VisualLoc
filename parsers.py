@@ -92,14 +92,6 @@ def eval_arguments():
     )
 
     parser.add_argument(
-        "--input_size",
-        type=int,
-        default=config["eval"]["input_size"],
-        nargs=2,
-        help="Resizing shape for images (HxW).",
-    )
-
-    parser.add_argument(
         "--device",
         type=str,
         default=config["eval"]["device"],
