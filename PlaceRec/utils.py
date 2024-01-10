@@ -178,6 +178,14 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import CCT384_NetVLAD
 
         method = CCT384_NetVLAD(pretrained=pretrained)
+    elif name == "resnet34convap":
+        from PlaceRec.Methods import ResNet34ConvAP
+
+        method = ResNet34ConvAP(pretrained=pretrained)
+    elif name == "resnet34fpyramid":
+        from PlaceRec.Methods import ResNet34FPyramid
+
+        method = ResNet34FPyramid(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method

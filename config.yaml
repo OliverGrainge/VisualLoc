@@ -24,4 +24,23 @@ eval:
   distance: "l2" # either l2 or cosine
 
 
+train: 
+  student_method: "resnet50convap"
+  teacher_method: "resnet50convap"
+  batch_size: 24
+  max_epochs: 100
+  device: "cuda"
+  reload: True
+  distillation_type: "uniform_random_resize" # either single_resolution, uniform_random_resize
+  min_mult: 0.2
+  max_mult: 1.0
+  patience: 5
+  learning_rate: 0.0001
+  num_workers: 6
+  logger: "wandb"
+
+  size: [480, 640]
+
+
+
 

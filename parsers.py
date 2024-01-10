@@ -104,3 +104,108 @@ def eval_arguments():
 
     args = parser.parse_args()
     return args
+
+
+def train_args(): 
+    parser = argparse.ArgumentParser()
+
+    config = get_config()
+
+    parser.add_argument(
+        "--datasets_directory",
+        type=str,
+        default=config["datasets_directory"]
+    )
+
+    parser.add_argument(
+        "--weights_directory",
+        type=str,
+        default=config["weights_directory"]
+    )
+
+    config = config["train"]
+
+    parser.add_argument(
+        "--student_method",
+        type=str,
+        default=config["student_method"]
+    )
+
+
+    parser.add_argument(
+        "--teacher_method",
+        type=str,
+        default=config["teacher_method"]
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=config["batch_size"]
+    )
+
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=config["device"]
+    )
+
+    parser.add_argument(
+        "--reload",
+        type=bool,
+        default=config["reload"]
+    )
+
+    parser.add_argument(
+        "--distillation_type",
+        type=str,
+        default=config["distillation_type"]
+    )
+
+    parser.add_argument(
+        "--min_mult",
+        type=float,
+        default=config["min_mult"]
+    )
+
+
+    parser.add_argument(
+        "--max_mult",
+        type=float,
+        default=config["max_mult"]
+    )
+
+    parser.add_argument(
+        "--patience",
+        type=int,
+        default=config["patience"]
+    )
+
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=config["learning_rate"]
+    )
+
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=config["num_workers"]
+    )
+
+    parser.add_argument(
+        "--max_epochs",
+        type=int,
+        default=config["max_epochs"]
+    )
+
+    parser.add_argument(
+        "--size",
+        type=int,
+        default=config["size"],
+        nargs="+"
+    )
+
+    args = parser.parse_args()
+    return args
+
