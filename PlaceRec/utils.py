@@ -186,6 +186,14 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet34FPyramid
 
         method = ResNet34FPyramid(pretrained=pretrained)
+    elif name == "gatinginceptionlarge":
+        from PlaceRec.Methods import GatingInceptionLarge
+
+        method = GatingInceptionLarge(pretrained=pretrained)
+    elif name == "gatinginceptionsmall":
+        from PlaceRec.Methods import GatingInceptionSmall
+
+        method = GatingInceptionSmall(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method

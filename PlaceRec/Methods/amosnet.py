@@ -193,12 +193,11 @@ class AmosNet(BaseModelWrapper):
         super().__init__(model=model, preprocess=preprocess, name="amosnet")
         # some layers not implemented on metal
         # some layers not implemented on metal
-        if self.device == "mps":
-            self.device = "cpu"
-        self.model.to(self.device)
+        self.set_device(self.device)
 
     def set_device(self, device: str) -> None:
         if "mps" in device:
             device = "cpu"
         self.device = device
         self.model.to(device)
+
