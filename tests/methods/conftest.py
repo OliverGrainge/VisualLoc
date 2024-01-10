@@ -69,3 +69,14 @@ def resnet18_gem():
 @pytest.fixture
 def resnet50_gem():
     return Methods.ResNet50GeM(pretrained=False)
+
+
+@pytest.fixture
+def gatinginceptionsmall():
+    return Methods.GatingInceptionSmall(pretrained=False)
+
+
+@pytest.fixture
+def gatinginceptionlarge():
+    return Methods.GatingInceptionLarge(pretrained=False)
+

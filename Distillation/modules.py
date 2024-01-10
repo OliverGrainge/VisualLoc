@@ -107,6 +107,38 @@ class UniformRandomResizeDataset(data.Dataset):
         idxs = torch.tensor(idxs)
         return imgs, features, idxs
 
+class BetaRandomResizeDataset(data.Dataset):
+    def __init__(self, basedistillationdataset, cache, preprocess, mult_range=(0.8, 1.2), teacher_size=(480, 640)):
+        self.base_dataset = basedistillationdataset
+        self.cache = cache
+        self.preprocess = preprocess
+        self.teacher_size = teacher_size
+        self.mult_range = mult_range
+
+    def __len__(self):
+        return self.base_dataset.__len__()
+
+    def __getitem__(self, idx):
+        pil_img, _ = self.base_dataset.__getitem__(idx)
+        img = self.preprocess(pil_img)
+        return img, self.cache[idx], idx
+
+    def collate_fn(self, batch):
+        # Set the parameters for the Beta distribution
+        alpha = 1.4  # shape parameter
+        beta = 1.1 # shape parameter
+        beta_distribution = torch.distributions.beta.Beta(alpha, beta)
+        random_mult  = beta_distribution.sample().item()
+        random_mult = 0.5 + 0.5 * random_mult 
+        res = (int(random_mult * self.teacher_size[0]), int(random_mult * self.teacher_size[1]))
+        imgs = [F.resize(item[0], res, antialias=True) for item in batch]
+        features = [torch.tensor(item[1]) for item in batch]
+        idxs = [item[2] for item in batch]
+        imgs = torch.stack(imgs, dim=0)
+        features = torch.vstack(features)
+        idxs = torch.tensor(idxs)
+        return imgs, features, idxs
+
 
 class SingleResolutionDataset(data.Dataset):
     def __init__(self, basedistillationdataset, cache, preprocess, size=(320, 320)):
@@ -188,6 +220,13 @@ class DistillationDataModule(pl.LightningDataModule):
                 self.base_train_dataset, self.train_cache, preprocess=self.train_preprocess, mult_range = (self.args.min_mult, self.args.max_mult), teacher_size=(480, 640)
             )
             self.student_val_dataset = UniformRandomResizeDataset(
+                self.base_val_dataset, self.val_cache, preprocess=self.test_preprocess, mult_range = (self.args.min_mult, self.args.max_mult), teacher_size=(480, 640)
+            )
+        elif self.args.distillation_type == "beta_random_resize":
+            self.student_train_dataset = BetaRandomResizeDataset(
+                self.base_train_dataset, self.train_cache, preprocess=self.train_preprocess, mult_range = (self.args.min_mult, self.args.max_mult), teacher_size=(480, 640)
+            )
+            self.student_val_dataset = BetaRandomResizeDataset(
                 self.base_val_dataset, self.val_cache, preprocess=self.test_preprocess, mult_range = (self.args.min_mult, self.args.max_mult), teacher_size=(480, 640)
             )
         elif self.args.distillation_type == "single_resolution":

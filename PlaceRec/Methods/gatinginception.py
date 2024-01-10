@@ -54,7 +54,7 @@ class InceptionV2Block(nn.Module):
 class GatingFunction(nn.Module):
     def __init__(self, in_channels, n_weights):
         super(GatingFunction, self).__init__()
-        self.conv = nn.Conv2d(in_channels, n_weights, kernel_size=1)
+        self.conv = nn.Conv2d(in_channels, n_weights, kernel_size=5)
         self.pool = nn.AdaptiveMaxPool2d(1)
         self.softmax = nn.Softmax(dim=1)
         self.n_weights = n_weights
