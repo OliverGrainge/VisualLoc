@@ -98,12 +98,4 @@ class CALC(BaseModelWrapper):
             model = CalcModel(pretrained=False)
         super().__init__(model=model, preprocess=preprocess, name="calc")
 
-        if self.device == "mps":
-            self.device = "cpu"
-        self.model.to(self.device)
 
-    def set_device(self, device: str) -> None:
-        if "mps" in device:
-            device = "cpu"
-        self.device = device
-        self.model.to(device)

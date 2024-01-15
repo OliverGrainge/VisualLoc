@@ -187,8 +187,6 @@ class BaseFunctionality(BaseTechnique):
 
         if torch.cuda.is_available():
             self.device = "cuda"
-        elif torch.backends.mps.is_available():
-            self.device = "mps"
         else:
             self.device = "cpu"
 
@@ -373,6 +371,7 @@ class BaseModelWrapper(BaseFunctionality):
         self.model.eval()
         self.features_dim = self.features_size()
         self.model.to(self.device)
+        self.model.eval()
 
     def features_size(self):
         img = np.random.rand(224, 224, 3) * 255

@@ -333,12 +333,5 @@ class ResNet50ConvAP(BaseModelWrapper):
 
         # some layers not implemented on metal
         # some layers not implemented on metal
-        if self.device == "mps":
-            self.device = "cpu"
         self.model.to(self.device)
-
-    def set_device(self, device: str) -> None:
-        if "mps" in device:
-            device = "cpu"
-        self.device = device
-        self.model.to(device)
+        self.model.eval()

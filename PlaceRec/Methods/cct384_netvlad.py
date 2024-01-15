@@ -1625,9 +1625,3 @@ class CCT384_NetVLAD(BaseModelWrapper):
             self.model.load_state_dict(state_dict)
 
         super().__init__(model=self.model, preprocess=preprocess, name="cct384_netvlad")
-
-        if self.device == "mps":
-            self.device = "cpu"
-
-        self.model.to(self.device)
-        self.model.eval()
