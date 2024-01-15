@@ -13,7 +13,7 @@ from sklearn.neighbors import NearestNeighbors
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import get_config, s3_bucket_download
+from ..utils import get_config
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -196,4 +196,3 @@ class HybridNet(BaseModelWrapper):
                 torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
             )
         super().__init__(model=model, preprocess=preprocess, name="hybridnet")
-

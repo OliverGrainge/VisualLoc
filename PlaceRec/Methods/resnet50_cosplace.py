@@ -12,6 +12,8 @@ from torch import nn
 from torchvision import transforms
 from tqdm import tqdm
 
+from PlaceRec import utils
+
 from .base_method import BaseModelWrapper
 
 cosplace_directory = os.path.dirname(os.path.abspath(__file__))
@@ -37,16 +39,8 @@ preprocess = transforms.Compose(
 )
 
 
-def init_weights(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        # Example: Kaiming Initialization for Conv2D and Linear layers
-        nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
-        if m.bias is not None:
-            nn.init.constant_(m.bias, 0)
-
-
 class CosPlace(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if not pretrained:
-            model.apply(init_weights)
+            model.apply(utils.init_weights)
         super().__init__(model=model, preprocess=preprocess, name="cosplace")

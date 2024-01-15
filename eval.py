@@ -4,18 +4,10 @@ import pandas as pd
 import yaml
 
 from parsers import eval_arguments
-from PlaceRec.Metrics import (
-    average_precision,
-    benchmark_latency_cpu,
-    benchmark_latency_gpu,
-    count_flops,
-    count_params,
-    measure_memory,
-    plot_metric,
-    plot_pr_curve,
-    recall_at_100p,
-    recallatk,
-)
+from PlaceRec.Metrics import (average_precision, benchmark_latency_cpu,
+                              benchmark_latency_gpu, count_flops, count_params,
+                              measure_memory, plot_metric, plot_pr_curve,
+                              recall_at_100p, recallatk)
 from PlaceRec.utils import get_dataset, get_method
 
 args = eval_arguments()

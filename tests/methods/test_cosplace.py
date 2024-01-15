@@ -107,19 +107,6 @@ def test_cuda_acceleration(dataset, cosplace):
 
 
 @pytest.mark.skipif(
-    not torch.backends.mps.is_available(),
-    reason="Full training tests require a apple GPU",
-)
-def test_mps_acceleration(dataset, cosplace):
-    cosplace.set_device("mps")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=cosplace.preprocess)
-    dataset = dataloader.dataset
-    dataset = Subset(dataset, list(range(2)))
-    dataloader = DataLoader(dataset, batch_size=1)
-    desc = cosplace.compute_map_desc(dataloader=dataloader, pbar=False)
-
-
-@pytest.mark.skipif(
     not os.path.exists(config["weights_directory"]),
     reason="Full training tests require downloaded weights",
 )

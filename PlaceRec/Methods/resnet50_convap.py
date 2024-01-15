@@ -12,7 +12,7 @@ import torchvision
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import get_config, s3_bucket_download
+from ..utils import get_config
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -330,8 +330,3 @@ class ResNet50ConvAP(BaseModelWrapper):
             )
 
         super().__init__(model=model, preprocess=preprocess, name="resnet50convap")
-
-        # some layers not implemented on metal
-        # some layers not implemented on metal
-        self.model.to(self.device)
-        self.model.eval()

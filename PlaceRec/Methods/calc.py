@@ -23,7 +23,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
 
-from ..utils import get_config, s3_bucket_download
+from ..utils import get_config
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
@@ -96,6 +96,5 @@ class CALC(BaseModelWrapper):
             model = CalcModel(pretrained=True)
         else:
             model = CalcModel(pretrained=False)
+
         super().__init__(model=model, preprocess=preprocess, name="calc")
-
-

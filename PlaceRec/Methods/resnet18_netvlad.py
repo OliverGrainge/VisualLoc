@@ -18,7 +18,7 @@ from torchvision import transforms
 from torchvision.models import resnet18
 from tqdm import tqdm
 
-from ..utils import get_config, s3_bucket_download
+from ..utils import get_config
 from .base_method import BaseModelWrapper
 
 netvlad_directory = os.path.dirname(os.path.abspath(__file__))

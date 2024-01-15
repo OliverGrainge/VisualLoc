@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 from torchvision.models import ResNet50_Weights
 from tqdm import tqdm
 
-from ..utils import get_config, s3_bucket_download
+from ..utils import get_config
 from .base_method import BaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))

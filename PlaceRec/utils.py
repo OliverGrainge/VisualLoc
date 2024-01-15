@@ -53,40 +53,6 @@ class ImageIdxDataset(Dataset):
         return idx, img
 
 
-# ============== S3 Bucket ===========================================================================
-
-
-class ProgressPercentage(tqdm):
-    def __init__(self, client, bucket, filename):
-        self._size = client.head_object(Bucket=bucket, Key=filename)["ContentLength"]
-        super(ProgressPercentage, self).__init__(
-            total=self._size,
-            unit="B",
-            unit_scale=True,
-            desc="Downloading " + filename.split("/")[-1],
-        )
-
-    def __call__(self, bytes_amount):
-        self.update(bytes_amount)
-
-
-def s3_bucket_download(remote_path: str, local_path: str):
-    s3 = boto3.client(
-        "s3",
-        region_name="eu-north-1",
-        config=boto3.session.Config(signature_version=botocore.UNSIGNED),
-    )
-
-    # Define the bucket name and the datasets to download
-    bucket_name = "visuallocbucket"
-
-    # Download each dataset
-    progress = ProgressPercentage(s3, bucket_name, remote_path)
-    s3.download_file(bucket_name, remote_path, local_path, Callback=progress)
-
-    return None
-
-
 # ==========================================================================================================
 
 
@@ -222,3 +188,11 @@ class L2Norm(nn.Module):
 
     def forward(self, x):
         return F.normalize(x, p=2, dim=self.dim)
+
+
+def init_weights(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        # Example: Kaiming Initialization for Conv2D and Linear layers
+        nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
+        if m.bias is not None:
+            nn.init.constant_(m.bias, 0)

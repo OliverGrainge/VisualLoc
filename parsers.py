@@ -52,11 +52,7 @@ def run_arguments():
         help="Choose whether to pin memory in GPU",
     )
 
-    parser.add_argument(
-        "--device",
-        type=str,
-        default=config["run"]["device"]
-    )
+    parser.add_argument("--device", type=str, default=config["run"]["device"])
 
     args = parser.parse_args()
     return args
