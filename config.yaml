@@ -25,18 +25,18 @@ eval:
 
 
 train: 
-  student_method: "resnet50convap"
+  student_method: "gatingresnet"
   teacher_method: "resnet50convap"
-  batch_size: 24
+  batch_size: 32
   max_epochs: 100
   device: "cuda"
   reload: True
-  distillation_type: "uniform_random_resize" # either single_resolution, uniform_random_resize
-  min_mult: 0.2
-  max_mult: 1.0
-  patience: 5
+  distillation_type: "beta_random_resize" # either single_resolution, uniform_random_resize, beta_random_resize
+  min_mult: 0.5
+  max_mult: 0.9
+  patience: 500
   learning_rate: 0.0001
-  num_workers: 6
+  num_workers: 9
   logger: "wandb"
 
   size: [480, 640]

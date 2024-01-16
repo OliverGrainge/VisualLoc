@@ -12,3 +12,4 @@ from .resnet50_gem import ResNet50GeM
 from .resnet34_convap import ResNet34ConvAP
 from .resnet34_fpyramid import ResNet34FPyramid
 from .gatinginception import GatingInceptionLarge, GatingInceptionSmall
+from .gatingresnet import GatingResNet

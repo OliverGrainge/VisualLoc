@@ -54,10 +54,13 @@ class BaseDistillationDataset(data.Dataset):
         self.all_images_paths = []
         for folder in self.image_folders:
             self.all_images_paths += glob(join(folder + "/*.jpg"))
+
+        self.all_images_paths = np.array(self.all_images_paths)
+        #np.random.shuffle(self.all_images_paths)
         if split == "train":
-            self.all_images_paths = self.all_images_paths[1000:100000]
+            self.all_images_paths = self.all_images_paths[4000:400000]
         else: 
-            self.all_images_paths = self.all_images_paths[:1000]
+            self.all_images_paths = self.all_images_paths[:4000]
         self.all_images_num = len(self.all_images_paths)
 
     def __len__(self):
@@ -197,10 +200,9 @@ class DistillationDataModule(pl.LightningDataModule):
         self.pin_memory = True if self.args.device == "cuda" else False
 
     def setup(self, stage=None):
-        # Split data into train, validate, and test sets
+        # Split data into train, validate, and test set
         if self.reload:
             try:
-                # try and load the cache
                 self.train_cache = torch.load(
                     os.path.join(file_directory, "utils", self.teacher_method.name, "train_features.pt")
                 )
@@ -250,8 +252,8 @@ class DistillationDataModule(pl.LightningDataModule):
         if not os.path.exists(os.path.join(file_directory, "utils", self.teacher_method.name)):
             os.makedirs(os.path.join(file_directory, "utils", self.teacher_method.name))
 
-        torch.save(self.train_cache, os.path.join(file_directory, "utils", self.teacher_method.name, "train_features.pt"))
-        torch.save(self.val_cache, os.path.join(file_directory, "utils", self.teacher_method.name, "val_features.pt"))
+        torch.save(self.train_cache, os.path.join(file_directory, "utils", self.teacher_method.name, "train_features.pt"), pickle_protocol=5)
+        torch.save(self.val_cache, os.path.join(file_directory, "utils", self.teacher_method.name, "val_features.pt"), pickle_protocol=5)
 
     def compute_cache(self, dataloader, desc):
         cache = np.empty((dataloader.dataset.__len__(), self.teacher_method.features_dim), dtype=np.float32)

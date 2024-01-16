@@ -1,11 +1,16 @@
 import os
+import pytorch_lightning as pl 
+pl.seed_everything(0)
 
 from PlaceRec.utils import get_method, get_training_logger
-import pytorch_lightning as pl 
 from PlaceRec.utils import get_config
 from os.path import join
 from Distillation import DistillationDataModule, DistillationModule
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+import torch
+
+pl.seed_everything(0)
+torch.set_float32_matmul_precision('medium')
 
 from parsers import train_args
 
@@ -33,7 +38,6 @@ checkpoint_callback = ModelCheckpoint(
     mode="min",
 )
 
-
 logger = get_training_logger(config, project_name="Distillation")
 
 trainer = pl.Trainer(
@@ -46,5 +50,5 @@ trainer = pl.Trainer(
 
 if __name__ == "__main__":
     distillationdatamodule = DistillationDataModule(args, teacher_method, teacher_method.preprocess, reload=args.reload)
-    distillationmodule = DistillationModule(args, student_method)
+    distillationmodule = DistillationModule(args=args, student_method=student_method)
     trainer.fit(distillationmodule, datamodule=distillationdatamodule)

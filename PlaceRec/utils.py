@@ -194,6 +194,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import GatingInceptionSmall
 
         method = GatingInceptionSmall(pretrained=pretrained)
+    elif name == "gatingresnet": 
+        from PlaceRec.Methods import GatingResNet
+
+        method = GatingResNet(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method

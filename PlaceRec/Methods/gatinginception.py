@@ -106,7 +106,7 @@ class GatingInceptionModelLarge(nn.Module):
 
         self.inception_block9 = GatingInceptionBlock(1280, 512, 512, 1280)
         self.inception_block10 = GatingInceptionBlock(1280, 512, 512, 2048)
-        self.conv_final = nn.Conv2d(2048, descriptor_size//4, kernel_size=1)
+        self.conv_final = nn.Conv2d(2048, descriptor_size//2, kernel_size=1)
         self.AAP = nn.AdaptiveAvgPool2d((2, 2))
     
     def forward(self, x):
@@ -146,17 +146,19 @@ class GatingInceptionModelSmall(nn.Module):
         self.pool3 = nn.MaxPool2d(kernel_size=3, stride=2)
         self.conv4 = nn.Conv2d(64, 80, kernel_size=1)
         self.conv5 = nn.Conv2d(80, 192, kernel_size=3, stride=2)
+        #self.pool6 = nn.MaxPool2d(kernel_size=3, stride=2)
 
         self.inception_block1 = GatingInceptionBlock(192, 96, 96, 192)
         self.inception_block2 = GatingInceptionBlock(192, 96, 96, 288)
+        self.poolblock1 = nn.MaxPool2d(kernel_size=3, stride=1)
 
         self.inception_block3 = GatingInceptionBlock(288, 128, 128, 288)
-        self.inception_block4 = GatingInceptionBlock(288, 128, 128, 288)
-        self.inception_block5 = GatingInceptionBlock(288, 128, 128, 512)
-
+        self.inception_block4 = GatingInceptionBlock(288, 128, 128, 512)
         self.inception_block6 = GatingInceptionBlock(512, 256, 256, 512)
+        self.poolblock2 = nn.MaxPool2d(kernel_size=3, stride=1)
+
         self.inception_block7 = GatingInceptionBlock(512, 256, 256, 1028)
-        self.conv_final = nn.Conv2d(1028, descriptor_size//4, kernel_size=1)
+        self.conv_final = nn.Conv2d(1028, descriptor_size//2, kernel_size=1)
         self.AAP = nn.AdaptiveAvgPool2d((2, 2))
     
     def forward(self, x):
@@ -165,13 +167,16 @@ class GatingInceptionModelSmall(nn.Module):
         x = self.pool3(x)
         x = F.relu(self.conv4(x))
         x = F.relu(self.conv5(x))
+        #x = self.pool6(x)
+
 
         x = F.relu(self.inception_block1(x))
         x = F.relu(self.inception_block2(x))
+        x = self.poolblock1(x)
 
         x = F.relu(self.inception_block3(x))
         x = F.relu(self.inception_block4(x))
-        x = F.relu(self.inception_block5(x))
+        x = self.poolblock2(x)
 
         x = F.relu(self.inception_block6(x))
         x = F.relu(self.inception_block7(x))
