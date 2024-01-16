@@ -13,7 +13,7 @@ from sklearn.neighbors import NearestNeighbors
 from torch.utils.data import DataLoader, Dataset
 
 from PlaceRec.Datasets.base_dataset import BaseDataset
-from PlaceRec.utils import ImageIdxDataset, get_config, s3_bucket_download
+from PlaceRec.utils import ImageIdxDataset, get_config
 
 config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))

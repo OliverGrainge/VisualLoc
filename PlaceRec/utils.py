@@ -3,8 +3,6 @@ import pathlib
 from argparse import Namespace
 from typing import Union
 
-import boto3
-import botocore
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
@@ -108,6 +106,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import CALC
 
         method = CALC(pretrained=pretrained)
+    elif name == "eigenplaces":
+        from PlaceRec.Methods import resnet50_eigenplaces
+
+        method = EigenPlaces(pretrained=pretrained)
     elif name == "netvlad":
         from PlaceRec.Methods import NetVLAD
 
