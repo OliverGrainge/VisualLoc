@@ -1,26 +1,56 @@
+from train.dataloaders.train.GSVCitiesDataset import GSVCitiesDataset
+from train import GSVCitiesDataModule
+from PlaceRec.utils import get_method
+from PlaceRec import utils
 import numpy as np
-import torch
-import torchvision.transforms as transforms
-from PIL import Image
+from torch.utils.data import DataLoader 
+from os.path import join 
+import os
+from PlaceRec.utils import get_config
+from parsers import train_arguments
 
-model = torch.hub.load(
-    "gmberton/eigenplaces", "get_trained_model", backbone="ResNet50", fc_output_dim=2048
-)
-
-image = np.random.randint(0, 255, (255, 255, 3)).astype(np.uint8)
-image = Image.fromarray(image)
+config = get_config()
+args = train_arguments()
 
 
-preprocess = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize((480, 640), antialias=True),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ]
-)
+METHODS = ["cosplace"]
 
-img = preprocess(image)
 
-out = model(img[None, :])
+TRAIN_CITIES = [
+    "Bangkok",
+    "BuenosAires",
+    "LosAngeles",
+    "MexicoCity",
+    "OSL",  # refers to Oslo
+    "Rome",
+    "Barcelona",
+    "Chicago",
+    "Madrid",
+    "Miami",
+    "Phoenix",
+    "TRT",  # refers to Toronto
+    "Boston",
+    "Lisbon",
+    "Medellin",
+    "Minneapolis",
+    "PRG",  # refers to Prague
+    "WashingtonDC",
+    "Brussels",
+    "London",
+    "Melbourne",
+    "Osaka",
+    "PRS",  # refers to Paris
+]
 
-print(out.shape, torch.norm(out))
+DEBUG_CITIES = ["TRT"]
+
+ds = GSVCitiesDataset(cities=DEBUG_CITIES)
+dm = GSVCitiesDataModule(args)
+
+out = ds.__getitem__(0)
+
+dl = dm.train_dataloader()
+
+for batch in dl:
+    print(len(batch))
+    print(batch[0].shape, batch[1])

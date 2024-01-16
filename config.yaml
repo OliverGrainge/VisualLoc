@@ -13,15 +13,71 @@ run:
   num_workers: 0
   pin_memory: False
   batchsize: 10
-  device: "cpu"
+  device: "cuda"
 
 eval: 
   datasets: ["inriaholidays"]
   methods: ["amosnet", "hybridnet"]
   partition: "test"
-  device: "cpu"
+  device: "cuda"
   metrics: ["recall@1", "recall@5"]
   distance: "l2" # either l2 or cosine
 
+
+
+train: 
+  ######################## High Level Training Configuration ########################
+  seed: 0 # random seed
+  training_type: "distillation" # training type either contrastive or asymmetric_distillation
+  logger: "wandb" # either wandb or tensorboard
+  train_batch_size: 12 # training batch size
+  infer_batch_size: 20 # inference batch size 
+  learning_rate: 0.03 # learning rate
+  device: "cuda" # either cpu or cuda for acceleration
+  num_workers: 12 # number of workers for the dataloader
+  max_epochs: 90 # maximum number of allowable epochs
+  recall_values: [1, 3, 5, 10, 20] # k for recall@k values
+  rkd_loss: "pairwise_cosine_distance" # either pairwise_cosine_distance or pairwise_l2_distance
+  rkd_weight: 0.1
+
+
+  ######################## Contrastive GSV Training Configuration #####################
+  method: "resnet50_gem" # method to train
+  loss_distance: "l2" # either cosine or l2
+  layers_to_freeze: 1 # number of base layers to freeze
+  layers_to_crop: [] # number of convolutional layers to crop
+  optimizer: "sgd" # optimizer
+  weight_decay: 0.001 # weight decay
+  momentum: 0.9 #optimizer momentum
+  warmup_steps: 500 # learning rate warmup steps
+  milestones: [5, 10, 15] # epoch milestones for learning rate decay
+  lr_mult: 0.3 # learning rate multiplier for each mileston
+  loss_name: "MultiSimilarityLoss" # loss frunction for contrastive learning
+  miner_name: "MultiSimilarityMiner" # triplet miner type
+  miner_margin: 0.1 # margin on the loss function
+  faiss_gpu: False # use faiss for similarity search
+  pretrained: True # whether to start training from a imagenet pretrained model
+
+  img_per_place: 4 # number of images per place per batch
+  min_img_per_place: 4 # minimum number of images per place
+  cities: ["TRT"] # which cities of the dataset for place recognition
+  shuffle_all: False # whether to shuffle the images
+  random_sample_from_each_place: True # sample each place uniformly
+  image_size: [320, 320] # image input shape
+  num_workers: 12 # number of dataloader workers
+  show_data_stats: True # print the dataset stats during training
+  val_set_names: ["pitts30k_val", "essex3in1_val", "sped_val", "inria_val", "crossseason_val"] # validation datasets to use for training
+  batch_sampler: None #   
+  
+  
+  ###################### Asymmetric Training Configuration ############################
+  student_method: "resnet34convap" # student method for knowledge distillation 
+  teacher_method: "resnet50convap" # teacher method for knowledge distillation
+  distillation_type: "single_resolution" # either uniform_random_resize, single_resolution
+  size: [480, 640]
+  min_size: 320 # minimum image size to sample from
+  max_size: 420 # maximum image size to sample from
+  reload: True # whether to reload the teacher's supervision features or compute new ones 
+  patience: 3 # patience for early stopping
 
 
