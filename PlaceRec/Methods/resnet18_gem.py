@@ -65,9 +65,6 @@ class ResNet18GeM(BaseModelWrapper):
 
         super().__init__(model=model, preprocess=preprocess, name="resnet18_gem")
 
-        self.model.to(self.device)
-        self.model.eval()
-
 
 if __name__ == "__main__":
     model = ResNet18GeM()

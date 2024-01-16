@@ -37,7 +37,7 @@ TRAIN_CITIES = [
 
 DEBUG_CITIES = ["TRT"]
 
-ds = GSVCitiesDataset(cities=TRAIN_CITIES)
+ds = GSVCitiesDataset(cities=DEBUG_CITIES)
 
 df = ds.dataframe
 

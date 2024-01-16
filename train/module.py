@@ -95,76 +95,45 @@ class VPRModel(pl.LightningModule):
             "interval": "step",  # Step-wise scheduler
         }
         return [optimizer], [warmup_scheduler, scheduler]
-
-    def loss_function(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor], labels: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the loss for a batch of data.
-
-        Args:
-            descriptors (torch.Tensor): The descriptor vectors outputted by the model.
-            labels (torch.Tensor): Ground truth labels corresponding to the input data.
-
-        Returns:
-            torch.Tensor: The computed loss value.
-        """
-        if self.miner is not None:
-            miner_outputs = self.miner(student_descriptors, labels)
-            #task_loss = self.loss_fn(student_descriptors, labels, miner_outputs)
-            rkd_loss = self.rkd_loss(student_descriptors, teacher_descriptors, labels)
-            loss = torch.sum(self.args.rkd_weight * rkd_loss)/len(rkd_loss)
-            nb_samples = student_descriptors.shape[0]
-            nb_mined = len(set(miner_outputs[0].detach().cpu().numpy()))
-            batch_acc = 1.0 - (nb_mined / nb_samples)
-
-        else:  # no online mining
-            loss = self.loss_fn(student_descriptors, labels)
-            batch_acc = 0.0
-            if type(loss) == tuple:
-                loss, batch_acc = task_loss
-
-        self.batch_acc.append(batch_acc)
-        self.log("b_acc", sum(self.batch_acc) / len(self.batch_acc), prog_bar=True, logger=True)
-        return loss
     
     def rkd_loss(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor], labels: torch.Tensor) -> torch.Tensor:
-        if self.miner is not None:
-            if self.args.rkd_loss == "pairwise_l2_distance":
-                miner_outputs = self.miner(student_descriptors, labels)
-                s_desc_i = student_descriptors[miner_outputs[0]]
-                s_desc_j = student_descriptors[miner_outputs[1]]
-                student_structure = (s_desc_i - s_desc_j) ** 2
-                student_structure = torch.sum(student_structure, dim=1)
-                student_structure /= s_desc_i.shape[1]
-                student_structure *= 1/student_structure.mean()
-                rkd_losses = []
-                for t_desc in teacher_descriptors:
-                    t_desc_i = t_desc[miner_outputs[0]]
-                    t_desc_j = t_desc[miner_outputs[1]]
-                    teacher_structure = (t_desc_i - t_desc_j) ** 2
-                    teacher_structure = torch.sum(teacher_structure, dim=1)
-                    teacher_structure /= t_desc_i.shape[1]
-                    teacher_structure *= 1/teacher_structure.mean()
-                    rkd_losses.append(F.smooth_l1_loss(student_structure, teacher_structure))
-                return torch.tensor(rkd_losses.item())
-            elif self.args.rkd_loss == "pairwise_cosine_distance":
-                miner_outputs = self.miner(student_descriptors, labels)
-                s_desc_i = student_descriptors[miner_outputs[0]]
-                s_desc_j = student_descriptors[miner_outputs[1]]
-                student_similarity_matrix = torch.mm(s_desc_i, s_desc_j.T)
-                rkd_losses = []
-                for t_desc in teacher_descriptors:
-                    t_desc_i = t_desc[miner_outputs[0]]
-                    t_desc_j = t_desc[miner_outputs[1]]
-                    teacher_similarity_matrix = torch.mm(t_desc_i, t_desc_j.T)
-                    rkd_loss = F.smooth_l1_loss(student_similarity_matrix.flatten(), teacher_similarity_matrix.flatten())
-                    rkd_losses.append(rkd_loss)
-                return torch.tensor(rkd_losses)
-            else:
-                raise NotImplementedError
-
-                    
-
-
+        if self.args.rkd_loss == "pairwise_l2_distance":
+            miner_outputs = self.miner(student_descriptors, labels)
+            s_desc_i = student_descriptors[miner_outputs[0]]
+            s_desc_j = student_descriptors[miner_outputs[1]]
+            student_structure = (s_desc_i - s_desc_j) ** 2
+            student_structure = torch.sum(student_structure, dim=1)
+            student_structure /= s_desc_i.shape[1]
+            student_structure *= 1/student_structure.mean()
+            rkd_losses = []
+            for t_desc in teacher_descriptors:
+                t_desc_i = t_desc[miner_outputs[0]]
+                t_desc_j = t_desc[miner_outputs[1]]
+                teacher_structure = (t_desc_i - t_desc_j) ** 2
+                teacher_structure = torch.sum(teacher_structure, dim=1)
+                teacher_structure /= t_desc_i.shape[1]
+                teacher_structure *= 1/teacher_structure.mean()
+                rkd_losses.append(F.smooth_l1_loss(student_structure, teacher_structure))
+            loss = torch.sum(rkd_losses)/len(rkd_losses)
+            return loss
+        elif self.args.rkd_loss == "pairwise_cosine_distance":
+            miner_outputs = self.miner(student_descriptors, labels)
+            s_desc_i = student_descriptors[miner_outputs[0]]
+            s_desc_j = student_descriptors[miner_outputs[1]]
+            student_similarity_matrix = torch.mm(s_desc_i, s_desc_j.T)
+            rkd_losses = []
+            for t_desc in teacher_descriptors:
+                t_desc_i = t_desc[miner_outputs[0]]
+                t_desc_j = t_desc[miner_outputs[1]]
+                teacher_similarity_matrix = torch.mm(t_desc_i, t_desc_j.T)
+                rkd_loss = F.smooth_l1_loss(student_similarity_matrix.flatten(), teacher_similarity_matrix.flatten())
+                rkd_losses.append(rkd_loss)
+            loss = torch.sum(rkd_losses)/len(rkd_losses)
+            return loss
+        elif self.args.rkd_loss == "tripletwise_cosine_distance":
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
             
                 
 
@@ -180,17 +149,14 @@ class VPRModel(pl.LightningModule):
             dict: A dictionary containing the loss value for the batch.
         """
         places, labels, teacher_desc = batch
-        for desc in teacher_desc:
-            desc.to("cuda")
         BS, N, ch, h, w = places.shape
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
         student_desc = self(images)  # Here we are calling the method forward that we defined above
         teacher_desc = [desc.view(BS * N, -1) for desc in teacher_desc]
-        print("################################3", student_desc.device, teacher_desc[0].device, labels.device)
-        loss = self.loss_function(student_desc, teacher_desc, labels)  # Call the loss_function we defined above
-        self.log("loss", loss.item(), logger=True)
-        return {"loss": loss}
+        loss = self.rkd_loss(student_desc, teacher_desc, labels)  # Call the loss_function we defined above
+        self.log("train_loss", loss.item(), logger=True)
+        return {"train_loss": loss}
 
     def on_train_epoch_end(self) -> None:
         """
@@ -221,7 +187,7 @@ class VPRModel(pl.LightningModule):
         Returns:
             torch.Tensor: The descriptor vectors computed for the batch.
         """
-        places, _ = batch
+        places, _, _ = batch
         # calculate descriptors
         descriptors = self(places).detach().cpu()
         if len(self.trainer.datamodule.val_set_names) == 1:
