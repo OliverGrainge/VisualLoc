@@ -16,6 +16,52 @@ from train.dataloaders.GSVCitiesDataloader import (
 )
 
 
+def pdist(e, squared=False, eps=1e-12):
+    e_square = e.pow(2).sum(dim=1)
+    prod = e @ e.t()
+    res = (e_square.unsqueeze(1) + e_square.unsqueeze(0) - 2 * prod).clamp(min=eps)
+
+    if not squared:
+        res = res.sqrt()
+
+    res = res.clone()
+    res[range(len(e)), range(len(e))] = 0
+    return res
+
+
+class RKdAngle(nn.Module):
+    def forward(self, student, teacher):
+        # N x C
+        # N x N x C
+
+        with torch.no_grad():
+            td = (teacher.unsqueeze(0) - teacher.unsqueeze(1))
+            norm_td = F.normalize(td, p=2, dim=2)
+            t_angle = torch.bmm(norm_td, norm_td.transpose(1, 2)).view(-1)
+
+        sd = (student.unsqueeze(0) - student.unsqueeze(1))
+        norm_sd = F.normalize(sd, p=2, dim=2)
+        s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
+
+        loss = F.smooth_l1_loss(s_angle, t_angle, reduction='elementwise_mean')
+        return loss
+
+
+class RkdDistance(nn.Module):
+    def forward(self, student, teacher):
+        with torch.no_grad():
+            t_d = pdist(teacher, squared=False)
+            mean_td = t_d[t_d>0].mean()
+            t_d = t_d / mean_td
+
+        d = pdist(student, squared=False)
+        mean_d = d[d>0].mean()
+        d = d / mean_d
+
+        loss = F.smooth_l1_loss(d, t_d, reduction='elementwise_mean')
+        return loss
+    
+
 class VPRModel(pl.LightningModule):
     """
     A PyTorch Lightning Module for Visual Place Recognition (VPR).
@@ -58,6 +104,8 @@ class VPRModel(pl.LightningModule):
         self.batch_acc = []  # we will keep track of the % of trivial pairs/triplets at the loss level
         self.faiss_gpu = args.faiss_gpu
         self.model = model
+        self.angle_loss = RKdAngle()
+        self.dist_loss = RkdDistance()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -86,7 +134,7 @@ class VPRModel(pl.LightningModule):
         elif self.args.optimizer.lower() == "adamw":
             optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.learning_rate, weight_decay=self.args.weight_decay)
         elif self.args.optimizer.lower() == "adam":
-            optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.learning_rate, weight_decay=self.args.weight_decay)
+            optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.learning_rate)
         else:
             raise ValueError(f'Optimizer {self.optimizer} has not been added to "configure_optimizers()"')
         scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=self.args.milestones, gamma=self.args.lr_mult)
@@ -96,39 +144,12 @@ class VPRModel(pl.LightningModule):
         }
         return [optimizer], [warmup_scheduler, scheduler]
     
-    def rkd_loss(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor], labels: torch.Tensor) -> torch.Tensor:
+    def rkd_loss(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor]) -> torch.Tensor:
         if self.args.rkd_loss == "pairwise_l2_distance":
-            miner_outputs = self.miner(student_descriptors, labels)
-            s_desc_i = student_descriptors[miner_outputs[0]]
-            s_desc_j = student_descriptors[miner_outputs[1]]
-            student_structure = (s_desc_i - s_desc_j) ** 2
-            student_structure = torch.sum(student_structure, dim=1)
-            student_structure /= s_desc_i.shape[1]
-            student_structure *= 1/student_structure.mean()
-            rkd_losses = []
-            for t_desc in teacher_descriptors:
-                t_desc_i = t_desc[miner_outputs[0]]
-                t_desc_j = t_desc[miner_outputs[1]]
-                teacher_structure = (t_desc_i - t_desc_j) ** 2
-                teacher_structure = torch.sum(teacher_structure, dim=1)
-                teacher_structure /= t_desc_i.shape[1]
-                teacher_structure *= 1/teacher_structure.mean()
-                rkd_losses.append(F.smooth_l1_loss(student_structure, teacher_structure))
-            loss = torch.sum(rkd_losses)/len(rkd_losses)
+            loss = self.dist_loss(student_descriptors, teacher_descriptors)
             return loss
         elif self.args.rkd_loss == "pairwise_cosine_distance":
-            miner_outputs = self.miner(student_descriptors, labels)
-            s_desc_i = student_descriptors[miner_outputs[0]]
-            s_desc_j = student_descriptors[miner_outputs[1]]
-            student_similarity_matrix = torch.mm(s_desc_i, s_desc_j.T)
-            rkd_losses = []
-            for t_desc in teacher_descriptors:
-                t_desc_i = t_desc[miner_outputs[0]]
-                t_desc_j = t_desc[miner_outputs[1]]
-                teacher_similarity_matrix = torch.mm(t_desc_i, t_desc_j.T)
-                rkd_loss = F.smooth_l1_loss(student_similarity_matrix.flatten(), teacher_similarity_matrix.flatten())
-                rkd_losses.append(rkd_loss)
-            loss = torch.sum(rkd_losses)/len(rkd_losses)
+            loss = self.angle_loss(student_descriptors, teacher_descriptors)
             return loss
         elif self.args.rkd_loss == "tripletwise_cosine_distance":
             raise NotImplementedError
@@ -154,9 +175,9 @@ class VPRModel(pl.LightningModule):
         labels = labels.view(-1)
         student_desc = self(images)  # Here we are calling the method forward that we defined above
         teacher_desc = [desc.view(BS * N, -1) for desc in teacher_desc]
-        loss = self.rkd_loss(student_desc, teacher_desc, labels)  # Call the loss_function we defined above
+        loss = torch.stack([self.rkd_loss(student_desc, t_desc) for t_desc in teacher_desc]).mean() # Call the loss_function we defined above
         self.log("train_loss", loss.item(), logger=True)
-        return {"train_loss": loss}
+        return {"loss": loss}
 
     def on_train_epoch_end(self) -> None:
         """
@@ -187,7 +208,7 @@ class VPRModel(pl.LightningModule):
         Returns:
             torch.Tensor: The descriptor vectors computed for the batch.
         """
-        places, _, _ = batch
+        places, _ = batch
         # calculate descriptors
         descriptors = self(places).detach().cpu()
         if len(self.trainer.datamodule.val_set_names) == 1:

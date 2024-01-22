@@ -6,10 +6,12 @@ from os.path import join
 import pytorch_lightning as pl 
 from pytorch_lightning.callbacks import ModelCheckpoint
 from PlaceRec.utils import get_config, get_training_logger
+from compute_features import TRAIN_CITIES
 
 
 config = get_config()
 args = train_arguments()
+args.cities = TRAIN_CITIES
 method = get_method(args.method, pretrained=False)
 args.features_dim = method.features_dim
 model = method.model.to(args.device)
@@ -48,7 +50,8 @@ trainer = pl.Trainer(
     logger=logger,
     reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
     log_every_n_steps=20,
-    limit_train_batches=10,
+    val_check_interval=400
+    #limit_train_batches=10,
     # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
 )
 trainer.fit(model=model, datamodule=datamodule)

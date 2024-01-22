@@ -1,7 +1,7 @@
-#datasets_directory: "/home/oliver/Documents/github/Datasets"
-#weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
-datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
-weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/home/oliver/Documents/github/Datasets"
+weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
+#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 
 #####################################################################################################################################################
 ################################################               RUN CONFIGURATION          #####################################################
@@ -32,12 +32,12 @@ train:
   logger: "wandb" # either wandb or tensorboard
   train_batch_size: 12 # training batch size
   infer_batch_size: 20 # inference batch size 
-  learning_rate: 0.03 # learning rate
+  learning_rate: 0.0001 # learning rate
   device: "cuda" # either cpu or cuda for acceleration
   num_workers: 12 # number of workers for the dataloader
   max_epochs: 90 # maximum number of allowable epochs
   recall_values: [1, 3, 5, 10, 20] # k for recall@k values
-  rkd_loss: "pairwise_cosine_distance" # either pairwise_cosine_distance or pairwise_l2_distance
+  rkd_loss: "pairwise_l2_distance" # either pairwise_cosine_distance or pairwise_l2_distance
   rkd_weight: 0.1
 
 
@@ -46,12 +46,12 @@ train:
   loss_distance: "l2" # either cosine or l2
   layers_to_freeze: 1 # number of base layers to freeze
   layers_to_crop: [] # number of convolutional layers to crop
-  optimizer: "sgd" # optimizer
+  optimizer: "adam" # optimizer
   weight_decay: 0.001 # weight decay
   momentum: 0.9 #optimizer momentum
   warmup_steps: 500 # learning rate warmup steps
   milestones: [5, 10, 15] # epoch milestones for learning rate decay
-  lr_mult: 0.3 # learning rate multiplier for each mileston
+  lr_mult: 0.001 # learning rate multiplier for each milestonw
   loss_name: "MultiSimilarityLoss" # loss frunction for contrastive learning
   miner_name: "MultiSimilarityMiner" # triplet miner type
   miner_margin: 0.1 # margin on the loss function

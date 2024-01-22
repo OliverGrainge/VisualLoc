@@ -89,17 +89,17 @@ class GSVCitiesDataset(Dataset):
         self.places_ids = pd.unique(self.dataframe.index)
         self.total_nb_images = len(self.dataframe)
 
-        self.teacher_desc = [np.load(pth) for pth in glob("/home/oliver/Documents/github/VisualLoc/Data/feature_store/debug/*")]
+        self.teacher_desc = [np.load(pth) for pth in glob("/home/oliver/Documents/github/VisualLoc/Data/feature_store/train/*")]
 
     def __getdataframes(self) -> pd.DataFrame:
         """Creates and returns a consolidated dataframe of image metadata from all specified cities."""
         df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[0]}.csv")
-        df = df.sample(frac=1)  # shuffle the city dataframe
+        #df = df.sample(frac=1)  # shuffle the city dataframe
         for i in range(1, len(self.cities)):
             tmp_df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[i]}.csv")
             prefix = i
             tmp_df["place_id"] = tmp_df["place_id"] + (prefix * 10**5)
-            tmp_df = tmp_df.sample(frac=1)  # shuffle the city dataframe
+            #tmp_df = tmp_df.sample(frac=1)  # shuffle the city dataframe
             df = pd.concat([df, tmp_df], ignore_index=True)
         res = df[df.groupby("place_id")["place_id"].transform("size") >= self.min_img_per_place]
         return res.set_index("place_id")

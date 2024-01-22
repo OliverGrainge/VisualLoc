@@ -6,10 +6,10 @@ from torch.utils.data import DataLoader
 from os.path import join 
 import os
 
-METHODS = ["netvlad"]
+METHODS = ["mixvpr"]
 
 
-TRAIN_CITIES = [
+ALL_CITIES = [
     "Bangkok",
     "BuenosAires",
     "LosAngeles",
@@ -35,27 +35,41 @@ TRAIN_CITIES = [
     "PRS",  # refers to Paris
 ]
 
+TRAIN_CITIES = [
+    "Bangkok",
+    "BuenosAires",
+    "LosAngeles",
+    "MexicoCity",
+    "OSL",  # refers to Oslo
+    "Rome",
+    "Barcelona",
+    "Chicago",
+    "Madrid",
+    "Miami",
+    "Phoenix",]
+
 DEBUG_CITIES = ["TRT"]
 
-ds = GSVCitiesDataset(cities=DEBUG_CITIES)
+if __name__ == "__main__":
+    ds = GSVCitiesDataset(cities=TRAIN_CITIES)
 
-df = ds.dataframe
+    df = ds.dataframe
+    print(df.head())
+    img_paths = np.array([ds.base_path + "/Images/" + row["city_id"] + "/" + ds.get_img_name(row) for i, row in df.iterrows()])
 
-img_paths = np.array([ds.base_path + "/Images/" + row["city_id"] + "/" + ds.get_img_name(row) for i, row in df.iterrows()])
 
 
-
-for method_name in METHODS: 
-    method = get_method(method_name)
-    dataset = utils.ImageIdxDataset(img_paths, method.preprocess)
-    dataloader = DataLoader(dataset, num_workers=6, pin_memory=True, batch_size=32)
-    features = method.compute_query_desc(dataloader, pbar=True)
-    if ds.cities == DEBUG_CITIES:
-        features_name = method_name + ".npy"
-        np.save(os.getcwd() + "/Data/feature_store/debug/" + features_name, features)
-    else:
-        features_name = method_name + ".npy"
-        np.save(os.getcwd() + "/Data/feature_store/train/" + features_name, features)
+    for method_name in METHODS: 
+        method = get_method(method_name, pretrained=True)
+        dataset = utils.ImageIdxDataset(img_paths, method.preprocess)
+        dataloader = DataLoader(dataset, num_workers=6, pin_memory=True, batch_size=32)
+        features = method.compute_query_desc(dataloader, pbar=True)
+        if ds.cities == DEBUG_CITIES:
+            features_name = method_name + ".npy"
+            np.save(os.getcwd() + "/Data/feature_store/debug/" + features_name, features)
+        else:
+            features_name = method_name + ".npy"
+            np.save(os.getcwd() + "/Data/feature_store/train/" + features_name, features)
 
 
 
