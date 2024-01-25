@@ -23,12 +23,12 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.preprocess is not None:
-            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
+            img = np.array(Image.open(self.img_paths[idx]))
             img = Image.fromarray(img)
             img = self.preprocess(img)
             return img
 
-        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
+        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))
         return img
 
 
@@ -42,12 +42,12 @@ class ImageIdxDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.preprocess is not None:
-            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
+            img = np.array(Image.open(self.img_paths[idx]))
             img = Image.fromarray(img)
             img = self.preprocess(img)
             return idx, img
 
-        img = np.array(Image.open(self.img_paths[idx]).resize((224, 224)))[:, :, :3]
+        img = np.array(Image.open(self.img_paths[idx]).resize((224, 224)))
         return idx, img
 
 
@@ -60,6 +60,14 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import GardensPointWalking
 
         dataset = GardensPointWalking()
+    elif name == "eynsham":
+        from PlaceRec.Datasets import Eynsham
+
+        dataset = Eynsham()
+    elif name == "st_lucia":
+        from PlaceRec.Datasets import StLucia
+
+        dataset = StLucia()
     elif name == "pitts250k":
         from PlaceRec.Datasets import Pitts250k
 

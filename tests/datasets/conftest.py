@@ -54,3 +54,19 @@ def sfu():
 @pytest.fixture
 def spedtest():
     return Datasets.SpedTest()
+
+@pytest.fixture
+def st_lucia():
+    return Datasets.StLucia()
+
+
+@pytest.fixture
+def eynsham():
+    return Datasets.Eynsham()
+
+
+@pytest.fixture
+def mapillarysls():
+    return Datasets.MapillarySLS()
+
+

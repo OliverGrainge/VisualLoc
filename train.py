@@ -21,7 +21,7 @@ distillation_datamodule = DistillationCitiesDataModule(args, preprocess=student_
 
 # Checkpointing the Model on pitts30k
 checkpoint_callback = ModelCheckpoint(
-    monitor="pitts30k_val/R1",
+    monitor="mapillary_sls/R1",
     filename=join(
         os.getcwd(),
         "checkpoints",
@@ -47,7 +47,7 @@ trainer = pl.Trainer(
     logger=logger,
     reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
     log_every_n_steps=20,
-    #precision="bf16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
+    precision="bf16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
     #limit_train_batches=10,
     #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
 )

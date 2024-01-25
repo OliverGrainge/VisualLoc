@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 import torch.nn.functional as F
 
-from train import utils
+from train import utils, losses
 
 
 def pdist(e, squared=False, eps=1e-12):
@@ -109,6 +109,7 @@ class DistillationModel(pl.LightningModule):
         self.faiss_gpu = args.faiss_gpu
         self.lr_mult = args.lr_mult
         self.lr_milestones = args.lr_milestones
+        self.loss_fn = losses.get_multi_teacher_loss(args)
         self.save_hyperparameters(args)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -148,19 +149,6 @@ class DistillationModel(pl.LightningModule):
             "interval": "step",  # Step-wise scheduler
         }
         return [optimizer], [warmup_scheduler, scheduler]
-    
-    def rkd_loss(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor]) -> torch.Tensor:
-        if self.rkd_loss_type == "pairwise_l2_distance":
-            loss = self.dist_loss(student_descriptors, teacher_descriptors)
-            return loss
-        elif self.rkd_loss_type == "pairwise_cosine_distance":
-            loss = self.angle_loss(student_descriptors, teacher_descriptors)
-            return loss
-        elif self.rkd_loss_type == "tripletwise_cosine_distance":
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-            
                 
 
     def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
@@ -180,11 +168,7 @@ class DistillationModel(pl.LightningModule):
         labels = labels.view(-1)
         student_desc = self(images)  # Here we are calling the method forward that we defined above
         teacher_desc = [desc.view(BS * N, -1) for desc in teacher_desc]
-        if self.fusion_method == "average":
-            loss = torch.stack([self.rkd_loss(student_desc, t_desc) for t_desc in teacher_desc]).mean() # Call the loss_function we defined above
-        else: 
-            raise NotImplementedError
-        self.log("train_loss", loss.item(), logger=True)
+        loss = self.loss_fn(student_desc, teacher_desc)
         return {"loss": loss}
 
     def on_train_epoch_end(self) -> None:

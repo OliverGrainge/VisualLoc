@@ -171,10 +171,6 @@ def train_arguments():
 
     parser.add_argument("--warmup_steps", type=int, default=config["train"]["warmup_steps"])
 
-    parser.add_argument("--miner_name", type=str, default=config["train"]["miner_name"])
-
-    parser.add_argument("--miner_margin", type=float, default=config["train"]["miner_margin"])
-
     parser.add_argument("--faiss_gpu", type=bool, default=config["train"]["faiss_gpu"])
 
     parser.add_argument("--random_sample_from_each_place", type=bool, default=config["train"]["random_sample_from_each_place"])

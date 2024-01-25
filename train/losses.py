@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from argparse import Namespace
+from typing import List
 
 def pdist(e, squared=False, eps=1e-12):
     e_square = e.pow(2).sum(dim=1)
@@ -55,14 +56,16 @@ def simple_mlp(in_dim: int, out_dim: int):
 
 class TeacherAverageLoss(nn.Module):
     def __init__(self, args: Namespace):
+        super().__init__()
         self.distance_loss = RkdDistance()
 
-    def forward(self, student_desc: torch.tensor, teacher_desc: torch.tensor):
+    def forward(self, student_desc: torch.tensor, teacher_desc: List[torch.tensor]):
         loss = torch.stack([self.distance_loss(student_desc, desc) for desc in teacher_desc]).mean()
         return loss
 
 class TeacherWeightedAverageLoss(nn.Module):
     def __init__(self, args: Namespace):
+        super().__init__()
         self.weights = nn.Parameters(torch.ones(len(args.teacher_methods)/len(args.teacher_methods)), requires_grad=True)
         self.distance_loss = RkdDistance()
 
@@ -74,6 +77,7 @@ class TeacherWeightedAverageLoss(nn.Module):
 
 class TeacherFeedLoss(nn.Module):
     def __init__(self, args: Namespace):
+        super().__init__()
         self.distance_loss = RkdDistance()
         self.feed_heads = [self.simple_mlp(args.student_features_dim, 2048) for _ in range(len(args.teacher_methods))]
 
@@ -85,6 +89,7 @@ class TeacherFeedLoss(nn.Module):
 
 class TeacherAdaptiveLoss(nn.Module):
     def __init__(self, args: Namespace):
+        super().__init__()
         self.distance_loss = RkdDistance()
         self.adaption_heads = [nn.Linear(t_dim, args.student_features_dim) for t_dim in args.teacher_features_dim]
         self.weight_head = nn.Linear(args.student_features_dim, 1)
@@ -99,13 +104,13 @@ class TeacherAdaptiveLoss(nn.Module):
 
 
 def get_multi_teacher_loss(args: Namespace):
-    if args.teacher_methods == "average":
+    if args.fusion_method == "average":
         return TeacherAverageLoss(args)
-    elif args.teacher_methods == "weighted_average":
+    elif args.fusion_method == "weighted_average":
         return TeacherWeightedAverageLoss(args)
-    elif args.teacher_methods == "feed":
+    elif args.fusion_method == "feed":
         return TeacherFeedLoss(args)
-    elif args.teacher_methods == "adaptive":
+    elif args.fusion_method == "adaptive":
         return TeacherAdaptiveLoss(args)
     else: 
         raise NotImplementedError()

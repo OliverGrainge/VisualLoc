@@ -8,3 +8,7 @@ from .pitts30k import Pitts30k
 from .pitts250k import Pitts250k
 from .sfu import SFU
 from .spedtest import SpedTest
+from .st_lucia import StLucia
+from .eynsham import Eynsham
+from .san_francisco import SanFrancisco
+from .mapillarysls import MapillarySLS

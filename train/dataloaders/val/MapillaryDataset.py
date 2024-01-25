@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, Dataset
 from PlaceRec.utils import get_config
 
 config = get_config()
-GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "msls_val/")
+GT_ROOT = DATASET_ROOT = join(config["datasets_directory"], "mapillary_sls/")
 
 
 class MSLS(Dataset):
