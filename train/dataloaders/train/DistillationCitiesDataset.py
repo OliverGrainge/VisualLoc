@@ -31,7 +31,7 @@ if not Path(BASE_PATH).exists():
     raise FileNotFoundError("BASE_PATH is hardcoded, please adjust to point to gsv_cities")
 
 
-class GSVCitiesDataset(Dataset):
+class DistillationCitiesDataset(Dataset):
     """
     A dataset class for loading and processing images from various cities.
 
@@ -69,14 +69,17 @@ class GSVCitiesDataset(Dataset):
 
     def __init__(
         self,
+        
         cities: List[str] = ["London", "Boston"],
         img_per_place: int = 4,
         min_img_per_place: int = 4,
         random_sample_from_each_place: bool = True,
         transform: Compose = default_transform,
         base_path: str = BASE_PATH,
+        teacher_methods: List[str]=["mixvpr"]
     ) -> None:
-        super(GSVCitiesDataset, self).__init__()
+        
+        super(DistillationCitiesDataset, self).__init__()
         self.base_path = base_path
         self.cities = cities
         assert img_per_place <= min_img_per_place, f"img_per_place should be less than {min_img_per_place}"
@@ -85,21 +88,18 @@ class GSVCitiesDataset(Dataset):
         self.random_sample_from_each_place = random_sample_from_each_place
         self.transform = transform
         self.dataframe = self.__getdataframes()
-        self.dataframe['global_index'] = range(len(self.dataframe))
         self.places_ids = pd.unique(self.dataframe.index)
         self.total_nb_images = len(self.dataframe)
+        self.teacher_methods = teacher_methods
 
-        self.teacher_desc = [np.load(pth) for pth in glob("/home/oliver/Documents/github/VisualLoc/Data/feature_store/train/*")]
 
     def __getdataframes(self) -> pd.DataFrame:
         """Creates and returns a consolidated dataframe of image metadata from all specified cities."""
         df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[0]}.csv")
-        #df = df.sample(frac=1)  # shuffle the city dataframe
         for i in range(1, len(self.cities)):
             tmp_df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[i]}.csv")
             prefix = i
             tmp_df["place_id"] = tmp_df["place_id"] + (prefix * 10**5)
-            #tmp_df = tmp_df.sample(frac=1)  # shuffle the city dataframe
             df = pd.concat([df, tmp_df], ignore_index=True)
         res = df[df.groupby("place_id")["place_id"].transform("size") >= self.min_img_per_place]
         return res.set_index("place_id")
@@ -114,7 +114,6 @@ class GSVCitiesDataset(Dataset):
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: A batch of images and their corresponding place IDs.
         """
-        
         place_id = self.places_ids[index]
         place = self.dataframe.loc[place_id]
         
@@ -123,17 +122,23 @@ class GSVCitiesDataset(Dataset):
         else:  # always get the same most recent images
             place = place.sort_values(by=["year", "month", "lat"], ascending=False)
             place = place[: self.img_per_place]
+
         imgs = []
-        global_indicies = place["global_index"].to_numpy()
-        #print(global_indicies)
+        features = [[] for _ in range(len(self.teacher_methods))]
+        method_paths = [join(config["datasets_directory"], "feature_store", "gsvcities", name) for name in self.teacher_methods]
         for i, row in place.iterrows():
             img_name = self.get_img_name(row)
             img_path = self.base_path + "/Images/" + row["city_id"] + "/" + img_name
+            feature_name = img_name.replace(".jpg", ".npy")
             img = self.image_loader(img_path)
             if self.transform is not None:
                 img = self.transform(img)
             imgs.append(img)
-        t_desc = [torch.tensor(desc[global_indicies]) for desc in self.teacher_desc]
+
+            for i, method_pth in enumerate(method_paths):
+                features[i].append(torch.tensor(np.load(join(method_pth, feature_name))))
+
+        t_desc = [torch.vstack(f) for f in features]
         return torch.stack(imgs), torch.tensor(place_id).repeat(self.img_per_place), t_desc
 
     def __len__(self) -> int:

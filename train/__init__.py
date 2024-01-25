@@ -1,1 +1,2 @@
-from .module import VPRModel, GSVCitiesDataModule
+from .DistillationModule import DistillationModel
+from .dataloaders.DistillationDataloader import DistillationCitiesDataModule

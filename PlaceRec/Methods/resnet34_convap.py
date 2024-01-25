@@ -285,48 +285,21 @@ preprocess = transforms.Compose(
 )
 
 
-class ResNet50ConvAP(BaseModelWrapper):
+class ResNet34ConvAP(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
-            if not os.path.exists(
-                join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
-            ):
-                raise Exception(
-                    f'Could not find weights at {join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")}'
-                )
-            model = VPRModel(
-                backbone_arch="resnet50",
-                layers_to_crop=[],
-                agg_arch="ConvAP",
-                agg_config={
-                    "in_channels": 2048,
-                    "out_channels": 1024,
-                    "s1": 2,
-                    "s2": 2,
-                },
-            )
-            if not torch.cuda.is_available():
-                state_dict = torch.load(
-                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"),
-                    map_location=torch.device("cpu"),
-                )
-            else:
-                state_dict = torch.load(
-                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
-                )
+           raise Exception("Pretrained ResNet34ConvAP Not Available")
+        
+        model = VPRModel(
+            backbone_arch="resnet34",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 512,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
 
-            model.load_state_dict(state_dict)
-        else:
-            model = VPRModel(
-                backbone_arch="resnet50",
-                layers_to_crop=[],
-                agg_arch="ConvAP",
-                agg_config={
-                    "in_channels": 2048,
-                    "out_channels": 1024,
-                    "s1": 2,
-                    "s2": 2,
-                },
-            )
-
-        super().__init__(model=model, preprocess=preprocess, name="resnet50convap")
+        super().__init__(model=model, preprocess=preprocess, name="resnet34convap")

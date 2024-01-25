@@ -107,9 +107,13 @@ def get_method(name: str = None, pretrained: bool = True):
 
         method = CALC(pretrained=pretrained)
     elif name == "eigenplaces":
-        from PlaceRec.Methods import resnet50_eigenplaces
+        from PlaceRec.Methods import EigenPlaces
 
         method = EigenPlaces(pretrained=pretrained)
+    elif name == "resnet34convap":
+        from PlaceRec.Methods import ResNet34ConvAP
+
+        method = ResNet34ConvAP(pretrained=pretrained)
     elif name == "netvlad":
         from PlaceRec.Methods import NetVLAD
 
@@ -151,10 +155,10 @@ def get_method(name: str = None, pretrained: bool = True):
     return method
 
 
-def get_training_logger(config: dict, project_name: Union[str, None] = None):
-    if config["train"]["logger"].lower() == "wandb":
+def get_training_logger(args: Namespace, project_name: Union[str, None] = None):
+    if args.logger_type.lower() == "wandb":
         logger = WandbLogger(project=project_name)
-    elif config["train"]["logger"].lower() == "tensorboard":
+    elif args.logger_type.lower() == "tensorboard":
         logger = TensorBoardLogger("tb_logs", name=project_name)
     else:
         raise NotImplementedError()

@@ -9,3 +9,5 @@ from .resnet18_netvlad import NetVLAD
 from .resnet18_gem import ResNet18GeM
 from .resnet50_convap import ResNet50ConvAP
 from .resnet50_gem import ResNet50GeM
+from .resnet34_convap import ResNet34ConvAP
+from .resnet50_eigenplaces import EigenPlaces

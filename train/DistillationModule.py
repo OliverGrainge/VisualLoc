@@ -11,9 +11,6 @@ from torch.optim.optimizer import Optimizer
 import torch.nn.functional as F
 
 from train import utils
-from train.dataloaders.GSVCitiesDataloader import (
-    GSVCitiesDataModule,
-)
 
 
 def pdist(e, squared=False, eps=1e-12):
@@ -62,7 +59,7 @@ class RkdDistance(nn.Module):
         return loss
     
 
-class VPRModel(pl.LightningModule):
+class DistillationModel(pl.LightningModule):
     """
     A PyTorch Lightning Module for Visual Place Recognition (VPR).
 
@@ -98,14 +95,21 @@ class VPRModel(pl.LightningModule):
         """
         super().__init__()
         self.args = args
-        self.save_hyperparameters()  # write hyperparams into a file
-        self.loss_fn = utils.get_loss(args.loss_name)
-        self.miner = utils.get_miner(args.miner_name, args.miner_margin)
         self.batch_acc = []  # we will keep track of the % of trivial pairs/triplets at the loss level
         self.faiss_gpu = args.faiss_gpu
         self.model = model
         self.angle_loss = RKdAngle()
         self.dist_loss = RkdDistance()
+        self.optimizer = args.optimizer.lower()
+        self.learning_rate = args.learning_rate
+        self.weight_decay = args.weight_decay
+        self.warmup_steps = args.warmup_steps
+        self.rkd_loss_type = args.rkd_loss
+        self.fusion_method = args.fusion_method
+        self.faiss_gpu = args.faiss_gpu
+        self.lr_mult = args.lr_mult
+        self.lr_milestones = args.lr_milestones
+        self.save_hyperparameters(args)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -127,31 +131,32 @@ class VPRModel(pl.LightningModule):
         Returns:
             tuple: A tuple containing the list of optimizers and the list of learning rate schedulers.
         """
-        if self.args.optimizer.lower() == "sgd":
+        if self.optimizer.lower() == "sgd":
             optimizer = torch.optim.SGD(
-                self.parameters(), lr=self.args.learning_rate, weight_decay=self.args.weight_decay, momentum=self.args.momentum
+                self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay, momentum=self.momentum
             )
-        elif self.args.optimizer.lower() == "adamw":
-            optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.learning_rate, weight_decay=self.args.weight_decay)
-        elif self.args.optimizer.lower() == "adam":
-            optimizer = torch.optim.AdamW(self.parameters(), lr=self.args.learning_rate)
+        elif self.optimizer.lower() == "adamw":
+            optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        elif self.optimizer.lower() == "adam":
+            optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
         else:
             raise ValueError(f'Optimizer {self.optimizer} has not been added to "configure_optimizers()"')
-        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=self.args.milestones, gamma=self.args.lr_mult)
+        
+        scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=self.lr_milestones, gamma=self.lr_mult)
         warmup_scheduler = {
-            "scheduler": LambdaLR(optimizer, lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.args.warmup_steps)),
+            "scheduler": LambdaLR(optimizer, lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_steps)),
             "interval": "step",  # Step-wise scheduler
         }
         return [optimizer], [warmup_scheduler, scheduler]
     
     def rkd_loss(self, student_descriptors: torch.Tensor, teacher_descriptors: List[torch.Tensor]) -> torch.Tensor:
-        if self.args.rkd_loss == "pairwise_l2_distance":
+        if self.rkd_loss_type == "pairwise_l2_distance":
             loss = self.dist_loss(student_descriptors, teacher_descriptors)
             return loss
-        elif self.args.rkd_loss == "pairwise_cosine_distance":
+        elif self.rkd_loss_type == "pairwise_cosine_distance":
             loss = self.angle_loss(student_descriptors, teacher_descriptors)
             return loss
-        elif self.args.rkd_loss == "tripletwise_cosine_distance":
+        elif self.rkd_loss_type == "tripletwise_cosine_distance":
             raise NotImplementedError
         else:
             raise NotImplementedError
@@ -175,7 +180,10 @@ class VPRModel(pl.LightningModule):
         labels = labels.view(-1)
         student_desc = self(images)  # Here we are calling the method forward that we defined above
         teacher_desc = [desc.view(BS * N, -1) for desc in teacher_desc]
-        loss = torch.stack([self.rkd_loss(student_desc, t_desc) for t_desc in teacher_desc]).mean() # Call the loss_function we defined above
+        if self.fusion_method == "average":
+            loss = torch.stack([self.rkd_loss(student_desc, t_desc) for t_desc in teacher_desc]).mean() # Call the loss_function we defined above
+        else: 
+            raise NotImplementedError
         self.log("train_loss", loss.item(), logger=True)
         return {"loss": loss}
 
@@ -242,7 +250,7 @@ class VPRModel(pl.LightningModule):
                 gt=ground_truth,
                 print_results=True,
                 dataset_name=val_set_name,
-                faiss_gpu=self.args.faiss_gpu,
+                faiss_gpu=self.faiss_gpu,
             )
             del r_list, q_list, feats, num_references, ground_truth
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
