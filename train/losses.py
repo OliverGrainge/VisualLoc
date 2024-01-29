@@ -66,7 +66,7 @@ class TeacherAverageLoss(nn.Module):
 class TeacherWeightedAverageLoss(nn.Module):
     def __init__(self, args: Namespace):
         super().__init__()
-        self.weights = nn.Parameters(torch.ones(len(args.teacher_methods)/len(args.teacher_methods)), requires_grad=True)
+        self.weights = nn.Parameter(torch.ones(len(args.teacher_methods))/len(args.teacher_methods))
         self.distance_loss = RkdDistance()
 
     def forward(self, student_desc: torch.tensor, teacher_desc: torch.tensor):
@@ -79,11 +79,13 @@ class TeacherFeedLoss(nn.Module):
     def __init__(self, args: Namespace):
         super().__init__()
         self.distance_loss = RkdDistance()
-        self.feed_heads = [self.simple_mlp(args.student_features_dim, 2048) for _ in range(len(args.teacher_methods))]
+        self.feed_heads = [simple_mlp(args.student_features_dim, 2048) for _ in range(len(args.teacher_methods))]
+        if args.device == "cuda":
+            self.feed_heads = [head.to("cuda") for head in self.feed_heads]
 
     def forward(self, student_desc: torch.tensor, teacher_desc: torch.tensor):
         all_student_desc = [mlp(student_desc) for mlp in self.feed_heads]
-        loss = torch.stack([self.rkd_loss(s_desc, t_desc) for s_desc, t_desc in zip(all_student_desc, teacher_desc)])
+        loss = torch.stack([self.distance_loss(s_desc, t_desc) for s_desc, t_desc in zip(all_student_desc, teacher_desc)])
         return loss.mean()
 
 
@@ -91,15 +93,15 @@ class TeacherAdaptiveLoss(nn.Module):
     def __init__(self, args: Namespace):
         super().__init__()
         self.distance_loss = RkdDistance()
-        self.adaption_heads = [nn.Linear(t_dim, args.student_features_dim) for t_dim in args.teacher_features_dim]
-        self.weight_head = nn.Linear(args.student_features_dim, 1)
+        self.adaption_heads = [nn.Linear(t_dim, args.student_features_dim).to(args.device) for t_dim in args.teacher_features_dim]
+        self.weight_head = nn.Linear(args.student_features_dim, 1).to(args.device)
 
     def forward(self, student_desc: torch.tensor, teacher_desc: torch.tensor):
-        teacher_features = [mlp(t_desc) for mlp, t_desc in zip(self.adaptive_heads, teacher_desc)] # maps the teacher features to same shape as student features
+        teacher_features = [mlp(t_desc) for mlp, t_desc in zip(self.adaption_heads, teacher_desc)] # maps the teacher features to same shape as student features
         fused_features = [student_desc * x for x in teacher_features] # performs hadamard product with teacher features 
         weights = torch.stack([self.weight_head(x) for x in fused_features]).flatten()
         weights = F.softmax(weights)
-        loss = torch.stack([weights[i] * self.rkd_loss(student_desc, t_desc) for i, t_desc in enumerate(teacher_desc)]).sum()
+        loss = torch.stack([weights[i] * self.distance_loss(student_desc, t_desc) for i, t_desc in enumerate(teacher_desc)]).sum()
         return loss 
 
 

@@ -28,29 +28,29 @@ eval:
 train: 
   ######################## High Level Training Configuration ########################
   seed: 0 # random seed
-  student_method: "resnet50convap" # student method for knowledge distillation 
+  student_method: "resnet34convap" # student method for knowledge distillation 
   teacher_methods: ["resnet50_gem", "cosplace", "mixvpr"] #["resnet50convap", "cosplace", "resnet50_gem"] # teacher method for knowledge distillation
-  fusion_method: "average" # either average, weighted_average, feed, adaptive
+  fusion_method: "adaptive" # either average, weighted_average, feed, adaptive
 
   logger_type: "wandb" # either wandb or tensorboard
   batch_size: 32 # training batch size
   learning_rate: 0.0001 # learning rate
   device: "cuda" # either cpu or cuda for acceleration
   num_workers: 12 # number of workers for the dataloader
-  max_epochs: 22 # maximum number of allowable epochs
+  max_epochs: 25 # maximum number of allowable epochs
   rkd_loss: "pairwise_l2_distance" # either pairwise_cosine_distance or pairwise_l2_distance
   optimizer: "adam" # optimizer
   weight_decay: 0.001 # weight decay
   momentum: 0.9 #optimizer momentum
   warmup_steps: 500 # learning rate warmup steps
-  lr_milestones: [5, 9, 15] # epoch milestones for learning rate decay
+  lr_milestones: [6, 12, 18] # epoch milestones for learning rate decay
   lr_mult: 0.3 # learning rate multiplier for each milestone
 
   faiss_gpu: False # use faiss for similarity search
   random_sample_from_each_place: True # sample each place uniformly
   image_size: [320, 320] # image input shape
   show_data_stats: True # print the dataset stats during training
-  val_set_names: ["pitts30k_val", "mapillary_sls"] # validation datasets to use for training
+  val_set_names: ["pitts30k_val", "mapillary_sls", "nordland", "sped", "essex", "inria", "cross"] # validation datasets to use for training
 
 
 

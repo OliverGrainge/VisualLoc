@@ -1,97 +1,193 @@
 
-import torch 
-import torch.nn as nn
-import torch.nn.functional as F
-from argparse import Namespace
-from parsers import train_arguments
+from os.path import join
+from pathlib import Path
+from typing import Any, List, Tuple
 
-args = train_arguments()
+import pandas as pd
+import torch
+import torchvision.transforms as T
+from PIL import Image
+from torch.utils.data import Dataset
+from torchvision.transforms import Compose
+from glob import glob
+from typing import Union
 
-def pdist(e, squared=False, eps=1e-12):
-    e_square = e.pow(2).sum(dim=1)
-    prod = e @ e.t()
-    res = (e_square.unsqueeze(1) + e_square.unsqueeze(0) - 2 * prod).clamp(min=eps)
+from PlaceRec.utils import get_config
+import numpy as np
 
-    if not squared:
-        res = res.sqrt()
-
-    res = res.clone()
-    res[range(len(e)), range(len(e))] = 0
-    return res
-
-
-
-
-class RkdDistance(nn.Module):        
-    def forward(self, student, teacher):
-        with torch.no_grad():
-            t_d = pdist(teacher, squared=False)
-            mean_td = t_d[t_d>0].mean()
-            t_d = t_d / mean_td
-
-        d = pdist(student, squared=False)
-        mean_d = d[d>0].mean()
-        d = d / mean_d
-
-        loss = F.smooth_l1_loss(d, t_d, reduction='elementwise_mean')
-        return loss
-
-
-class TeacherAverageLoss(nn.Module):
-    def __init__(self, args: Namespace):
-        super().__init__()
-        self.distance_loss = RkdDistance()
-
-    def forward(self, student_desc: torch.tensor, teacher_desc: torch.tensor):
-        loss = torch.stack([self.distance_loss(student_desc, desc) for desc in teacher_desc]).mean()
-        return loss
-
-
-args = train_arguments()
-loss = TeacherAverageLoss(args)
-"""
 config = get_config()
 
-DATASET_NAME = "san_francisco"
+default_transform = T.Compose(
+    [
+        T.ToTensor(),
+        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
-datasets_dir = join(config["datasets_directory"], "datasets_vg", "datasets", DATASET_NAME, "images", "test")
-database_folder = join(datasets_dir, "database")
-print(database_folder)
-queries_folder = join(datasets_dir, "queries")
-database_paths = sorted(glob(database_folder + "/*.jpg"))
-queries_paths = sorted(glob(queries_folder + "/*.jpg"))
-
-database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in database_paths]).astype(float)
-queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in queries_paths]).astype(float)
-print(len(queries_utms))
-
-knn = NearestNeighbors()
-knn.fit(database_utms)
-gt = knn.radius_neighbors(queries_utms,
-                                     radius=25,
-                                     return_distance=False)
-
-idx_zero = []
-for i, pos in enumerate(gt):
-    if len(pos) == 0:
-        idx_zero.append(i)
-
-if not len(idx_zero) == 0:
-    queries_paths = np.delete(queries_paths, np.array(idx_zero))
-    gt = np.delete(gt, np.array(idx_zero))
-
-assert len(queries_paths) == gt.shape[0]
-
-queries_paths = np.array([q_pth.replace(join(config["datasets_directory"], "datasets_vg", "datasets", DATASET_NAME), "") for q_pth in queries_paths])
-database_paths = np.array([d_pth.replace(join(config["datasets_directory"], "datasets_vg", "datasets", DATASET_NAME), "") for d_pth in database_paths])
-
-print(len(queries_paths), len(database_paths))
-def save_dataset(name, query_paths, database_paths, ground_truth):
-    np.save("tmp/" + DATASET_NAME + "/" + DATASET_NAME + "_qImages.npy", query_paths)
-    np.save("tmp/" + DATASET_NAME + "/" + DATASET_NAME + "_dbImages.npy", database_paths)
-    np.save("tmp/" + DATASET_NAME + "/" + DATASET_NAME + "_gt.npy", ground_truth)
+# NOTE: Hard coded path to dataset folder
+BASE_PATH = join(config["datasets_directory"], "gsv_cities")
 
 
-save_dataset(DATASET_NAME, queries_paths, database_paths, gt)
+if not Path(BASE_PATH).exists():
+    raise FileNotFoundError("BASE_PATH is hardcoded, please adjust to point to gsv_cities")
 
-"""
+
+class DistillationCitiesDataset(Dataset):
+    """
+    A dataset class for loading and processing images from various cities.
+
+    This class extends PyTorch's Dataset class to handle datasets consisting of images
+    from different cities. It supports random sampling of images from each city and
+    allows for a minimum number of images per place to be specified.
+
+    Attributes:
+        base_path (str): The base path to the dataset directory.
+        cities (List[str]): A list of city names to include in the dataset.
+        img_per_place (int): The number of images to sample from each place.
+        min_img_per_place (int): The minimum number of images required for a place to be included.
+        random_sample_from_each_place (bool): Flag to randomize image sampling from each place.
+        transform (Compose): A torchvision Compose object for image transformations.
+        dataframe (pd.DataFrame): The dataframe containing image metadata.
+        places_ids (pd.Index): Index of unique place IDs in the dataset.
+        total_nb_images (int): Total number of images in the dataset.
+
+    Methods:
+        __init__: Initializes the dataset with given parameters.
+        __getdataframes: Creates a dataframe with image metadata from all cities.
+        __getitem__: Returns a batch of images and their associated place IDs.
+        __len__: Returns the total number of unique places in the dataset.
+        image_loader: Loads an image from a given path.
+        get_img_name: Generates an image file name based on metadata.
+
+    Parameters:
+        cities (List[str]): List of city names.
+        img_per_place (int): Number of images per place.
+        min_img_per_place (int): Minimum number of images for a place to be included.
+        random_sample_from_each_place (bool): Whether to randomly sample images.
+        transform (Compose): Image transformation operations.
+        base_path (str): Base directory path for the dataset.
+    """
+
+    def __init__(
+        self,
+        
+        cities: List[str] = ["London", "Boston"],
+        img_per_place: int = 4,
+        min_img_per_place: int = 4,
+        random_sample_from_each_place: bool = True,
+        transform: Compose = default_transform,
+        base_path: str = BASE_PATH,
+        teacher_methods: List[str]=["mixvpr"],
+        #datasets: List[str] = ["gsvcities", "mapillarysls", "sanfranciscoxl"]
+    ) -> None:
+        
+        super(DistillationCitiesDataset, self).__init__()
+        self.base_path = base_path
+        self.cities = cities
+        assert img_per_place <= min_img_per_place, f"img_per_place should be less than {min_img_per_place}"
+        self.img_per_place = img_per_place
+        self.min_img_per_place = min_img_per_place
+        self.random_sample_from_each_place = random_sample_from_each_place
+        self.transform = transform
+        self.dataframe = self.__getdataframes()
+        self.places_ids = pd.unique(self.dataframe.index)
+        self.total_nb_images = len(self.dataframe)
+        self.teacher_methods = teacher_methods
+
+
+
+
+    def __getdataframes(self) -> pd.DataFrame:
+        """Creates and returns a consolidated dataframe of image metadata from all specified cities."""
+        df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[0]}.csv")
+        for i in range(1, len(self.cities)):
+            tmp_df = pd.read_csv(self.base_path + "/Dataframes/" + f"{self.cities[i]}.csv")
+            prefix = i
+            tmp_df["place_id"] = tmp_df["place_id"] + (prefix * 10**5)
+            df = pd.concat([df, tmp_df], ignore_index=True)
+        res = df[df.groupby("place_id")["place_id"].transform("size") >= self.min_img_per_place]
+        return res.set_index("place_id")
+
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Retrieves a batch of images and their associated place IDs based on the given index.
+
+        Parameters:
+            index (int): The index of the place to retrieve images from.
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor]: A batch of images and their corresponding place IDs.
+        """
+        place_id = self.places_ids[index]
+        place = self.dataframe.loc[place_id]
+        
+        if self.random_sample_from_each_place:
+            place = place.sample(n=self.img_per_place)
+        else:  # always get the same most recent images
+            place = place.sort_values(by=["year", "month", "lat"], ascending=False)
+            place = place[: self.img_per_place]
+
+        imgs = []
+        features = [[] for _ in range(len(self.teacher_methods))]
+        method_paths = [join(config["datasets_directory"], "feature_store", "gsvcities", name) for name in self.teacher_methods]
+        for i, row in place.iterrows():
+            img_name = self.get_img_name(row)
+            img_path = self.base_path + "/Images/" + row["city_id"] + "/" + img_name
+            feature_name = img_name.replace(".jpg", ".npy")
+            img = self.image_loader(img_path)
+            if self.transform is not None:
+                img = self.transform(img)
+            imgs.append(img)
+
+            for i, method_pth in enumerate(method_paths):
+                features[i].append(torch.tensor(np.load(join(method_pth, feature_name))))
+
+        t_desc = [torch.vstack(f) for f in features]
+        return torch.stack(imgs), torch.tensor(place_id).repeat(self.img_per_place), t_desc
+
+    def __len__(self) -> int:
+        """Returns the total number of unique places in the dataset."""
+        return len(self.places_ids)
+
+    @staticmethod
+    def image_loader(path: str) -> Image:
+        """
+        Loads an image from the specified path.
+
+        Parameters:
+            path (str): The file path of the image to load.
+
+        Returns:
+            Image: The loaded image.
+        """
+        return Image.open(path).convert("RGB")
+
+    @staticmethod
+    def get_img_name(row: pd.Series) -> str:
+        """
+        Generates a unique image file name based on the metadata in the given row.
+
+        Parameters:
+            row (pd.Series): A series containing metadata of an image.
+
+        Returns:
+            str: The generated image file name.
+        """
+        city = row["city_id"]
+        pl_id = row.name % 10**5  # row.name is the index of the row, not to be confused with image name
+        pl_id = str(pl_id).zfill(7)
+        panoid = row["panoid"]
+        year = str(row["year"]).zfill(4)
+        month = str(row["month"]).zfill(2)
+        northdeg = str(row["northdeg"]).zfill(3)
+        lat, lon = str(row["lat"]), str(row["lon"])
+        name = city + "_" + pl_id + "_" + year + "_" + month + "_" + northdeg + "_" + lat + "_" + lon + "_" + panoid + ".jpg"
+        return name
+    
+
+
+dataset = DistillationCitiesDataset()
+
+imgs, labels, descriptors = dataset.__getitem__(4)
+
+print(imgs.shape)

@@ -169,7 +169,8 @@ class DistillationModel(pl.LightningModule):
         student_desc = self(images)  # Here we are calling the method forward that we defined above
         teacher_desc = [desc.view(BS * N, -1) for desc in teacher_desc]
         loss = self.loss_fn(student_desc, teacher_desc)
-        return {"loss": loss}
+        self.log("train_loss", loss)
+        return loss
 
     def on_train_epoch_end(self) -> None:
         """

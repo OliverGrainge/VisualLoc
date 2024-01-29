@@ -14,7 +14,8 @@ args.cities = ALL_CITIES
 
 # Build the Lightning DataModule and LightningModule
 student_method = get_method(args.student_method, pretrained=False)
-args.features_dim = student_method.features_dim
+args.student_features_dim = student_method.features_dim
+args.teacher_features_dim = [get_method(teacher, pretrained=False).features_dim for teacher in args.teacher_methods]
 student_model = student_method.model.to(args.device)
 distillation_module = DistillationModel(args, student_model)
 distillation_datamodule = DistillationCitiesDataModule(args, preprocess=student_method.preprocess)
