@@ -32,6 +32,20 @@ if not Path(BASE_PATH).exists():
     raise FileNotFoundError("BASE_PATH is hardcoded, please adjust to point to gsv_cities")
 
 
+def load_mpaillary(): 
+    root = join(config["dataset_directory"], "datasets_vg", "datasets", "mapillary_sls", "images", "train")
+    database_folder = join(root, "database")
+    query_folder = join(root, "database")
+    database_paths = sorted(glob(join(database_folder, "**", "*.jpg"), recursive=True))
+    queries_paths = sorted(glob(join(query_folder, "**", "*.jpg"),  recursive=True))
+    database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.database_paths]).astype(float)
+    queries_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in self.queries_paths]).astype(float)
+     knn = NearestNeighbors(n_jobs=-1)
+        knn.fit(self.database_utms)
+
+    
+
+
 class DistillationCitiesDataset(Dataset):
     """
     A dataset class for loading and processing images from various cities.
@@ -78,7 +92,7 @@ class DistillationCitiesDataset(Dataset):
         transform: Compose = default_transform,
         base_path: str = BASE_PATH,
         teacher_methods: List[str]=["mixvpr"],
-        #datasets: List[str] = ["gsvcities", "mapillarysls", "sanfranciscoxl"]
+        datasets: List[str] = ["gsvcities", "mapillarysls", "sanfranciscoxl"]
     ) -> None:
         
         super(DistillationCitiesDataset, self).__init__()
@@ -93,6 +107,9 @@ class DistillationCitiesDataset(Dataset):
         self.places_ids = pd.unique(self.dataframe.index)
         self.total_nb_images = len(self.dataframe)
         self.teacher_methods = teacher_methods
+        
+        if "mapillarysls" in datasets: 
+            self.mapillary_images, self.mapillary_label = load_mapillary()
 
 
 
