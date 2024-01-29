@@ -54,3 +54,8 @@ def sfu():
 @pytest.fixture
 def spedtest():
     return Datasets.SpedTest()
+
+
+@pytest.fixture
+def mapillarysls():
+    return Datasets.MapillarySLS()
