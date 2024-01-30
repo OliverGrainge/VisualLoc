@@ -107,7 +107,7 @@ def get_method(name: str = None, pretrained: bool = True):
 
         method = CALC(pretrained=pretrained)
     elif name == "eigenplaces":
-        from PlaceRec.Methods import resnet50_eigenplaces
+        from PlaceRec.Methods import EigenPlaces
 
         method = EigenPlaces(pretrained=pretrained)
     elif name == "netvlad":

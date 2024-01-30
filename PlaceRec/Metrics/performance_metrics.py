@@ -7,6 +7,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 from thop import profile
+from PIL import Image
+import pytorch_lightning as pl
 
 from PlaceRec.Datasets import GardensPointWalking
 
@@ -32,9 +34,15 @@ def measure_memory(args, method, jit=True):
     """
     model = method.model.to(args.device)
     model.eval()
+        # Assuming 'model' is your model instance
+    if isinstance(model, pl.LightningModule):
+        if method.name == "mixvpr":
+            model = nn.Sequential(model.backbone, model.aggregator)
+
     if jit:
         if isinstance(model, nn.Module):
-            example_input = torch.randn(args.input_size).numpy().astype(np.float32)
+            example_input = np.random.randint(0, 255, size=(480, 640, 3)).astype(np.uint8)
+            example_input = Image.fromarray(example_input)
             example_input = method.preprocess(example_input).to(args.device)
             traced_model = torch.jit.trace(model, example_input[None, :])
             model = torch.jit.script(traced_model)
@@ -64,10 +72,10 @@ def benchmark_latency_cpu(method, num_runs=100):
     model.eval()
     model = model.cpu()
     ds = GardensPointWalking()
-    dl = ds.query_images_loader("test", preprocess=method.preprocess)
+    dl = ds.query_images_loader(preprocess=method.preprocess, batch_size=1, num_workers=0, pin_memory=0)
     for batch in dl:
-        break
-    input_data = batch[0].unsqueeze(0)
+        _, input_data = batch
+
     for _ in range(10):
         _ = model(input_data)
 
@@ -93,11 +101,12 @@ def benchmark_latency_gpu(method, num_runs: int = 100):
     """
     # Ensure the model and input data are on the GPU
     ds = GardensPointWalking()
-    dl = ds.query_images_loader("test", preprocess=method.preprocess)
+    dl = ds.query_images_loader(preprocess=method.preprocess, batch_size=1, num_workers=0, pin_memory=False)
     for batch in dl:
-        break
-    input_data = batch[0].unsqueeze(0)
-    model = model.cuda()
+        _, input_data = batch
+
+    model = method.model
+    model.cuda()
     input_data = input_data.cuda()
     model.eval()
     # Warm up
@@ -150,11 +159,11 @@ def count_flops(method) -> int:
 
     method.model.eval()
     ds = GardensPointWalking()
-    loader = ds.query_images_loader("test", preprocess=method.preprocess)
+    loader = ds.query_images_loader(preprocess=method.preprocess, pin_memory=False, batch_size=1, num_workers=0)
     assert isinstance(method.model, nn.Module)
     if method.model is not None:
-        for batch, indicies in loader:
-            input = batch[0][None, :].to(method.device)  # get one input item
+        for indicies, batch in loader:
+            input = batch.to(method.device)  # get one input item
             flops, _ = profile(method.model, inputs=(input,), verbose=False)
             return int(flops)
     else:

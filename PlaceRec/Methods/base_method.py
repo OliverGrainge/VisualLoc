@@ -369,7 +369,7 @@ class BaseModelWrapper(BaseFunctionality):
         self.model = model
         self.preprocess = preprocess
         self.model.eval()
-        self.features_dim = self.features_size()
+        self.features_dim, self.input_size = self.features_size()
         self.model.to(self.device)
         self.model.eval()
 
@@ -377,10 +377,11 @@ class BaseModelWrapper(BaseFunctionality):
         img = np.random.rand(224, 224, 3) * 255
         img = Image.fromarray(img.astype(np.uint8))
         img = self.preprocess(img)
+        input_size = (img.shape[1], img.shape[2])
         self.model = self.model.to("cpu")
         with torch.no_grad():
             features = self.model(img[None, :].to("cpu")).detach().cpu()
-        return features.size(1)
+        return features.size(1), input_size
 
     def compute_query_desc(
         self,

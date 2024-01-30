@@ -12,16 +12,33 @@ run:
   methods: ["amosnet", "hybridnet"]
   num_workers: 0
   pin_memory: False
-  batchsize: 10
-  device: "cpu"
+  batchsize: 32
+  device: "cuda"
 
 eval: 
   datasets: ["inriaholidays"]
   methods: ["amosnet", "hybridnet"]
   partition: "test"
-  device: "cpu"
-  metrics: ["recall@1", "recall@5"]
+  device: "cuda"
+  metrics: ["recall@1", "recall@5", "gpu_latency", "cpu_latency", "count_flops", "count_params", "measure_memory"]
   distance: "l2" # either l2 or cosine
+
+
+train:
+  backbone: "resnet50" 
+  aggregation: "netvlad"
+  lr: 0.0002
+  optimizer: 'adam'
+  weight_decay: 0.0
+  momentum: 0.9
+  warmup_steps: 600
+  milestones: [5, 10, 15, 25]
+  lr_mult: 0.3
+  loss_name: "MultiSimilarityLoss"
+  miner_name: "MultiSimilarityMiner"
+  miner_margin: 0.1
+  descriptor_size: 1024
+
 
 
 

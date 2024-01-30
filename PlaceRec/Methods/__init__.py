@@ -10,3 +10,4 @@ from .resnet50_cosplace import CosPlace
 from .resnet50_eigenplaces import EigenPlaces
 from .resnet50_gem import ResNet50GeM
 from .resnet50_mixvpr import MixVPR
+from .resnet50_eigenplaces import EigenPlaces
