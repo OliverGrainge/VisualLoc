@@ -100,3 +100,92 @@ def eval_arguments():
 
     args = parser.parse_args()
     return args
+
+
+def train_arguments():
+    parser = argparse.ArgumentParser()
+    
+
+    parser.add_argument(
+        "--backbone", 
+        type=str,
+        default=config["train"]["backbone"]
+    )
+
+    parser.add_argument(
+        "--aggregation", 
+        type=str,
+        default=config["train"]["aggregation"]
+    )
+
+
+    parser.add_argument(
+        "--optimizer", 
+        type=str,
+        default=config["train"]["optimizer"]
+    )
+
+
+    parser.add_argument(
+        "--loss_name", 
+        type=str,
+        default=config["train"]["loss_name"]
+    )
+
+    parser.add_argument(
+        "--miner_name", 
+        type=str,
+        default=config["train"]["miner_name"]
+    )
+
+    parser.add_argument(
+        "--miner_margin", 
+        type=float,
+        default=config["train"]["miner_margin"]
+    )
+    
+    parser.add_argument(
+        "--lr", 
+        type=float,
+        default=config["train"]["lr"]
+    )
+
+    parser.add_argument(
+        "--weight_decay", 
+        type=float,
+        default=config["train"]["weight_decay"]
+    )
+
+    parser.add_argument(
+        "--momentum", 
+        type=float,
+        default=config["train"]["momentum"]
+    )
+
+    parser.add_argument(
+        "--warmup_steps", 
+        type=int,
+        default=config["train"]["warmup_steps"]
+    )
+
+    parser.add_argument(
+        "--milestones",
+        type=int,
+        default=config["train"]["milestones"],
+        nargs="+"
+    )
+
+    parser.add_argument(
+        "--lr_mult", 
+        type=float,
+        default=config["train"]["lr_mult"]
+    )
+
+    parser.add_argument(
+        "--descriptor_size",
+        type=int,
+        default=config["train"]["descriptor_size"]
+    )
+    args = parser.parse_args()
+    return args
+
