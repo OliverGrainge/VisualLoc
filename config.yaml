@@ -27,11 +27,11 @@ eval:
 train:
   backbone: "resnet50" 
   aggregation: "netvlad"
-  lr: 0.0002
+  lr: 0.00025
   optimizer: 'adam'
   weight_decay: 0.0
   momentum: 0.9
-  warmup_steps: 600
+  warmup_steps: 500
   milestones: [5, 10, 15, 25]
   lr_mult: 0.3
   loss_name: "MultiSimilarityLoss"
