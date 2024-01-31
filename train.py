@@ -340,7 +340,7 @@ if __name__ == '__main__':
         default_root_dir=f'./LOGS/{model.encoder_arch.lower()}_{model.agg_arch.lower()}_{args.descriptor_size}', # Tensorflow can be used to viz 
         num_sanity_val_steps=0, # runs N validation steps before stating training
         precision="bf16", # we use half precision to reduce  memory usage (and 2x speed on RTX)
-        max_epochs=35,
+        max_epochs=60,
         check_val_every_n_epoch=1, # run validation every epoch
         callbacks=[checkpoint_cb],# we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order

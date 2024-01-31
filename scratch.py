@@ -16,7 +16,7 @@ from PIL import Image
 import einops as ein
 from typing import Union, List, Literal
 from torchvision.transforms import functional as T
-from PlaceRec.Quantization import quantize_model
+from PlaceRec.Quantization import quantize_model_gpu
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from PlaceRec.Training.dataloaders.val.PittsburghDataset import PittsburghDataset
 from PlaceRec.Training import valid_transform
@@ -26,6 +26,10 @@ from torch.utils.data import SubsetRandomSampler
 from torch.hub import load_state_dict_from_url
 from torchvision import transforms
 from tqdm import tqdm 
+import time
+import statistics
+import tensorrt as trt
+from onnxconverter_common import auto_convert_mixed_precision
 
 
 
@@ -98,91 +102,80 @@ print(out.shape)
 print(out.norm())
 
 """
-
-from train import VPRModel
-
-
-#cal_ds = Subset(cal_ds, np.arange(100))
-
-
-class CombinedDataset(torch.utils.data.Dataset):
-    def __init__(self):
-        self.dataset1 = MSLS(input_transform=valid_transform)
-        self.dataset2 = PittsburghDataset(input_transform=valid_transform)
-
-    def __len__(self):
-        # If you want to handle datasets of unequal length, adjust this method
-        return len(self.dataset1) + len(self.dataset2)
-
-    def __getitem__(self, idx):
-        if idx < len(self.dataset1):
-            return self.dataset1[idx]
-        else:
-            # Adjust the index for the second dataset
-            return self.dataset2[idx - len(self.dataset1)]
-
-cal_ds = CombinedDataset()
-
-cal_ds_small = Subset(cal_ds, np.arange(100))
-cal_dl_small = DataLoader(cal_ds_small, batch_size=2)
+""""""
+import torch
+import onnx
+from onnxruntime.quantization import quantize_dynamic, QuantType, CalibrationDataReader
+import onnxruntime as ort
+import numpy as np 
+from onnxconverter_common import float16
+from onnxruntime import quantization
+from PlaceRec.Quantization import quant
 
 
-#model = VPRModel(backbone_arch='resnet18', agg_arch='netvlad')
-#model = VPRModel.load_from_checkpoint(checkpoint_path="/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad.ckpt")
+def get_model(backbone_arch, aggregation_arch, out_dim=1024):
+    img = torch.randn(1, 3, 320, 320)
+    backbone = get_backbone(backbone_arch)
+    feature_map = backbone(img)
+    agg = get_aggregator(aggregation_arch, feature_map[0].shape, out_dim=out_dim)
+    model = nn.Sequential(backbone, agg)
+    return model
 
 
-    
-img = torch.randn(1, 3, 320, 320).cuda()
+def time_execution(qmodel, img, warmup_runs=3, timed_runs=10):
+    """
+    Times the execution of qmodel(img) with warmup, using high-resolution timer
+    and statistical analysis.
 
-#model = VPRModel(backbone_arch='resnet18', agg_arch='netvlad')
-#model = VPRModel.load_from_checkpoint(checkpoint_path="/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad.ckpt")
-#model = model.model
-#model.eval().cuda()
+    :param qmodel: The model function to be timed.
+    :param img: The image input for the model.
+    :param warmup_runs: Number of warmup runs before timing.
+    :param timed_runs: Number of runs to time.
+    :return: Average execution time and standard deviation.
+    """
+    # Warmup phase
+    for _ in range(warmup_runs):
+        _ = qmodel(img)
 
-img = torch.randn(1, 3, 320, 320).cuda()
-backbone = get_backbone("efficientnet")
-backbone.cuda()
-feature_map = backbone(img)
-#agg = NetVLAD(feature_map_shape=feature_map[0].shape)
-agg = get_aggregator("netvlad", feature_map[0].shape)
-agg.eval().cuda()
+    # Timing phase
+    times = []
+    start_event = torch.cuda.Event(enable_timing=True)
+    end_event = torch.cuda.Event(enable_timing=True)
+    for _ in range(timed_runs):
+        start_event.record()
+        _ = qmodel(img)
+        end_event.record()
+        torch.cuda.synchronize()
+        times.append(start_event.elapsed_time(end_event))
 
-model = nn.Sequential(backbone, agg)
-model.eval().cuda()
+    # Statistical analysis
+    average_time = statistics.mean(times)
+    return average_time
 
-out = model(img)
-print(out.shape)
-print(out.norm())
 
-model_traced = torch.jit.trace(model, img)
-out = model_traced(img)
-print(out.shape)
-print(out.norm())
-
-batch = cal_ds_small.__getitem__(0)
-print(batch[0].shape, batch[1].shape)
-
-print("================================", cal_ds.__len__())
-
-import time 
-st = time.time()
-
-qmodel = quantize_model(model, precision="int8", calibration_dataset=cal_ds_small)
-img = torch.randn(1, 3, 320, 320).cuda().float()
-print(img.shape)
-out = qmodel(img)
-print(out.shape)
-print(out.norm())
-
-ed = time.time()
-
-print("Quantizing time", ed - st)
+img = torch.randn(10, 3, 320, 320)
+cal_ds = Subset(MSLS(valid_transform), list(range(100)))
+model = get_model("resnet18", "netvlad", 1024)
 
 
 
+avg = time_execution(model.cuda(), img.cuda(), timed_runs=1000)
+print("Full precision pt", avg)
+avg = time_execution(model.cuda().half(), img.cuda().half(), timed_runs=1000)
+print("Half precision pt", avg)
 
+qmodel_int8 = quantize_model_gpu(model, precision="int8", calibration_dataset=cal_ds, batch_size=10)
+avg_int8 = time_execution(qmodel_int8, img.float().cuda(), timed_runs=1000)
 
+qmodel_fp16 = quantize_model_gpu(model, precision="fp16", calibration_dataset=cal_ds, batch_size=10)
+avg_fp16= time_execution(qmodel_fp16, img.float().cuda(), timed_runs=1000)
 
+qmodel_fp32 = quantize_model_gpu(model, precision="fp32", calibration_dataset=cal_ds, batch_size=10)
+avg_fp32= time_execution(qmodel_fp32, img.float().cuda(), timed_runs=1000)
+
+print("tensorrt fp32", avg_fp32)
+print("tensorrt fp16", avg_fp16)
+print("tensorrt int8", avg_int8)
 
 
 
