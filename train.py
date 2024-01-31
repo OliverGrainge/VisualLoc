@@ -12,7 +12,7 @@ from PlaceRec.Training import GSVCitiesDataModule
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from torchvision import transforms as T
 from parsers import train_arguments
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 import numpy as np
 args = train_arguments()
 
@@ -94,16 +94,11 @@ class VPRModel(pl.LightningModule):
         feature_map_shape = backbone(img)[0].shape
         aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
 
-        #if "netvlad" in agg_arch:
-        #    print("building dataloader")
-        #    ds = MSLS(valid_transform)
-        #    indicies = np.arange(ds.__len__())
-        #    np.random.shuffle(indicies)
-        #    ds = Subset(ds, indicies[:50])
-        ##    dl = DataLoader(ds, batch_size=10, shuffle=True)
-        #    print("making feature maps")
-        #    feature_maps = torch.vstack([backbone(batch) for (batch, idx) in dl])
-        #    aggregator.initialize_netvlad_layer(feature_maps)
+        if "netvlad" in agg_arch:
+            print("building dataloader")
+            ds = MSLS(valid_transform)
+            aggregator.initialize_netvlad_layer(ds, backbone)
+            
             
         self.model = torch.nn.Sequential(backbone, aggregator)
         
@@ -268,7 +263,7 @@ if __name__ == '__main__':
     # if you want to train on specific cities, you can comment/uncomment
     # cities from the list TRAIN_CITIES
     datamodule = GSVCitiesDataModule(
-        batch_size=100,
+        batch_size=32,
         img_per_place=4,
         min_img_per_place=4,
         #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
@@ -331,7 +326,7 @@ if __name__ == '__main__':
     checkpoint_cb = ModelCheckpoint(
         dirpath="Checkpoints/",
         monitor='pitts30k_val/R1',
-        filename=f'{model.encoder_arch.lower()}_{model.agg_arch.lower()}',
+        filename=f'{model.encoder_arch.lower()}_{model.agg_arch.lower()}_{args.descriptor_size}',
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=1,
@@ -342,10 +337,10 @@ if __name__ == '__main__':
     # we instanciate a trainer
     trainer = pl.Trainer(
         accelerator='gpu', devices=[0],
-        default_root_dir=f'./LOGS/{model.encoder_arch.lower()}_{model.agg_arch.lower()}', # Tensorflow can be used to viz 
+        default_root_dir=f'./LOGS/{model.encoder_arch.lower()}_{model.agg_arch.lower()}_{args.descriptor_size}', # Tensorflow can be used to viz 
         num_sanity_val_steps=0, # runs N validation steps before stating training
         precision="bf16", # we use half precision to reduce  memory usage (and 2x speed on RTX)
-        max_epochs=30,
+        max_epochs=35,
         check_val_every_n_epoch=1, # run validation every epoch
         callbacks=[checkpoint_cb],# we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order

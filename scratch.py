@@ -18,12 +18,14 @@ from typing import Union, List, Literal
 from torchvision.transforms import functional as T
 from PlaceRec.Quantization import quantize_model
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
+from PlaceRec.Training.dataloaders.val.PittsburghDataset import PittsburghDataset
 from PlaceRec.Training import valid_transform
 from torch.utils.data import Subset
 from tqdm import tqdm 
 from torch.utils.data import SubsetRandomSampler
 from torch.hub import load_state_dict_from_url
 from torchvision import transforms
+from tqdm import tqdm 
 
 
 
@@ -99,18 +101,57 @@ print(out.norm())
 
 from train import VPRModel
 
-cal_ds = MSLS(input_transform=valid_transform)
-cal_ds = Subset(cal_ds, np.arange(100))
-cal_ds_small = Subset(cal_ds, np.arange(10))
+
+#cal_ds = Subset(cal_ds, np.arange(100))
+
+
+class CombinedDataset(torch.utils.data.Dataset):
+    def __init__(self):
+        self.dataset1 = MSLS(input_transform=valid_transform)
+        self.dataset2 = PittsburghDataset(input_transform=valid_transform)
+
+    def __len__(self):
+        # If you want to handle datasets of unequal length, adjust this method
+        return len(self.dataset1) + len(self.dataset2)
+
+    def __getitem__(self, idx):
+        if idx < len(self.dataset1):
+            return self.dataset1[idx]
+        else:
+            # Adjust the index for the second dataset
+            return self.dataset2[idx - len(self.dataset1)]
+
+cal_ds = CombinedDataset()
+
+cal_ds_small = Subset(cal_ds, np.arange(100))
 cal_dl_small = DataLoader(cal_ds_small, batch_size=2)
 
-model = VPRModel(backbone_arch='resnet18', agg_arch='netvlad')
-model = VPRModel.load_from_checkpoint(checkpoint_path="/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad.ckpt")
-model = model.model
-model.eval().cuda()
+
+#model = VPRModel(backbone_arch='resnet18', agg_arch='netvlad')
+#model = VPRModel.load_from_checkpoint(checkpoint_path="/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad.ckpt")
+
+
+    
+img = torch.randn(1, 3, 320, 320).cuda()
+
+#model = VPRModel(backbone_arch='resnet18', agg_arch='netvlad')
+#model = VPRModel.load_from_checkpoint(checkpoint_path="/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad.ckpt")
+#model = model.model
+#model.eval().cuda()
 
 img = torch.randn(1, 3, 320, 320).cuda()
+backbone = get_backbone("efficientnet")
+backbone.cuda()
+feature_map = backbone(img)
+#agg = NetVLAD(feature_map_shape=feature_map[0].shape)
+agg = get_aggregator("netvlad", feature_map[0].shape)
+agg.eval().cuda()
+
+model = nn.Sequential(backbone, agg)
+model.eval().cuda()
+
 out = model(img)
+print(out.shape)
 print(out.norm())
 
 model_traced = torch.jit.trace(model, img)
@@ -118,10 +159,25 @@ out = model_traced(img)
 print(out.shape)
 print(out.norm())
 
-qmodel = quantize_model(model_traced, precision="int8", calibration_dataset=cal_ds)
+batch = cal_ds_small.__getitem__(0)
+print(batch[0].shape, batch[1].shape)
+
+print("================================", cal_ds.__len__())
+
+import time 
+st = time.time()
+
+qmodel = quantize_model(model, precision="int8", calibration_dataset=cal_ds_small)
+img = torch.randn(1, 3, 320, 320).cuda().float()
+print(img.shape)
 out = qmodel(img)
 print(out.shape)
 print(out.norm())
+
+ed = time.time()
+
+print("Quantizing time", ed - st)
+
 
 
 
