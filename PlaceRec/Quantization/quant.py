@@ -2,7 +2,7 @@ import torch_tensorrt
 import torch
 import torch.nn as nn
 
-def quantize_model_gpu(model, precision="fp16", calibration_dataset = None, batch_size=1):
+def quantize_model(model, precision="fp16", calibration_dataset = None, batch_size=1):
     assert isinstance(model, nn.Module)
     model = model.float().cuda().eval()
 
