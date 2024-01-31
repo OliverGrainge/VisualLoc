@@ -16,7 +16,7 @@ from PIL import Image
 import einops as ein
 from typing import Union, List, Literal
 from torchvision.transforms import functional as T
-from PlaceRec.Quantization import quantize_model_gpu
+from PlaceRec.Quantization import quantize_model
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from PlaceRec.Training.dataloaders.val.PittsburghDataset import PittsburghDataset
 from PlaceRec.Training import valid_transform
@@ -155,7 +155,7 @@ def time_execution(qmodel, img, warmup_runs=3, timed_runs=10):
 
 img = torch.randn(10, 3, 320, 320)
 cal_ds = Subset(MSLS(valid_transform), list(range(100)))
-model = get_model("resnet18", "netvlad", 1024)
+model = get_model("resnet18", "mixvpr", 1024)
 
 
 
@@ -164,20 +164,16 @@ print("Full precision pt", avg)
 avg = time_execution(model.cuda().half(), img.cuda().half(), timed_runs=1000)
 print("Half precision pt", avg)
 
-qmodel_int8 = quantize_model_gpu(model, precision="int8", calibration_dataset=cal_ds, batch_size=10)
+qmodel_int8 = quantize_model(model, precision="int8", calibration_dataset=cal_ds, batch_size=10)
 avg_int8 = time_execution(qmodel_int8, img.float().cuda(), timed_runs=1000)
 
-qmodel_fp16 = quantize_model_gpu(model, precision="fp16", calibration_dataset=cal_ds, batch_size=10)
+qmodel_fp16 = quantize_model(model, precision="fp16", calibration_dataset=cal_ds, batch_size=10)
 avg_fp16= time_execution(qmodel_fp16, img.float().cuda(), timed_runs=1000)
 
-qmodel_fp32 = quantize_model_gpu(model, precision="fp32", calibration_dataset=cal_ds, batch_size=10)
+qmodel_fp32 = quantize_model(model, precision="fp32", calibration_dataset=cal_ds, batch_size=10)
 avg_fp32= time_execution(qmodel_fp32, img.float().cuda(), timed_runs=1000)
 
 print("tensorrt fp32", avg_fp32)
 print("tensorrt fp16", avg_fp16)
 print("tensorrt int8", avg_int8)
-
-
-
-
 

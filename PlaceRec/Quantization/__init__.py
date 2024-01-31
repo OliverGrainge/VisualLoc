@@ -1,1 +1,1 @@
-from .quant import quantize_model_gpu
+from .quant import quantize_model

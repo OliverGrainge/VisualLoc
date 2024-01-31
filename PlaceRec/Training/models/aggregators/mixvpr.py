@@ -9,28 +9,28 @@ class MixVPR(nn.Module):
     def __init__(self, feature_map_shape, out_dim=1024): 
         super().__init__()
         self.mix1 = nn.Sequential(
-            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
+            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2]),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
             nn.ReLU(),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
         )
 
         self.mix2 = nn.Sequential(
-            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
+            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2]),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
             nn.ReLU(),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
         )
 
         self.mix3 = nn.Sequential(
-            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
+            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2]),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
             nn.ReLU(),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
         )
 
         self.mix4 = nn.Sequential(
-            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
+            nn.LayerNorm(feature_map_shape[1] * feature_map_shape[2]),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
             nn.ReLU(),
             nn.Linear(feature_map_shape[1] * feature_map_shape[2], feature_map_shape[1] * feature_map_shape[2]),
