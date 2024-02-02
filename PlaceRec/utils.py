@@ -60,6 +60,10 @@ def get_dataset(name: str = None):
         from PlaceRec.Datasets import GardensPointWalking
 
         dataset = GardensPointWalking()
+    elif name == "stlucia":
+        from PlaceRec.Datasets import StLucia
+
+        dataset = StLucia()
     elif name == "pitts250k":
         from PlaceRec.Datasets import Pitts250k
 
@@ -101,11 +105,15 @@ def get_dataset(name: str = None):
     return dataset
 
 
-def get_method(name: str = None, pretrained: bool = True):
+def get_method(name: str = None, pretrained: bool = True, args=None):
     if name == "calc":
         from PlaceRec.Methods import CALC
 
         method = CALC(pretrained=pretrained)
+    elif name == "quantvpr":
+        from PlaceRec.Methods import QuantVPR
+
+        method = QuantVPR(backbone=args.backbone, aggregation=args.aggregation, descriptor_size=args.descriptor_size, pretrained=pretrained)
     elif name == "eigenplaces":
         from PlaceRec.Methods import EigenPlaces
 

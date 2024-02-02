@@ -14,6 +14,9 @@ run:
   pin_memory: False
   batchsize: 32
   device: "cuda"
+  descriptor_size: 1024
+  backbone: "resnet50"
+  aggregation: "gem"
 
 eval: 
   datasets: ["inriaholidays"]
@@ -22,6 +25,11 @@ eval:
   device: "cuda"
   metrics: ["recall@1", "recall@5", "gpu_latency", "cpu_latency", "count_flops", "count_params", "measure_memory"]
   distance: "l2" # either l2 or cosine
+  backend: "cuda"
+  precision: "fp32"
+  reload_calib: False
+  backbone: "resnet50"
+  aggregation: "gem"
 
 
 train:

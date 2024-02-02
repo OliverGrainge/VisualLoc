@@ -9,3 +9,4 @@ from .pitts250k import Pitts250k
 from .sfu import SFU
 from .spedtest import SpedTest
 from .mapillarysls import MapillarySLS
+from .st_lucia import StLucia

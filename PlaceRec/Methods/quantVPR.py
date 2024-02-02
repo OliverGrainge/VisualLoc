@@ -1,4 +1,17 @@
-import pytorch_lightning as pl
+import os
+import pickle
+import sys
+from typing import Tuple
+
+import numpy as np
+import sklearn
+import torch
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
+from torch import nn
+from torchvision import transforms
+from tqdm import tqdm
+import pytorch_lightning as pl 
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.optim import lr_scheduler
@@ -11,15 +24,11 @@ from PlaceRec.Training import helper
 from PlaceRec.Training import GSVCitiesDataModule
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from torchvision import transforms as T
-from parsers import train_arguments
-from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 import numpy as np
-args = train_arguments()
 
+from PlaceRec.Training import utils
 
-
-IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
-                     'std': [0.229, 0.224, 0.225]}
+from .base_method import BaseModelWrapper
 
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
@@ -28,7 +37,6 @@ valid_transform = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
-
 
 
 class VPRModel(pl.LightningModule):
@@ -255,115 +263,19 @@ class VPRModel(pl.LightningModule):
             self.log(f"{val_set_name}/R5", recalls_dict[5], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True)
         print("\n\n")
-            
-            
-if __name__ == '__main__':
-    args = train_arguments()
-    pl.seed_everything(seed=1, workers=True)
-    torch.set_float32_matmul_precision('medium')
-    
-    # the datamodule contains train and validation dataloaders,
-    # refer to ./dataloader/GSVCitiesDataloader.py for details
-    # if you want to train on specific cities, you can comment/uncomment
-    # cities from the list TRAIN_CITIES
-    datamodule = GSVCitiesDataModule(
-        batch_size=40,
-        img_per_place=4,
-        min_img_per_place=4,
-        #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
-        shuffle_all=False, # shuffle all images or keep shuffling in-city only
-        random_sample_from_each_place=True,
-        image_size=(320, 320),
-        num_workers=16,
-        show_data_stats=True,
-        val_set_names=['pitts30k_val', 'msls_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
-    )
-    
-    # examples of backbones
-    # resnet18, resnet50, resnet101, resnet152,
-    # resnext50_32x4d, resnext50_32x4d_swsl , resnext101_32x4d_swsl, resnext101_32x8d_swsl
-    # efficientnet_b0, efficientnet_b1, efficientnet_b2
-    # swinv2_base_window12to16_192to256_22kft1k
-    model = VPRModel(
-        #-------------------------------
-        #---- Backbone architecture ----
-        backbone_arch=args.backbone,
-        layers_to_freeze=2,
-        layers_to_crop=[], # 4 crops the last resnet layer, 3 crops the 3rd, ...etc
+
+WEIGHTS_BASE_DIRECTORY= "/home/oliver/Documents/github/VisualLoc/Checkpoints"
+preprocess = valid_transform
+
+class QuantVPR(BaseModelWrapper):
+    def __init__(self, backbone: str, aggregation: str, descriptor_size: int, pretrained: bool = True):
         
-        #---------------------
-        #---- Aggregator -----
-        # agg_arch='CosPlace',
-        # agg_config={'in_dim': 512,
-        #             'out_dim': 512},
-        # agg_arch='GeM',
-        # agg_config={'p': 3},
-        
-        agg_arch=args.aggregation,
-        descriptor_size=args.descriptor_size,
+        if pretrained:
+            weight_path = WEIGHTS_BASE_DIRECTORY + "/" + backbone + "_" + aggregation + "_" + str(descriptor_size) + ".ckpt"
+            train_model = VPRModel.load_from_checkpoint(weight_path)
+        else: 
+            train_model = VPRModel(backbone_arch=backbone, agg_arch=aggregation, descriptor_size=descriptor_size)
+        model = train_model.model
+        assert isinstance(model, nn.Module)
+        super().__init__(model=model, preprocess=preprocess, name=backbone + "_" + aggregation + "_" + str(descriptor_size))
 
-        #-----------------------------------
-        #---- Training hyperparameters -----
-        #
-        lr=args.lr, # 0.03 for sgd
-        optimizer=args.optimizer, # sgd, adam or adamw
-        weight_decay=args.weight_decay, # 0.001 for sgd or 0.0 for adam
-        momentum=args.momentum,
-        warmup_steps=args.warmup_steps,
-        milestones=args.milestones,
-        lr_mult=args.lr_mult,
-        
-        #---------------------------------
-        #---- Training loss function -----
-        # see utils.losses.py for more losses
-        # example: ContrastiveLoss, TripletMarginLoss, MultiSimilarityLoss,
-        # FastAPLoss, CircleLoss, SupConLoss,
-        #
-        loss_name='MultiSimilarityLoss',
-        miner_name='MultiSimilarityMiner', # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
-        miner_margin=0.1,
-        faiss_gpu=False
-    )
-    
-    # model params saving using Pytorch Lightning
-    # we save the best 3 models accoring to Recall@1 on pittsburg val
-    checkpoint_cb = ModelCheckpoint(
-        dirpath="Checkpoints/",
-        monitor='pitts30k_val/R1',
-        filename=f'{model.encoder_arch.lower()}_{model.agg_arch.lower()}_{args.descriptor_size}',
-        auto_insert_metric_name=False,
-        save_weights_only=True,
-        save_top_k=1,
-        mode='max',)
-
-    # stop training if recall@1 has not improved for 
-    # 3 epochs
-    earlystopping_cb = EarlyStopping(
-        monitor='pitts30k_val/R1',
-        min_delta=0.00,
-        patience=4,
-        verbose=True,
-        mode='max'
-    )
-    
-    #------------------
-    # we instanciate a trainer
-    trainer = pl.Trainer(
-        accelerator='gpu', devices=[0],
-        default_root_dir=f'./LOGS/{model.encoder_arch.lower()}_{model.agg_arch.lower()}_{args.descriptor_size}', # Tensorflow can be used to viz 
-        num_sanity_val_steps=0, # runs N validation steps before stating training
-        precision="bf16-mixed", # we use half precision to reduce  memory usage (and 2x speed on RTX)
-        max_epochs=60,
-        check_val_every_n_epoch=1, # run validation every epoch
-        callbacks=[checkpoint_cb, earlystopping_cb],# we run the checkpointing callback (you can add more)
-        reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
-        log_every_n_steps=20,
-        #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
-        #limit_train_batches=3
-    )
-
-
-
-    # we call the trainer, and give it the model and the datamodule
-    # now you see the modularity of Pytorch Lighning?
-    trainer.fit(model=model, datamodule=datamodule)

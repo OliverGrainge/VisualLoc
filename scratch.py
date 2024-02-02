@@ -101,7 +101,7 @@ print(out.shape)
 print(out.norm())
 
 """
-""""""
+"""
 import torch
 import onnx
 from onnxruntime.quantization import quantize_dynamic, QuantType, CalibrationDataReader
@@ -122,16 +122,6 @@ def get_model(backbone_arch, aggregation_arch, out_dim=1024):
 
 
 def time_execution(qmodel, img, warmup_runs=3, timed_runs=10):
-    """
-    Times the execution of qmodel(img) with warmup, using high-resolution timer
-    and statistical analysis.
-
-    :param qmodel: The model function to be timed.
-    :param img: The image input for the model.
-    :param warmup_runs: Number of warmup runs before timing.
-    :param timed_runs: Number of runs to time.
-    :return: Average execution time and standard deviation.
-    """
     # Warmup phase
     for _ in range(warmup_runs):
         _ = qmodel(img)
@@ -179,3 +169,48 @@ print("tensorrt fp32", avg_fp32)
 print("tensorrt fp16", avg_fp16)
 print("tensorrt int8", avg_int8)
 
+"""
+"""
+
+from PlaceRec.utils import get_config
+
+config = get_config()
+
+data_root = config["datasets_directory"]
+
+dataset_root = data_root + "/datasets_vg/datasets/st_lucia/images/test"
+database_folder = dataset_root + "/database"
+query_folder = dataset_root + "/queries"
+
+from os.path import join 
+from glob import glob
+
+print(query_folder)
+database_paths = sorted(glob(database_folder + "/*.jpg"))
+query_paths = sorted(glob(query_folder + "/*.jpg"))
+print(query_paths[0])
+print(len(database_paths))
+print(len(query_paths))
+
+database_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in database_paths]).astype(float)
+query_utms = np.array([(path.split("@")[1], path.split("@")[2]) for path in query_paths]).astype(float)
+
+from sklearn.neighbors import NearestNeighbors
+
+knn = NearestNeighbors()
+knn.fit(database_utms)
+soft_positives_per_query = knn.radius_neighbors(query_utms, 
+                                                radius=10,
+                                                return_distance=False)
+
+print(len(soft_positives_per_query[0]))
+print(type(soft_positives_per_query))
+print(type(soft_positives_per_query[5]))
+
+database_paths = np.array([pth.replace("/home/oliver/Documents/github/Datasets/datasets_vg/datasets/st_lucia/images", "") for pth in database_paths])
+query_paths = np.array([pth.replace("/home/oliver/Documents/github/Datasets/datasets_vg/datasets/st_lucia/images", "") for pth in query_paths])
+dataset_root = dataset_root.replace("/test", "")
+np.save(dataset_root + "/st_lucia_qImages.npy", query_paths)
+np.save(dataset_root + "/st_lucia_qDBImages.npy", database_paths)
+np.save(dataset_root + "/st_lucia_gt.npy", soft_positives_per_query)
+"""

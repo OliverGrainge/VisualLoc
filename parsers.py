@@ -23,12 +23,38 @@ def run_arguments():
         nargs="+",
     )
 
+
+    parser.add_argument(
+        "--precision",
+        help="specify one of the techniques from vpr/vpr_tecniques",
+        type=str,
+        default=config["eval"]["precision"],
+    )
+    
     parser.add_argument(
         "--methods",
         help="specify one of the techniques from vpr/vpr_tecniques",
         type=str,
         default=config["run"]["methods"],
         nargs="+",
+    )
+
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default=config["run"]["backbone"]
+    )
+
+    parser.add_argument(
+        "--aggregation",
+        type=str,
+        default=config["run"]["aggregation"]
+    )
+
+    parser.add_argument(
+        "--descriptor_size",
+        type=int,
+        default=config["run"]["descriptor_size"]
     )
 
     parser.add_argument(
@@ -73,11 +99,48 @@ def eval_arguments():
     )
 
     parser.add_argument(
+        "--precision",
+        help="specify one of the techniques from vpr/vpr_tecniques",
+        type=str,
+        default=config["eval"]["precision"],
+    )
+
+    parser.add_argument(
         "--methods",
         help="specify one of the techniques from vpr/vpr_tecniques",
         type=str,
         default=config["eval"]["methods"],
         nargs="+",
+    )
+
+    parser.add_argument(
+        "--backbone",
+        type=str,
+        default=config["eval"]["backbone"]
+    )
+
+    parser.add_argument(
+        "--aggregation",
+        type=str,
+        default=config["eval"]["aggregation"]
+    )
+
+    parser.add_argument(
+        "--descriptor_size",
+        type=int,
+        default=config["run"]["descriptor_size"]
+    )
+
+    parser.add_argument(
+        "--reload_calib",
+        type=bool,
+        default=config["eval"]["reload_calib"]
+    )
+
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=config["eval"]["backend"]
     )
 
     parser.add_argument(

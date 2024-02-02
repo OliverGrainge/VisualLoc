@@ -71,18 +71,19 @@ def benchmark_latency_cpu(method, num_runs=100):
     model = method.model
     model.eval()
     model = model.cpu()
-    ds = GardensPointWalking()
-    dl = ds.query_images_loader(preprocess=method.preprocess, batch_size=1, num_workers=0, pin_memory=0)
-    for batch in dl:
-        _, input_data = batch
+   
+    img = np.random.randint(0, 255, size=(480, 640, 3)).astype(np.uint8)
+    img = Image.fromarray(img)
+    img = method.preprocess(img)
+    img = img[None, :]
 
     for _ in range(10):
-        _ = model(input_data)
+        _ = model(img)
 
     # Measure inference time
     start_time = time.time()
     for _ in range(num_runs):
-        _ = model(input_data)
+        _ = model(img)
     end_time = time.time()
     average_time = (end_time - start_time) / num_runs * 1000  # Convert to milliseconds
     return average_time
@@ -100,25 +101,23 @@ def benchmark_latency_gpu(method, num_runs: int = 100):
     - Average inference time in milliseconds.
     """
     # Ensure the model and input data are on the GPU
-    ds = GardensPointWalking()
-    dl = ds.query_images_loader(preprocess=method.preprocess, batch_size=1, num_workers=0, pin_memory=False)
-    for batch in dl:
-        _, input_data = batch
+    img = np.random.randint(0, 255, size=(480, 640, 3)).astype(np.uint8)
+    img = Image.fromarray(img)
+    img = method.preprocess(img)
+    img = img[None, :]
 
     model = method.model
-    model.cuda()
-    input_data = input_data.cuda()
-    model.eval()
+    img = img.cuda()
     # Warm up
     for _ in range(10):
-        _ = model(input_data)
+        _ = model(img)
     torch.cuda.synchronize()  # Ensure CUDA operations are synchronized
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
     # Measure inference time using CUDA events
     start_event.record()
     for _ in range(num_runs):
-        _ = model(input_data)
+        _ = model(img)
     end_event.record()
     torch.cuda.synchronize()
     average_time = start_event.elapsed_time(end_event) / num_runs
@@ -158,13 +157,14 @@ def count_flops(method) -> int:
     from PlaceRec.Datasets import GardensPointWalking
 
     method.model.eval()
-    ds = GardensPointWalking()
-    loader = ds.query_images_loader(preprocess=method.preprocess, pin_memory=False, batch_size=1, num_workers=0)
+    img = np.random.randint(0, 255, size=(480, 640, 3)).astype(np.uint8)
+    img = Image.fromarray(img)
+    img = method.preprocess(img)
+    img = img[None, :]
     assert isinstance(method.model, nn.Module)
-    if method.model is not None:
-        for indicies, batch in loader:
-            input = batch.to(method.device)  # get one input item
-            flops, _ = profile(method.model, inputs=(input,), verbose=False)
-            return int(flops)
-    else:
-        return 0
+    input = img.to(method.device)  # get one input item
+    flops, _ = profile(method.model, inputs=(input,), verbose=False)
+    return int(flops)
+
+
+

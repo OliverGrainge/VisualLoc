@@ -428,7 +428,7 @@ class BaseModelWrapper(BaseFunctionality):
         Returns:
             dict: A dictionary containing the computed map descriptors.
         """
-
+        print("hello")
         all_desc = np.empty(
             (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
         )

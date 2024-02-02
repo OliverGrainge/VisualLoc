@@ -59,3 +59,8 @@ def spedtest():
 @pytest.fixture
 def mapillarysls():
     return Datasets.MapillarySLS()
+
+@pytest.fixture
+def st_lucia():
+    return Datasets.StLucia()
+

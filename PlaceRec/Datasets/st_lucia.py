@@ -19,27 +19,27 @@ config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 
-class Nordlands(BaseDataset):
+class StLucia(BaseDataset):
     def __init__(self):
-        if not os.path.isdir(join(config["datasets_directory"], "Nordland")):
-            raise Exception("Nordland Not Downloaded")
+        self.root = config["datasets_directory"] + "/datasets_vg/datasets/st_lucia/images"
+        if not os.path.isdir(self.root):
+            raise Exception("StLucia Not Downloaded")
 
-        self.root = join(config["datasets_directory"], "Nordland")
         self.map_paths = np.array(
             [
-                join(self.root, pth)
-                for pth in np.load(join(self.root, "Nordland_dbImages.npy"))
+                self.root + pth
+                for pth in np.load(self.root + "/st_lucia_qDBImages.npy")
             ]
         )
         self.query_paths = np.array(
             [
-                join(self.root, pth)
-                for pth in np.load(join(self.root, "Nordland_qImages.npy"))
+                self.root + pth
+                for pth in np.load(self.root + "/st_lucia_qImages.npy")
             ]
         )
-        self.gt = np.load(join(self.root, "Nordland_gt.npy"), allow_pickle=True)
+        self.gt = np.load(self.root + "/st_lucia_gt.npy", allow_pickle=True)
 
-        self.name = "nordland"
+        self.name = "stlucia"
 
     def query_images_loader(
         self,
@@ -84,4 +84,4 @@ class Nordlands(BaseDataset):
 
 
 if __name__ == "__main__":
-    ds = Nordlands()
+    ds = Pitts30k()

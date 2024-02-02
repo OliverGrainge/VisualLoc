@@ -13,7 +13,7 @@ config = get_config()
 # I hardcoded the image names and ground truth for faster evaluation
 # performance is exactly the same as if you use VPR-Bench.
 
-DATASET_ROOT = config["datasets_directory"] + 'CrossSeason_CoHOG_Dataset/'
+DATASET_ROOT = config["datasets_directory"] + '/CrossSeason_CoHOG_Dataset/'
 GT_ROOT = DATASET_ROOT # BECAREFUL, this is the ground truth that comes with GSV-Cities
 
 path_obj = Path(DATASET_ROOT)
