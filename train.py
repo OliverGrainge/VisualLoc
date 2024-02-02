@@ -1,6 +1,6 @@
 import pytorch_lightning as pl
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.optim import lr_scheduler
 from PlaceRec.Training import utils
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
@@ -263,14 +263,14 @@ if __name__ == '__main__':
     # if you want to train on specific cities, you can comment/uncomment
     # cities from the list TRAIN_CITIES
     datamodule = GSVCitiesDataModule(
-        batch_size=32,
+        batch_size=40,
         img_per_place=4,
         min_img_per_place=4,
         #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
         shuffle_all=False, # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
-        num_workers=8,
+        num_workers=12,
         show_data_stats=True,
         val_set_names=['pitts30k_val', 'msls_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
     )
@@ -332,6 +332,15 @@ if __name__ == '__main__':
         save_top_k=1,
         mode='max',)
 
+    # stop training if recall@1 has not improved for 
+    # 3 epochs
+    earlystopping_cb = EarlyStopping(
+        monitory='pitts30k_val/R1',
+        min_delta=0.00,
+        patience=3,
+        verbose=True,
+        mode='max'
+    )
     
     #------------------
     # we instanciate a trainer
@@ -342,12 +351,14 @@ if __name__ == '__main__':
         precision="bf16", # we use half precision to reduce  memory usage (and 2x speed on RTX)
         max_epochs=60,
         check_val_every_n_epoch=1, # run validation every epoch
-        callbacks=[checkpoint_cb],# we run the checkpointing callback (you can add more)
+        callbacks=[checkpoint_cb, earlystopping_cb],# we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
         #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
         #limit_train_batches=3
     )
+
+
 
     # we call the trainer, and give it the model and the datamodule
     # now you see the modularity of Pytorch Lighning?

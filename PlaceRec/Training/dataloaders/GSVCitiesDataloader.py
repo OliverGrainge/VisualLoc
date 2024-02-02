@@ -61,7 +61,7 @@ valid_transform = T.Compose([
 
 class GSVCitiesDataModule(pl.LightningDataModule):
     def __init__(self,
-                 batch_size=32,
+                 batch_size=64,
                  img_per_place=4,
                  min_img_per_place=4,
                  shuffle_all=False,

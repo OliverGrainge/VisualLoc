@@ -154,9 +154,9 @@ def time_execution(qmodel, img, warmup_runs=3, timed_runs=10):
 
 img = torch.randn(10, 3, 320, 320)
 cal_ds = Subset(MSLS(valid_transform), list(range(100)))
-model = get_model("resnet18", "mixvpr", 1024)
-method = VPRModel.load_from_checkpoint("/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad_1024.ckpt")
-model = method.model
+model = get_model("efficientnet", "spoc", 1024)
+#method = VPRModel.load_from_checkpoint("/home/oliver/Documents/github/VisualLoc/Checkpoints/resnet18_netvlad_1024.ckpt")
+#model = method.model
 assert isinstance(model, nn.Module)
 
 
