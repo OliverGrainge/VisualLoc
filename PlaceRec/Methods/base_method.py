@@ -405,9 +405,10 @@ class BaseModelWrapper(BaseFunctionality):
         with torch.no_grad():
             for indicies, batch in tqdm(
                 dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar
-            ):
+            ):  
+                B = batch.shape[0]
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
-                all_desc[indicies.numpy(), :] = features
+                all_desc[indicies.numpy(), :] = features[:B]
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         self.set_query(all_desc)
@@ -428,16 +429,16 @@ class BaseModelWrapper(BaseFunctionality):
         Returns:
             dict: A dictionary containing the computed map descriptors.
         """
-        print("hello")
         all_desc = np.empty(
             (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
         )
         with torch.no_grad():
             for indicies, batch in tqdm(
                 dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar
-            ):
+            ):  
+                B = batch.shape[0]
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
-                all_desc[indicies.numpy(), :] = features
+                all_desc[indicies.numpy(), :] = features[:B]
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         self.set_map(all_desc)

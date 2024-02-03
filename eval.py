@@ -36,14 +36,9 @@ valid_transform = T.Compose([
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
-valid_transform = T.Compose([
-            T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
-
-
 
 dataset_accuracy_metrics = []
+
 for ds in datasets:
     for am in accuracy_metrics:
         dataset_accuracy_metrics.append(ds + "_" + am)
@@ -213,8 +208,6 @@ for dataset_name in args.datasets:
             table_data["dataset"] = dataset_name
 
         df.loc[method.name + "_" + args.precision] = table_data
-        print(table_data)
-        print(df)
 
     if "prcurve" in args.metrics:
         plot_pr_curve(

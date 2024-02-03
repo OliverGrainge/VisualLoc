@@ -1,1 +1,1 @@
-from .helper import get_backbone, get_aggregator
+from .helper import get_backbone, get_aggregator, get_model

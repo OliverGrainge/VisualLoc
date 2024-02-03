@@ -2,7 +2,7 @@ import numpy as np
 from PlaceRec.Training.models import aggregators
 from PlaceRec.Training.models import backbones
 import torchvision
-
+import torch
 
 def get_backbone(backbone_arch='resnet50',
                  pretrained=True,
@@ -69,3 +69,11 @@ def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
     
     elif 'netvlad' in agg_arch.lower(): 
         return aggregators.NetVLAD(feature_map_shape, out_dim)
+
+
+def get_model(backbone_arch, agg_arch, descriptor_size=1024, pretrained=True):
+    backbone = get_backbone(backbone_arch, pretrained)
+    img = torch.randn(1, 3, 320, 320)
+    feature_map_shape = backbone(img)[0].shape
+    aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size)
+    return torch.nn.Sequential(backbone, aggregator)

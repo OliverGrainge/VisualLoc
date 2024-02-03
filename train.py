@@ -21,9 +21,6 @@ args = train_arguments()
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
-                     'std': [0.229, 0.224, 0.225]}
-
 valid_transform = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
@@ -341,7 +338,7 @@ if __name__ == '__main__':
     earlystopping_cb = EarlyStopping(
         monitor='pitts30k_val/R1',
         min_delta=0.00,
-        patience=4,
+        patience=5,
         verbose=True,
         mode='max'
     )

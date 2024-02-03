@@ -10,7 +10,7 @@ weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
 run: 
   datasets: ["inriaholidays"]
   methods: ["amosnet", "hybridnet"]
-  num_workers: 0
+  num_workers: 12
   pin_memory: False
   batchsize: 32
   device: "cuda"
