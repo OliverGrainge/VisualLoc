@@ -5,6 +5,7 @@ import yaml
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from parsers import eval_arguments
 import torchvision.transforms as T
+import torch
 
 args = eval_arguments()
 
@@ -13,7 +14,7 @@ from PlaceRec.Metrics import (average_precision, benchmark_latency_cpu,
                               measure_memory, plot_metric, plot_pr_curve,
                               recall_at_100p, recallatk)
 from PlaceRec.utils import get_dataset, get_method
-from PlaceRec.Quantization import quantize_model
+from PlaceRec.Quantization import quantize_model_trt
 from PlaceRec.Training.dataloaders.val.CrossSeasonDataset import CrossSeasonDataset
 from torch.utils.data import Subset
 
@@ -110,7 +111,9 @@ for dataset_name in args.datasets:
 
         for m in args.metrics: 
             if "latency" in m: 
-                method.model = quantize_model(method.model, precision=args.precision, batch_size=1, calibration_dataset=cal_ds, calib_name=method.name + "_" + str(args.precision), reload_calib=True)
+                method.model = quantize_model_trt(method.model, precision=args.precision, force_recalibration=True, model_name=method.name, descriptor_size=args.descriptor_size)
+
+                #method.model = quantize_model(method.model, precision=args.precision, batch_size=1, calibration_dataset=cal_ds, calib_name=method.name + "_" + str(args.precision), reload_calib=True)
                 break
         # only load pretrained weights if required
 
@@ -118,7 +121,8 @@ for dataset_name in args.datasets:
         # if measuring latency no need to load descriptors
         if pretrained:
             method.load_descriptors(ds.name)
-        method.set_device(args.device)
+        if isinstance(method.model, torch.nn.Module):
+            method.set_device(args.device)
         
         if args.backend == "tensorrt":
             method.set_device("cuda")

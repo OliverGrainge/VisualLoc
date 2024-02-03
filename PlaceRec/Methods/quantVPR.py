@@ -6,14 +6,12 @@ from typing import Tuple
 import numpy as np
 import sklearn
 import torch
-from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torch import nn
 from torchvision import transforms
 from tqdm import tqdm
 import pytorch_lightning as pl 
 import torch
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.optim import lr_scheduler
 from PlaceRec.Training import utils
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler

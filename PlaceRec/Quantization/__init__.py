@@ -1,1 +1,1 @@
-from .quant import quantize_model
+from .quant import quantize_model, quantize_model_trt
