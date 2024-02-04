@@ -35,6 +35,8 @@ def get_backbone(backbone_arch='resnet50',
         return backbones.MobileNetV2(backbone_arch, pretrained, layers_to_freeze)
     elif 'squeezenet' in backbone_arch.lower():
         return backbones.SqueezeNet(backbone_arch, pretrained, layers_to_freeze)
+    elif 'vgg16' in backbone_arch.lower():
+        return backbones.SqueezeNet(backbone_arch, pretrained, layers_to_freeze)
 
 def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
     """Helper function that returns the aggregation layer given its name.

@@ -133,8 +133,9 @@ def build_engine_onnx_int8(model_file, calibrator, force_recalibration=True):
         #builder.int8_mode = True
         
         config = builder.create_builder_config()
-        config.max_workspace_size = 2 << 30
+        #config.max_workspace_size = 2 << 30
         config.set_flag(trt.BuilderFlag.INT8)
+        config.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
         config.int8_calibrator = calibrator
         #config.set_flat(trt.BuilderFlag.INT8)
 
@@ -161,11 +162,12 @@ def build_engine_onnx_fp(model_file, precision):
     network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
     parser = trt.OnnxParser(network, TRT_LOGGER)
     config = builder.create_builder_config()
-    config.max_workspace_size = 1 << 30 # 1GB 
+    #config.max_workspace_size = 10 << 30 # 1GB 
     if precision == "fp16":
         config.set_flag(trt.BuilderFlag.FP16)
+        config.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
     elif precision == "fp32":
-        config.set_flag(trt.BuilderFlag.FP16)
+        config.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
     else: 
         raise Exception("precision must be fp16 or fp32")
     # Load ONNX model
