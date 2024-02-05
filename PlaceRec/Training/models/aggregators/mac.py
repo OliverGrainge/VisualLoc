@@ -7,7 +7,7 @@ class MAC(nn.Module):
     def __init__(self, feature_map_shape: torch.tensor, out_dim: int=1024):
         super().__init__()
         self.channel_pool = nn.Conv2d(in_channels=feature_map_shape[0], out_channels=out_dim, kernel_size=1)
-        self.pool = nn.AdaptiveAvgPool2d(1)
+        self.pool = nn.MaxPool2d((feature_map_shape[1], feature_map_shape[2]))
         self.norm = L2Norm()
 
     def forward(self, x):

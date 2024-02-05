@@ -34,10 +34,11 @@ from train import VPRModel
 from PlaceRec.Quantization import quantize_model_trt
 
 
-from PlaceRec.Training.models import get_model
+from PlaceRec.Methods import QuantVPR
 
-model = get_model("vgg16", "gem", descriptor_size=1024)
-qmodel = quantize_model_trt(model, precision="int8", force_recalibration=True, descriptor_size=1024)
+
+model = QuantVPR(backbone="resnet50", aggregation="gem", descriptor_size=1024, pretrained=True)
+#qmodel = quantize_model_trt(model, precision="int8", force_recalibration=True, descriptor_size=1024)
 img = torch.randn(1, 3, 320, 320).cuda()
-out = qmodel(img)
+out = model.model(img)
 print(out.shape)

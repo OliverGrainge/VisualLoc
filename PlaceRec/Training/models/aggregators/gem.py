@@ -11,7 +11,7 @@ class GeMPool(nn.Module):
         super().__init__()
         self.channel_pool = nn.Conv2d(in_channels=feature_map_shape[0], out_channels=out_dim, kernel_size=1)
         self.p = nn.Parameter(torch.ones(1)*p)
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.avg_pool = nn.AvgPool2d((feature_map_shape[1], feature_map_shape[2]))
         self.eps = eps
         self.out_dim = out_dim
         self.norm = L2Norm()
