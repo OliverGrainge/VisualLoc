@@ -22,13 +22,13 @@
 
 #python train.py --backbone squeezenet --aggregation mixvpr
 #python train.py --backbone squeezenet --aggregation netvlad
-python train.py --backbone squeezenet --aggregation gem
-python train.py --backbone squeezenet --aggregation mac
-python train.py --backbone squeezenet --aggregation spoc
+#python train.py --backbone squeezenet --aggregation gem
+#python train.py --backbone squeezenet --aggregation mac
+#python train.py --backbone squeezenet --aggregation spoc
 
-python train.py --backbone resnet101 --aggregation mixvpr
-python train.py --backbone resnet101 --aggregation netvlad
-python train.py --backbone resnet101 --aggregation gem
+#python train.py --backbone resnet101 --aggregation mixvpr
+#python train.py --backbone resnet101 --aggregation netvlad
+#python train.py --backbone resnet101 --aggregation gem
 python train.py --backbone resnet101 --aggregation mac
 python train.py --backbone resnet101 --aggregation spoc
 
