@@ -45,7 +45,7 @@ def get_backbone(backbone_arch='resnet50',
         vit = vit.cuda()
         return vit
 
-def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
+def get_aggregator(agg_arch, feature_map_shape, out_dim=1024, tokens=False):
     """Helper function that returns the aggregation layer given its name.
     If you happen to make your own aggregator, you might need to add a call
     to this helper function.
@@ -57,27 +57,39 @@ def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
     Returns:
         nn.Module: the aggregation layer
     """
-    
-    if 'cosplace' in agg_arch.lower():  
-        return aggregators.CosPlace(feature_map_shape, out_dim)
+    if tokens == False:
+        if 'cosplace' in agg_arch.lower():  
+            return aggregators.CosPlace(feature_map_shape, out_dim)
 
-    elif 'gem' in agg_arch.lower():
-        return aggregators.GeMPool(feature_map_shape, out_dim)
-    
-    elif 'convap' in agg_arch.lower():
-        return aggregators.ConvAP(feature_map_shape, out_dim)
-    
-    elif 'mixvpr' in agg_arch.lower():
-        return aggregators.MixVPR(feature_map_shape, out_dim)
-    
-    elif 'spoc' in agg_arch.lower(): 
-        return aggregators.SPoC(feature_map_shape, out_dim)
-    
-    elif 'mac' in agg_arch.lower():
-        return aggregators.MAC(feature_map_shape, out_dim)
-    
-    elif 'netvlad' in agg_arch.lower(): 
-        return aggregators.NetVLAD(feature_map_shape, out_dim)
+        elif 'gem' in agg_arch.lower():
+            return aggregators.GeMPool(feature_map_shape, out_dim)
+        
+        elif 'convap' in agg_arch.lower():
+            return aggregators.ConvAP(feature_map_shape, out_dim)
+        
+        elif 'mixvpr' in agg_arch.lower():
+            return aggregators.MixVPR(feature_map_shape, out_dim)
+        
+        elif 'spoc' in agg_arch.lower(): 
+            return aggregators.SPoC(feature_map_shape, out_dim)
+        
+        elif 'mac' in agg_arch.lower():
+            return aggregators.MAC(feature_map_shape, out_dim)
+        
+        elif 'netvlad' in agg_arch.lower(): 
+            return aggregators.NetVLAD(feature_map_shape, out_dim)
+    else: 
+        if 'mixvpr' in agg_arch.lower():
+            return aggregators.MixVPRTokens(feature_map_shape, out_dim=out_dim)
+        elif 'netvlad' in agg_arch.lower():
+            return aggregators.NetVLADTokens(feature_map_shape, out_dim=out_dim)
+        elif 'spoc' in agg_arch.lower():
+            return aggregators.SPoCTokens(feature_map_shape, out_dim=out_dim)
+        elif 'mac' in agg_arch.lower():
+            return aggregators.MACTokens(feature_map_shape, out_dim=out_dim)
+        elif 'gem' in agg_arch.lower():
+            return aggregators.GemPoolTokens(feature_map_shape, out_dim=out_dim)
+
 
 
 def get_model(backbone_arch, agg_arch, descriptor_size=1024, pretrained=True):
