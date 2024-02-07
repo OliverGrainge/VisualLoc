@@ -1,0 +1,1 @@
+from .hub.backbones import dinov2_vitb14
