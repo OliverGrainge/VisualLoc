@@ -94,7 +94,13 @@ def get_aggregator(agg_arch, feature_map_shape, out_dim=1024, tokens=False):
 
 def get_model(backbone_arch, agg_arch, descriptor_size=1024, pretrained=True):
     backbone = get_backbone(backbone_arch, pretrained)
-    img = torch.randn(1, 3, 320, 320)
-    feature_map_shape = backbone(img)[0].shape
-    aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size)
+    
+    if backbone_arch == "dinov2":
+        img = torch.randn(1, 3, 308, 308)
+        feature_map_shape = backbone(img)[0].shape
+        aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size, tokens=True)
+    else: 
+        img = torch.randn(1, 3, 320, 320)
+        feature_map_shape = backbone(img)[0].shape
+        aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size)
     return torch.nn.Sequential(backbone, aggregator)

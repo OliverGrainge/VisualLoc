@@ -31,8 +31,13 @@ from .base_method import BaseModelWrapper
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-valid_transform = T.Compose([
+valid_transform_conv = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
+
+valid_transform_token = T.Compose([
+            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
@@ -99,14 +104,27 @@ class VPRModel(pl.LightningModule):
         
         # ----------------------------------
         # get the backbone and the aggregator
-        backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-        img = torch.randn(1, 3, 320, 320)
-        feature_map_shape = backbone(img)[0].shape
-        aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        if backbone_arch == "dinov2":
+            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+            img = torch.randn(1, 3, 308, 308)
+            feature_map_shape = backbone(img)[0].shape
+            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size, tokens=True)
+        else: 
+            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+            img = torch.randn(1, 3, 320, 320)
+            feature_map_shape = backbone(img)[0].shape
+            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+
+
+        # get the right transform 
+        if backbone_arch == "dinov2":
+            self.valid_transform = valid_transform_conv
+        else: 
+            self.valid_transform = valid_transform_token
 
         if "netvlad" in agg_arch:
             print("building dataloader")
-            ds = MSLS(valid_transform)
+            ds = MSLS(self.valid_transform)
             aggregator.initialize_netvlad_layer(ds, backbone)
             
             
@@ -263,7 +281,6 @@ class VPRModel(pl.LightningModule):
         print("\n\n")
 
 WEIGHTS_BASE_DIRECTORY= "/home/oliver/Documents/github/VisualLoc/Checkpoints"
-preprocess = valid_transform
 
 class QuantVPR(BaseModelWrapper):
     def __init__(self, backbone: str, aggregation: str, descriptor_size: int, pretrained: bool = True):
@@ -275,5 +292,5 @@ class QuantVPR(BaseModelWrapper):
             train_model = VPRModel(backbone_arch=backbone, agg_arch=aggregation, descriptor_size=descriptor_size)
         model = train_model.model
         assert isinstance(model, nn.Module)
-        super().__init__(model=model, preprocess=preprocess, name=backbone + "_" + aggregation + "_" + str(descriptor_size))
+        super().__init__(model=model, preprocess=train_model.valid_transform, name=backbone + "_" + aggregation + "_" + str(descriptor_size))
 

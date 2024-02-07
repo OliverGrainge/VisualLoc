@@ -44,20 +44,35 @@ TRAIN_CITIES = [
 ]
 
 
-train_transform = T.Compose([
+train_transform_conv = T.Compose([
     T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
     T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BILINEAR),
     T.ToTensor(),
     T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std']),
 ])
 
-valid_transform = T.Compose([
+valid_transform_conv = T.Compose([
     T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
     T.ToTensor(),
     T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std'])
 ])
 
+valid_transform_conv = T.Compose([
+            T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
+valid_transform_token = T.Compose([
+            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
+
+train_transform_token = T.Compose([
+    T.Resize((320, 320), interpolation=T.InterpolationMode.BICUBIC),
+    T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BICUBIC),
+    T.ToTensor(),
+    T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std']),
+])
 
 class GSVCitiesDataModule(pl.LightningDataModule):
     def __init__(self,
@@ -72,7 +87,8 @@ class GSVCitiesDataModule(pl.LightningDataModule):
                  mean_std=IMAGENET_MEAN_STD,
                  batch_sampler=None,
                  random_sample_from_each_place=True,
-                 val_set_names=['pitts30k_val', 'msls_val']
+                 val_set_names=['pitts30k_val', 'msls_val'],
+                 tokens=False
                  ):
         super().__init__()
         self.batch_size = batch_size
@@ -90,8 +106,12 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         self.val_set_names = val_set_names
         self.save_hyperparameters() # save hyperparameter with Pytorch Lightening
 
-        self.train_transform = train_transform
-        self.valid_transform = valid_transform
+        if tokens: 
+            self.train_transorm = train_transform_token
+            self.valid_transform = valid_transform_token
+        else: 
+            self.train_transform = train_transform_conv
+            self.valid_transform = valid_transform_conv
 
         self.train_loader_config = {
             'batch_size': self.batch_size,
