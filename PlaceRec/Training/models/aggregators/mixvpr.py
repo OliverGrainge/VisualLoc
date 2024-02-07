@@ -67,6 +67,7 @@ class MixVPR(nn.Module):
 
 class MixVPRTokens(nn.Module):
     def __init__(self, feature_map_shape: torch.Tensor, out_dim: int=1024):
+        super().__init__()
         dim = feature_map_shape[1]
 
         self.mix1 = nn.Sequential(
@@ -107,7 +108,7 @@ class MixVPRTokens(nn.Module):
         x = self.mix2(x) + x
         x = self.mix3(x) + x 
         x = self.mix4(x) + x # dim 
-        x = self.permute(0, 2, 1)
+        x = x.permute(0, 2, 1)
         x = self.channel_proj(x)
         x = x.permute(0, 2, 1)
         x = self.row_proj(x)

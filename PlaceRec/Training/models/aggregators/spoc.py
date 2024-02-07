@@ -30,7 +30,7 @@ class SPoCTokens(nn.Module):
         self.norm = L2Norm()
 
     def forward(self, x):
-        B, N, D = x.shpae
+        B, N, D = x.shape
         x = self.token_pool(x)
         x = torch.mean(x, dim=1)
         x = self.norm(x)

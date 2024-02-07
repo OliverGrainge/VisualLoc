@@ -37,7 +37,7 @@ class GemPoolTokens(nn.Module):
     def forward(self, x):
         x = self.token_pool(x)
         x.clamp(min=self.eps).pow(self.p)
-        x = torch.mean(x, dim=0)
+        x = torch.mean(x, dim=1)
         x.pow(1./self.p)
         x = self.norm(x)
         return x
