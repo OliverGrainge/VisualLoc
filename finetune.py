@@ -14,6 +14,8 @@ from torchvision import transforms as T
 from parsers import train_arguments
 from torch.utils.data import DataLoader, Subset, SubsetRandomSampler
 import numpy as np
+import os 
+
 args = train_arguments()
 
 
@@ -21,14 +23,20 @@ args = train_arguments()
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-valid_transform = T.Compose([
+valid_transform_conv = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
+valid_transform_token = T.Compose([
+            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
+            T.ToTensor(),
+            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
 
-class VPRModelFinetune(pl.LightningModule):
+BASE_WEIGHTS_DIRECTORY = "/Checkpoints/"
+
+class VPRModelFineTune(pl.LightningModule):
     """This is the main model for Visual Place Recognition
     we use Pytorch Lightning for modularity purposes.
     """
@@ -90,18 +98,42 @@ class VPRModelFinetune(pl.LightningModule):
         
         # ----------------------------------
         # get the backbone and the aggregator
-        backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-        img = torch.randn(1, 3, 320, 320)
-        feature_map_shape = backbone(img)[0].shape
-        aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        if backbone_arch == "dinov2":
+            img = torch.randn(1, 3, 308, 308)
+            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+            feature_map_shape = backbone(img)[0].shape
+            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size, tokens=True)
+        else: 
+            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+            img = torch.randn(1, 3, 320, 320)
+            feature_map_shape = backbone(img)[0].shape
+            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
 
-        if "netvlad" in agg_arch:
-            print("building dataloader")
-            ds = MSLS(valid_transform)
-            aggregator.initialize_netvlad_layer(ds, backbone)
-            
-            
+        # Freeze the weights of the backbone
+        for param in backbone.parameters():
+            param.requires_grad = False
+
+        # get the right transformation for conv v vit
+        if backbone_arch == "dinov2":
+            valid_transform = valid_transform_token
+        else:
+            valid_transform = valid_transform_conv
+
+        # Build the New Model
         self.model = torch.nn.Sequential(backbone, aggregator)
+
+        # find the pretrained backbone weights 
+        weights_pth = f'{BASE_WEIGHTS_DIRECTORY}_{backbone_arch}_{agg_arch}_1024.ckpt'
+        if not os.path.exists(weights_pth):
+            raise Exception(f'Weight Path: {weights_pth} does not exists')
+
+        # load the unchanged weights from old architecture into new
+        pretrained_state_dict = torch.load(weights_pth)
+        current_state_dict = model.state_dict()
+        filtered_state_dict = {k: v for k, v in pretrained_state_dict.items() if k in current_state_dict and current_state_dict[k].size() == v.size()}
+        current_state_dict.update(filtered_state_dict)
+        model.load_state_dict(current_state_dict)
+
         
     # the forward pass of the lightning model
     def forward(self, x):
@@ -268,20 +300,20 @@ if __name__ == '__main__':
         img_per_place=4,
         min_img_per_place=4,
         #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
-        shuffle_all=False, # shuffle all images or keep shuffling in-city only
+        shuffle_all=True, # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
         num_workers=16,
         show_data_stats=True,
         val_set_names=['pitts30k_val', 'msls_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
     )
-    
+
     # examples of backbones
     # resnet18, resnet50, resnet101, resnet152,
     # resnext50_32x4d, resnext50_32x4d_swsl , resnext101_32x4d_swsl, resnext101_32x8d_swsl
     # efficientnet_b0, efficientnet_b1, efficientnet_b2
     # swinv2_base_window12to16_192to256_22kft1k
-    model = VPRModel(
+    model = VPRModelFineTune(
         #-------------------------------
         #---- Backbone architecture ----
         backbone_arch=args.backbone,
