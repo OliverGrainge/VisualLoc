@@ -209,17 +209,14 @@ def get_infer(engine, descriptor_size=1024):
         cuda.memcpy_dtoh_async(h_output, d_output, stream)
         # Synchronize the stream
         stream.synchronize()
-        return torch.tensor([h_output]).float()
+        return torch.tensor(np.array([h_output])).float()
     return infer
 
-
-
-
-def quantize_model_trt(model, precision="fp16", force_recalibration=False, model_name="calibration", descriptor_size=1024):
-    x = torch.randn(1, 3, 320, 320).cuda()
+def quantize_model_trt(model, precision="fp16", force_recalibration=False, model_name="calibration", descriptor_size=1024, resolution=(320, 320)):
+    x = torch.randn(1, 3, *resolution).cuda()
     assert isinstance(model, nn.Module)
-    model.eval().cuda()
-    torch.onnx.export(model, x, "model_fp32.onnx", verbose=True, input_names=["input"], output_names=['output'])
+    model = model.eval().cuda()
+    torch.onnx.export(model, x, "model_fp32.onnx", verbose=False, input_names=["input"], output_names=['output'], opset_version=17)
     if precision in ["fp16", "fp32"]:
         engine = build_engine_onnx_fp("model_fp32.onnx", precision=precision)
     elif precision == "int8":

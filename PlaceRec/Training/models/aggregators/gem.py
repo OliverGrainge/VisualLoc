@@ -24,3 +24,20 @@ class GeMPool(nn.Module):
         x = x.flatten(1)
         x = self.norm(x)
         return x
+    
+
+class GemPoolTokens(nn.Module):
+    def __init__(self, feature_map_shape: torch.tensor, out_dim=1024, p=3, eps=1e-6):
+        super().__init__()
+        self.token_pool = nn.Linear(feature_map_shape[1], out_dim)
+        self.p = nn.Parameter(torch.ones(1)*p)
+        self.eps = eps
+        self.norm = L2Norm()
+    
+    def forward(self, x):
+        x = self.token_pool(x)
+        x.clamp(min=self.eps).pow(self.p)
+        x = torch.mean(x, dim=0)
+        x.pow(1./self.p)
+        x = self.norm(x)
+        return x

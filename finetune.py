@@ -28,7 +28,7 @@ valid_transform = T.Compose([
 
 
 
-class VPRModel(pl.LightningModule):
+class VPRModelFinetune(pl.LightningModule):
     """This is the main model for Visual Place Recognition
     we use Pytorch Lightning for modularity purposes.
     """

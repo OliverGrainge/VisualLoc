@@ -1,3 +1,4 @@
+"""
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +17,7 @@ from PIL import Image
 import einops as ein
 from typing import Union, List, Literal
 from torchvision.transforms import functional as T
-from PlaceRec.Quantization import quantize_model
+#from PlaceRec.Quantization import quantize_model
 from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from PlaceRec.Training.dataloaders.val.PittsburghDataset import PittsburghDataset
 from PlaceRec.Training import valid_transform
@@ -31,14 +32,16 @@ import statistics
 import tensorrt as trt
 from onnxconverter_common import auto_convert_mixed_precision
 from train import VPRModel
-from PlaceRec.Quantization import quantize_model_trt
+#from PlaceRec.Quantization import quantize_model_trt
 
 
 from PlaceRec.Methods import QuantVPR
+from PlaceRec.Training.models.helper import get_backbone
 
 
-model = QuantVPR(backbone="resnet50", aggregation="gem", descriptor_size=1024, pretrained=True)
-#qmodel = quantize_model_trt(model, precision="int8", force_recalibration=True, descriptor_size=1024)
-img = torch.randn(1, 3, 320, 320).cuda()
-out = model.model(img)
+backbone = get_backbone("dinov2")
+img = torch.randn(1, 3, 308, 308).cuda()
+out = backbone(img)
 print(out.shape)
+
+"""

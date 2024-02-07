@@ -63,5 +63,56 @@ class MixVPR(nn.Module):
         return x
 
 
+
+
+class MixVPRTokens(nn.Module):
+    def __init__(self, feature_map_shape: torch.Tensor, out_dim: int=1024):
+        dim = feature_map_shape[1]
+
+        self.mix1 = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, dim),
+            nn.ReLU(),
+            nn.Linear(dim, dim),
+        )
+
+        self.mix2 = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, dim),
+            nn.ReLU(),
+            nn.Linear(dim, dim),
+        )
+
+        self.mix3 = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, dim),
+            nn.ReLU(),
+            nn.Linear(dim, dim),
+        )
+
+        self.mix4 = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, dim),
+            nn.ReLU(),
+            nn.Linear(dim, dim),
+        )
+
+        self.channel_proj = nn.Linear(feature_map_shape[0], out_dim // 4)
+        self.row_proj = nn.Linear(feature_map_shape[1], 4)
+        self.norm = L2Norm()
+
+    def forward(self, x):
+        B, N, D = x.shape
+        x = self.mix1(x) + x
+        x = self.mix2(x) + x
+        x = self.mix3(x) + x 
+        x = self.mix4(x) + x # dim 
+        x = self.permute(0, 2, 1)
+        x = self.channel_proj(x)
+        x = x.permute(0, 2, 1)
+        x = self.row_proj(x)
+        x = x.view(B, -1)
+        x = self.norm(x)
+        return x
         
 

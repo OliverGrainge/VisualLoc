@@ -268,14 +268,14 @@ if __name__ == '__main__':
         img_per_place=4,
         min_img_per_place=4,
         #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
-        shuffle_all=False, # shuffle all images or keep shuffling in-city only
+        shuffle_all=True, # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
         num_workers=16,
         show_data_stats=True,
         val_set_names=['pitts30k_val', 'msls_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
     )
-    
+
     # examples of backbones
     # resnet18, resnet50, resnet101, resnet152,
     # resnext50_32x4d, resnext50_32x4d_swsl , resnext101_32x4d_swsl, resnext101_32x8d_swsl

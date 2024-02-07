@@ -37,6 +37,13 @@ def get_backbone(backbone_arch='resnet50',
         return backbones.SqueezeNet(backbone_arch, pretrained, layers_to_freeze)
     elif 'vgg16' in backbone_arch.lower():
         return backbones.VGG16(backbone_arch, pretrained, layers_to_freeze)
+    elif "dinov2" in backbone_arch.lower():
+        vit = backbones.dinov2_vitb14(pretrained=True)
+        vit.init_pos_encoding()
+        for param in vit.parameters(): 
+            param.requires_grad = False
+        vit = vit.cuda()
+        return vit
 
 def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
     """Helper function that returns the aggregation layer given its name.

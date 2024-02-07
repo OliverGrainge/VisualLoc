@@ -21,3 +21,19 @@ class SPoC(nn.Module):
 
     def __repr__(self):
         return self.__class__.__name__ + "()"
+    
+
+class SPoCTokens(nn.Module):
+    def __init__(self, feature_map_shape: torch.tensor, out_dim: int=1024):
+        super().__init__()
+        self.token_pool = nn.Linear(feature_map_shape[1], out_dim)
+        self.norm = L2Norm()
+
+    def forward(self, x):
+        B, N, D = x.shpae
+        x = self.token_pool(x)
+        x = torch.mean(x, dim=1)
+        x = self.norm(x)
+        return x
+
+

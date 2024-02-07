@@ -6,7 +6,8 @@ from torch.utils.data import Dataset
 import torchvision.transforms as T
 from PlaceRec.utils import get_config
 from os.path import join
-
+import numpy as np
+import time
 config = get_config()
 
 default_transform = T.Compose([
@@ -63,6 +64,7 @@ class GSVCitiesDataset(Dataset):
         
 
         # append other cities one by one
+
         for i in range(1, len(self.cities)):
             tmp_df = pd.read_csv(
                 self.base_path+'Dataframes/'+f'{self.cities[i]}.csv')
@@ -78,6 +80,7 @@ class GSVCitiesDataset(Dataset):
             tmp_df = tmp_df.sample(frac=1)  # shuffle the city dataframe
             
             df = pd.concat([df, tmp_df], ignore_index=True)
+        
 
         # keep only places depicted by at least min_img_per_place images
         res = df[df.groupby('place_id')['place_id'].transform(
@@ -85,9 +88,9 @@ class GSVCitiesDataset(Dataset):
         return res.set_index('place_id')
     
     def __getitem__(self, index):
-        place_id = self.places_ids[index]
-        
         # get the place in form of a dataframe (each row corresponds to one image)
+        
+        place_id = self.places_ids[index]
         place = self.dataframe.loc[place_id]
         
         # sample K images (rows) from this place
@@ -106,17 +109,18 @@ class GSVCitiesDataset(Dataset):
             img_path = self.base_path + 'Images/' + \
                 row['city_id'] + '/' + img_name
             img = self.image_loader(img_path)
-
             if self.transform is not None:
                 img = self.transform(img)
-
             imgs.append(img)
+        
 
         # NOTE: contrary to image classification where __getitem__ returns only one image 
         # in GSVCities, we return a place, which is a Tesor of K images (K=self.img_per_place)
         # this will return a Tensor of shape [K, channels, height, width]. This needs to be taken into account 
         # in the Dataloader (which will yield batches of shape [BS, K, channels, height, width])
-        return torch.stack(imgs), torch.tensor(place_id).repeat(self.img_per_place)
+        imgs = torch.stack(imgs)
+        ids = torch.tensor(place_id).repeat(self.img_per_place)
+        return imgs, ids
 
     def __len__(self):
         '''Denotes the total number of places (not images)'''

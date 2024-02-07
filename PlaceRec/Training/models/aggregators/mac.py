@@ -19,3 +19,16 @@ class MAC(nn.Module):
 
     def __repr__(self):
         return self.__class__.__name__ + "()"
+    
+
+class MACTokens(nn.Module):
+    def __init__(self, feature_map_shape: torch.tensor, out_dim: int=1024):
+        super().__init__()
+        self.token_pool = nn.Linear(feature_map_shape[1], out_dim)
+        self.norm = L2Norm()
+
+    def forward(self, x):
+        x = self.token_pool(x)
+        x, _ = torch.max(x, dim=0)
+        x = self.norm(x)
+        return x
