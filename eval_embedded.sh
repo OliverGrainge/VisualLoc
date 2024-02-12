@@ -2,7 +2,7 @@
 DESCRIPTOR_SIZE=1024
 PRECISION=fp32
 
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone resnet18 --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone resnet18 --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics recall@1 gpu_desktop_latency,  --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone resnet18 --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone resnet18 --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone resnet18 --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
@@ -252,9 +252,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 
@@ -299,9 +299,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 DESCRIPTOR_SIZE=1024
@@ -340,9 +340,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 
@@ -382,9 +382,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 
@@ -429,9 +429,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 DESCRIPTOR_SIZE=1024
@@ -470,9 +470,9 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 
 
 
@@ -512,6 +512,6 @@ CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone mobilenet 
 
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation spoc --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mac --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation gem --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
 CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation netvlad --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
-CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet--aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION
+CUDA_MODULE_LOADING=LAZY python eval.py --methods quantvpr --backbone squeezenet --aggregation mixvpr --descriptor_size $DESCRIPTOR_SIZE --datasets stlucia --metrics gpu_embedded_latency --precision $PRECISION

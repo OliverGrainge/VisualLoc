@@ -44,34 +44,17 @@ TRAIN_CITIES = [
 ]
 
 
-train_transform_conv = T.Compose([
+train_transform = T.Compose([
     T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
     T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BILINEAR),
     T.ToTensor(),
     T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std']),
 ])
 
-valid_transform_conv = T.Compose([
+valid_transform = T.Compose([
     T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
     T.ToTensor(),
     T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std'])
-])
-
-valid_transform_conv = T.Compose([
-            T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
-
-valid_transform_token = T.Compose([
-            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
-
-train_transform_token = T.Compose([
-    T.Resize((320, 320), interpolation=T.InterpolationMode.BICUBIC),
-    T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BICUBIC),
-    T.ToTensor(),
-    T.Normalize(mean=IMAGENET_MEAN_STD['mean'], std=IMAGENET_MEAN_STD['std']),
 ])
 
 class GSVCitiesDataModule(pl.LightningDataModule):
@@ -106,12 +89,8 @@ class GSVCitiesDataModule(pl.LightningDataModule):
         self.val_set_names = val_set_names
         self.save_hyperparameters() # save hyperparameter with Pytorch Lightening
 
-        if tokens: 
-            self.train_transorm = train_transform_token
-            self.valid_transform = valid_transform_token
-        else: 
-            self.train_transform = train_transform_conv
-            self.valid_transform = valid_transform_conv
+        self.train_transform = train_transform
+        self.valid_transform = valid_transform
 
         self.train_loader_config = {
             'batch_size': self.batch_size,

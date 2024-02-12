@@ -142,11 +142,11 @@ class DinoVisionTransformer(nn.Module):
         self.norm = norm_layer(embed_dim)
         self.head = nn.Identity()
         self.mask_token = nn.Parameter(torch.zeros(1, embed_dim))
-        self.pos_encoding = nn.Parameter(torch.zeros(1, 485, 768))
+        self.pos_encoding = nn.Parameter(torch.zeros(1, 485, 384))
         self.init_weights()
     
     def init_pos_encoding(self):
-        encoding_data = self.interpolate_pos_encoding(torch.randn(1, 485, 768), 308, 308)
+        encoding_data = self.interpolate_pos_encoding(torch.randn(1, 485, 384), 308, 308)
         self.pos_encoding.data = encoding_data
         
     def init_weights(self):

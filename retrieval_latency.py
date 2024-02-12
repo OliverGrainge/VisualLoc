@@ -6,7 +6,7 @@ import pandas as pd
 PLATFORM = "desktop" # either embedded or 
 PATH_TO_RESULTS = "/home/oliver/Documents/github/VisualLoc/Plots/PlaceRec/data/results.csv"
 
-BACKBONES = ["vgg16", "mobilenet", "squeezenet", "efficientnet", "resnet18", "resnet50", "resnet101"]
+BACKBONES = ["vgg16", "mobilenet", "squeezenet", "efficientnet", "resnet18", "resnet50", "resnet101", "dinov2"]
 AGGREGATIONS = ["mixvpr", "netvlad", "spoc", "mac", "gem"]
 DESCRIPTOR_SIZES = [512, 1024, 2048, 4096]
 PRECISIONS = ["int8", "fp16", "fp32"]

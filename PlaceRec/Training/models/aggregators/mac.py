@@ -30,6 +30,5 @@ class MACTokens(nn.Module):
     def forward(self, x):
         x = self.token_pool(x)
         x, _ = torch.max(x, dim=1)
-        print(x.shape)
         x = self.norm(x)
         return x

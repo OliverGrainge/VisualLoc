@@ -6,6 +6,7 @@ from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
 from parsers import eval_arguments
 import torchvision.transforms as T
 import torch
+import numpy as np
 
 args = eval_arguments()
 
@@ -65,10 +66,11 @@ for dataset_name in args.datasets:
     aupr = {}
    
 
-    try:
-        df = pd.read_csv("Plots/PlaceRec/data/results.csv")
+    #try:
+    df = pd.read_csv("/home/oliver/Documents/github/VisualLoc/Plots/PlaceRec/data/results.csv")
 
-        df.set_index("id", inplace=True)
+    df.set_index("id", inplace=True)
+    """
     except:
         df = pd.DataFrame(
             columns=[
@@ -87,6 +89,7 @@ for dataset_name in args.datasets:
         )
 
         df.set_index("id", inplace=True)
+    """
     for method_name in args.methods:
 
 
@@ -102,19 +105,21 @@ for dataset_name in args.datasets:
             method = get_method(method_name, pretrained=pretrained)
 
         try:
+            print("==============================", "trying", method.name + "_" + args.precision)
             table_data = df.loc[method.name + "_" + args.precision]
         except:
+            print("==============================", "excepting")
             table_data = {}
 
-        cal_ds = CrossSeasonDataset(valid_transform)
-        cal_ds = Subset(cal_ds, list(range(100)))
-
-        for m in args.metrics: 
-            if "latency" in m: 
-                method.model = quantize_model_trt(method.model, precision=args.precision, force_recalibration=True, model_name=method.name, descriptor_size=args.descriptor_size)
-
-                #method.model = quantize_model(method.model, precision=args.precision, batch_size=1, calibration_dataset=cal_ds, calib_name=method.name + "_" + str(args.precision), reload_calib=True)
-                break
+        if (np.isnan(table_data["memory"]) or np.isnan(table_data["gpu_desktop_latency"])) and ("measure_memory" in args.metrics and "gpu_desktop_latency" in args.metrics):
+            print("#############################3 Quantizing Model")
+            method.model = quantize_model_trt(method.model, precision=args.precision, force_recalibration=True, model_name=method.name, descriptor_size=args.descriptor_size)
+        else: 
+            print(":########################### SKIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIPPPPPPPPPPPPPPPPPPPPPPPPPPPIIIIIIIIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGG")
+            if "measure_memory" in args.metrics:
+                args.metrics.remove("measure_memory")
+            if "gpu_desktop_latency" in args.metrics:
+                args.metrics.remove("gpu_desktop_latency")
         # only load pretrained weights if required
 
     
@@ -124,16 +129,6 @@ for dataset_name in args.datasets:
         if isinstance(method.model, torch.nn.Module):
             method.set_device(args.device)
         
-        if args.backend == "tensorrt":
-            method.set_device("cuda")
-            if args.precision == "fp32":
-                method.model = quantize_model(method.model, precision="fp32", batch_size=1)
-            elif args.precision == "fp16":
-                method.model = quantize_model(method.model, precision="fp16", batch_size=1)
-            elif args.precision == "int8":
-                method.model = quantize_model(method.model, precision="int8", calibration_dataset=None, batch_size=1,
-                                              reload_calib=args.reload_calib, calib_name=method.name + ".cache")
-
         all_methods.append(method)
 
         if pretrained:
@@ -167,7 +162,7 @@ for dataset_name in args.datasets:
             table_data["cpu_embedded_latency"] = latency_cpu_embedded[method.name]
 
         if "measure_memory" in args.metrics:
-            memory[method.name] = measure_memory(args, method, jit=True)
+            memory[method.name] = measure_memory(args, method)
             table_data["memory"] = memory[method.name]
 
 
@@ -210,8 +205,9 @@ for dataset_name in args.datasets:
             )
             table_data[ds.name + "_recall@10"] = recallat10[method.name]
             table_data["dataset"] = dataset_name
-
+        print(table_data)
         df.loc[method.name + "_" + args.precision] = table_data
+        df.to_csv("Plots/PlaceRec/data/results.csv")
 
     if "prcurve" in args.metrics:
         plot_pr_curve(
@@ -342,4 +338,3 @@ for dataset_name in args.datasets:
             dataset_name=ds.name,
         )
 
-df.to_csv("Plots/PlaceRec/data/results.csv")

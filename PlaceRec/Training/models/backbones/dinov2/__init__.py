@@ -1,1 +1,1 @@
-from .hub.backbones import dinov2_vitb14
+from .hub.backbones import dinov2_vitb14, dinov2_vits14

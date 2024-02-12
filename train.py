@@ -21,15 +21,11 @@ args = train_arguments()
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-valid_transform_conv = T.Compose([
+valid_transform = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
-valid_transform_token = T.Compose([
-            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
 
 
@@ -95,23 +91,13 @@ class VPRModel(pl.LightningModule):
         
         # ----------------------------------
         # get the backbone and the aggregator
-        if backbone_arch == "dinov2":
-            img = torch.randn(1, 3, 308, 308)
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size, tokens=True)
-        else: 
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            img = torch.randn(1, 3, 320, 320)
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+        backbone.to(self.device)
+        img = torch.randn(1, 3, 320, 320).to(self.device)
+        feature_map_shape = backbone(img)[0].shape
+        aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        aggregator.to(self.device)
 
-
-        # get the right transformation for conv v vit
-        if backbone_arch == "dinov2":
-            valid_transform = valid_transform_token
-        else:
-            valid_transform = valid_transform_conv
 
         if "netvlad" in agg_arch:
             print("building dataloader")
@@ -282,7 +268,7 @@ if __name__ == '__main__':
     # if you want to train on specific cities, you can comment/uncomment
     # cities from the list TRAIN_CITIES
     datamodule = GSVCitiesDataModule(
-        batch_size=40,
+        batch_size=30,
         img_per_place=4,
         min_img_per_place=4,
         #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
@@ -291,7 +277,7 @@ if __name__ == '__main__':
         image_size=(320, 320),
         num_workers=16,
         show_data_stats=True,
-        val_set_names=['pitts30k_val', 'msls_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
+        val_set_names=['pitts30k_val'], # pitts30k_val, pitts30k_test, msls_val, nordland, sped
     )
 
     # examples of backbones
@@ -339,6 +325,7 @@ if __name__ == '__main__':
         miner_margin=0.1,
         faiss_gpu=False
     )
+
     
     # model params saving using Pytorch Lightning
     # we save the best 3 models accoring to Recall@1 on pittsburg val
@@ -360,7 +347,6 @@ if __name__ == '__main__':
         verbose=True,
         mode='max'
     )
-    
     #------------------
     # we instanciate a trainer
     trainer = pl.Trainer(
@@ -374,7 +360,7 @@ if __name__ == '__main__':
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
         #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
-        #limit_train_batches=3
+        #limit_train_batches=10
     )
 
 

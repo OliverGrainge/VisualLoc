@@ -38,14 +38,15 @@ def get_backbone(backbone_arch='resnet50',
     elif 'vgg16' in backbone_arch.lower():
         return backbones.VGG16(backbone_arch, pretrained, layers_to_freeze)
     elif "dinov2" in backbone_arch.lower():
-        vit = backbones.dinov2_vitb14(pretrained=True)
+        vit = backbones.dinov2_vits14(pretrained=True)
         vit.init_pos_encoding()
-        for param in vit.parameters(): 
-            param.requires_grad = False
+        # unfreeze the final block, freeze the rest
+        for param in vit.parameters():
+            param.requires_grad=False
         vit = vit.cuda()
         return vit
 
-def get_aggregator(agg_arch, feature_map_shape, out_dim=1024, tokens=False):
+def get_aggregator(agg_arch, feature_map_shape, out_dim=1024):
     """Helper function that returns the aggregation layer given its name.
     If you happen to make your own aggregator, you might need to add a call
     to this helper function.
@@ -57,6 +58,10 @@ def get_aggregator(agg_arch, feature_map_shape, out_dim=1024, tokens=False):
     Returns:
         nn.Module: the aggregation layer
     """
+    if len(feature_map_shape) == 2:
+        tokens = True
+    else: 
+        tokens = False
     if tokens == False:
         if 'cosplace' in agg_arch.lower():  
             return aggregators.CosPlace(feature_map_shape, out_dim)
@@ -94,13 +99,13 @@ def get_aggregator(agg_arch, feature_map_shape, out_dim=1024, tokens=False):
 
 def get_model(backbone_arch, agg_arch, descriptor_size=1024, pretrained=True):
     backbone = get_backbone(backbone_arch, pretrained)
-    
+    backbone.cpu()
     if backbone_arch == "dinov2":
-        img = torch.randn(1, 3, 308, 308)
+        img = torch.randn(1, 3, 308, 308).cpu()
         feature_map_shape = backbone(img)[0].shape
         aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size, tokens=True)
     else: 
-        img = torch.randn(1, 3, 320, 320)
+        img = torch.randn(1, 3, 320, 320).cpu()
         feature_map_shape = backbone(img)[0].shape
         aggregator = get_aggregator(agg_arch, feature_map_shape, out_dim=descriptor_size)
     return torch.nn.Sequential(backbone, aggregator)

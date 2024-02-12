@@ -76,7 +76,7 @@ class EntropyCalibrator(trt.IInt8EntropyCalibrator2):
     def __init__(self, model_name):
         trt.IInt8EntropyCalibrator2.__init__(self)
         calibration_ds = MSLS(valid_transform)
-        calibration_ds = Subset(calibration_ds, list(range(100)))
+        calibration_ds = Subset(calibration_ds, list(range(500)))
         calibration_dataloader = DataLoader(calibration_ds, batch_size=1, num_workers=0)
         self.calibration_dataloader = iter(calibration_dataloader)  # Make it an iterator
         self.calibration_cache_path = "./calibration_cache/" + model_name + ".cache"
@@ -152,6 +152,11 @@ def build_engine_onnx_int8(model_file, calibrator, force_recalibration=True):
             
             # Serialize the TensorRT engine
             serialized_engine = engine.serialize()
+            engine_path = "tensorrt_engine.trt"
+
+            with open(engine_path, "wb") as f:
+                f.write(serialized_engine)
+
             return serialized_engine
 
 
@@ -177,7 +182,14 @@ def build_engine_onnx_fp(model_file, precision):
             for error in range(parser.num_errors):
                 print(parser.get_error(error))
             return None
-    return builder.build_serialized_network(network, config)
+    serialized_engine = builder.build_serialized_network(network, config)
+
+    engine_path = "tensorrt_engine.trt"
+    with open(engine_path, "wb") as f:
+        f.write(serialized_engine)
+
+    return serialized_engine
+
 
     
 

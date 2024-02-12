@@ -1,47 +1,41 @@
-"""
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import math 
-from torch.utils.data import DataLoader, TensorDataset
-import faiss
-import numpy as np
-import torchvision
-from PlaceRec.Training.models import get_backbone, get_aggregator
-from typing import Literal
-from torchvision import transforms as tvf
 import os 
-from onedrivedownloader import download
-import fast_pytorch_kmeans as fpk
-from PIL import Image
-import einops as ein
-from typing import Union, List, Literal
-from torchvision.transforms import functional as T
-#from PlaceRec.Quantization import quantize_model
-from PlaceRec.Training.dataloaders.val.MapillaryDataset import MSLS
-from PlaceRec.Training.dataloaders.val.PittsburghDataset import PittsburghDataset
-from PlaceRec.Training import valid_transform
-from torch.utils.data import Subset
-from tqdm import tqdm 
-from torch.utils.data import SubsetRandomSampler
-from torch.hub import load_state_dict_from_url
-from torchvision import transforms
-from tqdm import tqdm 
-import time
-import statistics
-import tensorrt as trt
-from onnxconverter_common import auto_convert_mixed_precision
-from train import VPRModel
-#from PlaceRec.Quantization import quantize_model_trt
+
+CHECKPOINT_DIR = "Checkpoints/"
+weights = os.listdir(CHECKPOINT_DIR)
+
+weights_standard = []
+for weight in weights:
+    if weight.endswith("1024.ckpt"):
+        weights_standard.append(weight)
 
 
-from PlaceRec.Methods import QuantVPR
-from PlaceRec.Training.models.helper import get_backbone
+backbones = ["resnet18", "resnet50", "resnet101", "mobilenet", "efficientnet", "squeezenet", "vgg16", "dinov2"]
+aggregations = ["mac", "spoc", "gem", "mixvpr", "netvlad"]
 
 
-backbone = get_backbone("dinov2")
-img = torch.randn(1, 3, 308, 308).cuda()
-out = backbone(img)
-print(out.shape)
+for back in backbones: 
+    for agg in aggregations: 
+        if not f'{back}_{agg}_1024.ckpt' in weights_standard:
+            print('Missing: ', f'{back}_{agg}_1024.ckpt')
 
-"""
+
+backbones = ["resnet50", "resnet18", "mobilenet", "efficientnet", "vgg16"]
+
+for back in backbones: 
+    for agg in aggregations: 
+        if not f'{back}_{agg}_512.ckpt' in weights:
+            print('Missing: ', f'{back}_{agg}_512.ckpt')
+
+
+for back in backbones: 
+    for agg in aggregations: 
+        if not f'{back}_{agg}_2048.ckpt' in weights:
+            print('Missing: ', f'{back}_{agg}_2048.ckpt')
+
+
+for back in backbones: 
+    for agg in aggregations: 
+        if not f'{back}_{agg}_4096.ckpt' in weights:
+            print('Missing: ', f'{back}_{agg}_4096.ckpt')
+
+

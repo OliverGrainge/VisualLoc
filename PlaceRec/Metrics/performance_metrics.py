@@ -13,48 +13,18 @@ import pytorch_lightning as pl
 from PlaceRec.Datasets import GardensPointWalking
 
 
-def measure_memory(args, method, jit=True):
-    """
-    Measures the size (in bytes) of a given PyTorch model when saved to disk.
 
-    Parameters:
-    - args (object): Placeholder for any additional arguments. Currently not used in the function.
-    - model (torch.nn.Module or torch.jit.ScriptModule): The PyTorch model to measure. This can be
-        a regular PyTorch model or a JIT scripted model.
-    - jit (bool, optional): Indicates whether the given model is a JIT scripted model.
-        If True, saves the model using torch.jit.save. If False, saves the model's state_dict.
-        Default is True.
 
-    Returns:
-    - int: Size of the saved model in mega bytes.
+def measure_memory(args, method): 
+    engine_path = "tensorrt_engine.trt"
+    try:
+        # Get the size of the engine file in bytes
+        file_size_bytes = os.path.getsize(engine_path)
+        return file_size_bytes / (1024**2)
+    except Exception as e:
+        print(f"Error obtaining file size: {e}")
+        return None
 
-    Note:
-    - This function temporarily saves the model to 'tmp_model.pt' on disk to measure its size.
-        The temporary file is deleted after size measurement.
-    """
-    model = method.model.to(args.device)
-    model.eval()
-        # Assuming 'model' is your model instance
-    if isinstance(model, pl.LightningModule):
-        if method.name == "mixvpr":
-            model = nn.Sequential(model.backbone, model.aggregator)
-
-    if jit:
-        if isinstance(model, nn.Module):
-            example_input = np.random.randint(0, 255, size=(480, 640, 3)).astype(np.uint8)
-            example_input = Image.fromarray(example_input)
-            example_input = method.preprocess(example_input).to(args.device)
-            traced_model = torch.jit.trace(model, example_input[None, :])
-            model = torch.jit.script(traced_model)
-        torch.jit.save(model, "tmp_model.pt")
-        size_in_bytes = os.path.getsize("tmp_model.pt")
-        os.remove("tmp_model.pt")
-        return size_in_bytes / 1000000
-    else:
-        torch.save(model.state_dict(), "tmp_model.pt")
-        size_in_bytes = os.path.getsize("tmp_model.pt")
-        os.remove("tmp_model.pt")
-        return size_in_bytes / 1000000
 
 
 def benchmark_latency_cpu(method, num_runs=100):
@@ -109,19 +79,21 @@ def benchmark_latency_gpu(method, num_runs: int = 100):
     model = method.model
     img = img.cuda()
     # Warm up
-    for _ in range(10):
+    for _ in range(20):
         _ = model(img)
-    torch.cuda.synchronize()  # Ensure CUDA operations are synchronized
-    start_event = torch.cuda.Event(enable_timing=True)
-    end_event = torch.cuda.Event(enable_timing=True)
+    
     # Measure inference time using CUDA events
-    start_event.record()
+    times = []
     for _ in range(num_runs):
+        torch.cuda.synchronize()  # Ensure CUDA operations are synchronized
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
         _ = model(img)
-    end_event.record()
-    torch.cuda.synchronize()
-    average_time = start_event.elapsed_time(end_event) / num_runs
-    return average_time
+        end_event.record()
+        torch.cuda.synchronize()
+        times.append(start_event.elapsed_time(end_event))
+    return np.mean(times)
 
 
 def count_params(method) -> int:

@@ -23,18 +23,27 @@ args = train_arguments()
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-valid_transform_conv = T.Compose([
+valid_transform = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
-valid_transform_token = T.Compose([
-            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
+FINETUNE_CITIES = [
+    'Bangkok',
+    'Rome',
+    'Barcelona',
+    'Chicago',
+    'Miami',
+    'Phoenix',
+    'TRT', # refers to Toronto
+    'Boston',
+    'PRG', # refers to Prague
+    'London',
+    'Melbourne',
+    'PRS', # refers to Paris
+]
 
-
-BASE_WEIGHTS_DIRECTORY = "/Checkpoints/"
+BASE_WEIGHTS_DIRECTORY = "Checkpoints/"
 
 class VPRModelFineTune(pl.LightningModule):
     """This is the main model for Visual Place Recognition
@@ -98,41 +107,38 @@ class VPRModelFineTune(pl.LightningModule):
         
         # ----------------------------------
         # get the backbone and the aggregator
-        if backbone_arch == "dinov2":
-            img = torch.randn(1, 3, 308, 308)
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size, tokens=True)
-        else: 
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            img = torch.randn(1, 3, 320, 320)
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+        backbone.cpu()
+        img = torch.randn(1, 3, 320, 320).cpu()
+        feature_map_shape = backbone(img)[0].shape
+        aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        aggregator.cpu()
 
         # Freeze the weights of the backbone
         for param in backbone.parameters():
             param.requires_grad = False
 
-        # get the right transformation for conv v vit
-        if backbone_arch == "dinov2":
-            valid_transform = valid_transform_token
-        else:
-            valid_transform = valid_transform_conv
-
         # Build the New Model
         self.model = torch.nn.Sequential(backbone, aggregator)
+        self.model.to(self.device)
 
         # find the pretrained backbone weights 
-        weights_pth = f'{BASE_WEIGHTS_DIRECTORY}_{backbone_arch}_{agg_arch}_1024.ckpt'
+        weights_pth = f'{BASE_WEIGHTS_DIRECTORY}{backbone_arch}_{agg_arch}_1024.ckpt'
         if not os.path.exists(weights_pth):
             raise Exception(f'Weight Path: {weights_pth} does not exists')
 
         # load the unchanged weights from old architecture into new
         pretrained_state_dict = torch.load(weights_pth)
-        current_state_dict = model.state_dict()
+        current_state_dict = self.model.state_dict()
+        new_pretrained_state_dict = {}
+        for key, value in pretrained_state_dict["state_dict"].items():
+            new_pretrained_state_dict[key.replace("model.", "")] = value
+        pretrained_state_dict = new_pretrained_state_dict
         filtered_state_dict = {k: v for k, v in pretrained_state_dict.items() if k in current_state_dict and current_state_dict[k].size() == v.size()}
+        if len(list(filtered_state_dict.keys())) < 5:
+            raise Exception("pretrained weights are not recorded")
         current_state_dict.update(filtered_state_dict)
-        model.load_state_dict(current_state_dict)
+        self.model.load_state_dict(current_state_dict)
 
         
     # the forward pass of the lightning model
@@ -299,7 +305,7 @@ if __name__ == '__main__':
         batch_size=40,
         img_per_place=4,
         min_img_per_place=4,
-        #cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
+        cities=FINETUNE_CITIES, # you can sppecify cities here or in GSVCitiesDataloader.py
         shuffle_all=True, # shuffle all images or keep shuffling in-city only
         random_sample_from_each_place=True,
         image_size=(320, 320),
@@ -370,7 +376,7 @@ if __name__ == '__main__':
     earlystopping_cb = EarlyStopping(
         monitor='pitts30k_val/R1',
         min_delta=0.00,
-        patience=5,
+        patience=3,
         verbose=True,
         mode='max'
     )
@@ -388,7 +394,7 @@ if __name__ == '__main__':
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
         #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
-        #limit_train_batches=3
+        #slimit_train_batches=3
     )
 
 

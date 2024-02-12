@@ -31,13 +31,8 @@ from .base_method import BaseModelWrapper
 IMAGENET_MEAN_STD = {'mean': [0.485, 0.456, 0.406], 
                      'std': [0.229, 0.224, 0.225]}
 
-valid_transform_conv = T.Compose([
+valid_transform = T.Compose([
             T.Resize((320, 320), interpolation=T.InterpolationMode.BILINEAR),
-            T.ToTensor(),
-            T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
-
-valid_transform_token = T.Compose([
-            T.Resize((308, 308), interpolation=T.InterpolationMode.BICUBIC),
             T.ToTensor(),
             T.Normalize(mean=IMAGENET_MEAN_STD["mean"], std=IMAGENET_MEAN_STD["std"])])
 
@@ -106,25 +101,25 @@ class VPRModel(pl.LightningModule):
         # get the backbone and the aggregator
         if backbone_arch == "dinov2":
             backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            img = torch.randn(1, 3, 308, 308)
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size, tokens=True)
-        else: 
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            img = torch.randn(1, 3, 320, 320)
+            backbone.cpu()
+            img = torch.randn(1, 3, 308, 308).cpu()
             feature_map_shape = backbone(img)[0].shape
             aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+            aggregator.cpu()
+        else: 
+            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+            backbone.cpu()
+            img = torch.randn(1, 3, 320, 320).cpu()
+            feature_map_shape = backbone(img)[0].shape
+            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+            aggregator.cpu()
 
 
         # get the right transform 
-        if backbone_arch == "dinov2":
-            self.valid_transform = valid_transform_conv
-        else: 
-            self.valid_transform = valid_transform_token
 
         if "netvlad" in agg_arch:
             print("building dataloader")
-            ds = MSLS(self.valid_transform)
+            ds = MSLS(valid_transform)
             aggregator.initialize_netvlad_layer(ds, backbone)
             
             
@@ -288,9 +283,11 @@ class QuantVPR(BaseModelWrapper):
         if pretrained:
             weight_path = WEIGHTS_BASE_DIRECTORY + "/" + backbone + "_" + aggregation + "_" + str(descriptor_size) + ".ckpt"
             train_model = VPRModel.load_from_checkpoint(weight_path)
+            print("===============   Loaded Weights: ", weight_path)
         else: 
             train_model = VPRModel(backbone_arch=backbone, agg_arch=aggregation, descriptor_size=descriptor_size)
         model = train_model.model
         assert isinstance(model, nn.Module)
-        super().__init__(model=model, preprocess=train_model.valid_transform, name=backbone + "_" + aggregation + "_" + str(descriptor_size))
+        super().__init__(model=model, preprocess=valid_transform, name=backbone + "_" + aggregation + "_" + str(descriptor_size))
+        self.set_device("cuda" if torch.cuda.is_available else "cpu")
 

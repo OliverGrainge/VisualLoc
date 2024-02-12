@@ -68,7 +68,7 @@ class NetVLAD(nn.Module):
             descriptors = np.zeros(
                 shape=(descriptors_num, self.dim), dtype=np.float32
             )
-            for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100)):
+            for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100, desc="Initializing Netvlad")):
                 inputs = inputs.to("cuda")
                 outputs = self.channel_pool(backbone(inputs))
                 norm_outputs = F.normalize(outputs, p=2, dim=1)
@@ -149,12 +149,9 @@ class NetVLADTokens(nn.Module):
         dots = np.dot(centroids_assign, descriptors.T)
         dots.sort(0)
         dots = dots[::-1, :]  # sort, descending
-
         self.alpha = (-np.log(0.01) / np.mean(dots[0, :] - dots[1, :])).item()
         self.centroids = nn.Parameter(torch.from_numpy(centroids))
-        self.conv.weight = nn.Parameter(
-            torch.from_numpy(self.alpha * centroids_assign).unsqueeze(2).unsqueeze(3)
-        )
+        self.soft_lin.weight = nn.Parameter(torch.from_numpy(self.alpha * centroids_assign))
 
     def initialize_netvlad_layer(self, cluster_ds, backbone):
         descriptors_num = 50000
@@ -171,11 +168,11 @@ class NetVLADTokens(nn.Module):
         )
         with torch.no_grad():
             backbone = backbone.eval().cuda()
-            self.channel_pool.eval().cuda()
+            self.token_pool.eval().cuda()
             descriptors = np.zeros(
                 shape=(descriptors_num, self.dim), dtype=np.float32
             )
-            for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100)):
+            for iteration, (inputs, _) in enumerate(tqdm(random_dl, ncols=100, desc="Initializing Netvlad")):
                 inputs = inputs.to("cuda")
                 outputs = self.token_pool(backbone(inputs))
                 outputs = outputs.permute(0, 2, 1)
