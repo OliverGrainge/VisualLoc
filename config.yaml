@@ -12,7 +12,7 @@ run:
   methods: ["amosnet", "hybridnet"]
   num_workers: 12
   pin_memory: False
-  batchsize: 32
+  batchsize: 40
   device: "cuda"
   descriptor_size: 1024
   backbone: "resnet50"

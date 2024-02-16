@@ -30,16 +30,27 @@ valid_transform = T.Compose([
 
 FINETUNE_CITIES = [
     'Bangkok',
+    'BuenosAires',
+    'LosAngeles',
+    'MexicoCity',
+    'OSL', # refers to Oslo
     'Rome',
     'Barcelona',
     'Chicago',
+    'Madrid',
     'Miami',
     'Phoenix',
     'TRT', # refers to Toronto
     'Boston',
+    'Lisbon',
+    'Medellin',
+    'Minneapolis',
     'PRG', # refers to Prague
+    'WashingtonDC',
+    'Brussels',
     'London',
     'Melbourne',
+    'Osaka',
     'PRS', # refers to Paris
 ]
 
@@ -114,10 +125,6 @@ class VPRModelFineTune(pl.LightningModule):
         aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
         aggregator.cpu()
 
-        # Freeze the weights of the backbone
-        for param in backbone.parameters():
-            param.requires_grad = False
-
         # Build the New Model
         self.model = torch.nn.Sequential(backbone, aggregator)
         self.model.to(self.device)
@@ -139,6 +146,7 @@ class VPRModelFineTune(pl.LightningModule):
             raise Exception("pretrained weights are not recorded")
         current_state_dict.update(filtered_state_dict)
         self.model.load_state_dict(current_state_dict)
+        print("LOADED WEIGHTS: ", weights_pth)
 
         
     # the forward pass of the lightning model
@@ -394,7 +402,7 @@ if __name__ == '__main__':
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
         #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
-        #slimit_train_batches=3
+        limit_train_batches=500
     )
 
 
