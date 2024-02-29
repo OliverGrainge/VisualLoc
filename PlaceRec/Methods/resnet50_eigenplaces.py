@@ -16,7 +16,7 @@ preprocess = transforms.Compose(
 )
 
 
-class EigenPlaces(BaseModelWrapper):
+class ResNet50_EigenPlaces(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
@@ -31,4 +31,4 @@ class EigenPlaces(BaseModelWrapper):
         if not pretrained:
             model.apply(utils.init_weights)
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet50eigenplaces")
+        super().__init__(model=model, preprocess=preprocess, name="resnet50_eigenplaces")

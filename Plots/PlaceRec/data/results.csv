@@ -1,3 +1,0 @@
-id,dataset,descriptor_bytes,descriptor_dim,flops,params,gpu_latency,cpu_latency,recall@1,recall@5,recall@10,recall@100p,average_precision,memory
-amosnet_inriaholidays,,30720.0,7680,,,,,0.74,0.85333335,,,,
-hybridnet_inriaholidays,,30720.0,7680,,,,,0.77,0.87,,,,

@@ -39,8 +39,8 @@ preprocess = transforms.Compose(
 )
 
 
-class CosPlace(BaseModelWrapper):
+class ResNet50_CosPlace(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if not pretrained:
             model.apply(utils.init_weights)
-        super().__init__(model=model, preprocess=preprocess, name="cosplace")
+        super().__init__(model=model, preprocess=preprocess, name="resnet50_cosplace")

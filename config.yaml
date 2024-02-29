@@ -13,7 +13,7 @@ run:
   num_workers: 0
   pin_memory: False
   batchsize: 10
-  device: "cpu"
+  device: "cuda"
 
 eval: 
   datasets: ["inriaholidays"]

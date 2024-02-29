@@ -360,7 +360,7 @@ preprocess = transforms.Compose(
 )
 
 
-class MixVPR(BaseModelWrapper):
+class ResNet50_MixVPR(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
             weight_pth = join(
@@ -375,4 +375,4 @@ class MixVPR(BaseModelWrapper):
             else:
                 state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
             model.load_state_dict(state_dict)
-        super().__init__(model=model, preprocess=preprocess, name="mixvpr")
+        super().__init__(model=model, preprocess=preprocess, name="resnet50_mixvpr")

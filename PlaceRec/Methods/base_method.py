@@ -352,6 +352,7 @@ class BaseModelWrapper(BaseFunctionality):
         model (torch.nn.Module): The PyTorch model instance.
         preprocess (callable): A function or callable to preprocess input data.
         device (str): The device on which the model runs (inherited from `BaseFunctionality`).
+        features_dim (int): the dimension of the descriptor
     """
 
     def __init__(self, model, preprocess, name):
@@ -441,3 +442,22 @@ class BaseModelWrapper(BaseFunctionality):
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         self.set_map(all_desc)
         return all_desc
+    
+    def compute_feature(self, img: Image) -> np.ndarray:
+        """
+        Compute the descriptor of a single PIL image
+
+        Args: 
+            img (PIL.Image): The PIL image on which the descriptors will be computed
+        Returns: 
+            desc (np.ndarray): The np.ndarray descriptor. Dimensions will be [1, descriptor_dimension]
+        """
+        
+        if not isinstance(img, Image): 
+            print("img must be of type PIL.Image")
+        
+        img = self.preprocess(img)
+        with torch.no_grad(): 
+            desc = self.model(img[None, :].to(self.device)).detach().cpu().numpy()
+        return desc
+        

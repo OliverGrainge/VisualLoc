@@ -176,7 +176,7 @@ preprocess = transforms.Compose(
 )
 
 
-class NetVLAD(BaseModelWrapper):
+class ResNet18_NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = ResNet_NetVLAD()
         if pretrained:
@@ -187,4 +187,4 @@ class NetVLAD(BaseModelWrapper):
                 raise Exception(f"Could not find weights at {weights_pth}")
             model.load_state_dict(torch.load(weights_pth))
 
-        super().__init__(model=model, preprocess=preprocess, name="netvlad")
+        super().__init__(model=model, preprocess=preprocess, name="resnet18_netvlad")

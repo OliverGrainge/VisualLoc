@@ -173,7 +173,7 @@ else:
     )
 
 
-class AmosNet(BaseModelWrapper):
+class AlexNet_AmosNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = False):
         if pretrained:
             if os.path.exists(config["weights_directory"]):
@@ -190,7 +190,7 @@ class AmosNet(BaseModelWrapper):
         self.device = "cpu"
         model.to("cpu")
 
-        super().__init__(model=model, preprocess=preprocess, name="amosnet")
+        super().__init__(model=model, preprocess=preprocess, name="alexnet_amosnet")
         # some layers not implemented on metal
         # some layers not implemented on metal
         if self.device == "mps":

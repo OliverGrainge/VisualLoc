@@ -285,7 +285,7 @@ preprocess = transforms.Compose(
 )
 
 
-class ResNet50ConvAP(BaseModelWrapper):
+class ResNet50_ConvAP(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
             if not os.path.exists(
@@ -329,4 +329,4 @@ class ResNet50ConvAP(BaseModelWrapper):
                 },
             )
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet50convap")
+        super().__init__(model=model, preprocess=preprocess, name="resnet50_convap")

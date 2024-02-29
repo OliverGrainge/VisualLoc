@@ -52,7 +52,7 @@ preprocess = transforms.Compose(
 )
 
 
-class ResNet50GeM(BaseModelWrapper):
+class ResNet50_GeM(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = Resnet50gemModel()
         if pretrained:

@@ -183,7 +183,7 @@ else:
     )
 
 
-class HybridNet(BaseModelWrapper):
+class AlexNet_HybridNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if pretrained:
             if not os.path.exists(
@@ -195,4 +195,4 @@ class HybridNet(BaseModelWrapper):
             model.load_state_dict(
                 torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
             )
-        super().__init__(model=model, preprocess=preprocess, name="hybridnet")
+        super().__init__(model=model, preprocess=preprocess, name="alexnet_hybridnet")
