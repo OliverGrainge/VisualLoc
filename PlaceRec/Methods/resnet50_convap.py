@@ -290,12 +290,8 @@ class ResNet50_ConvAP(BaseModelWrapper):
         name = "resnet50_convap"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            if not os.path.exists(
-                weight_path
-            ):
-                raise Exception(
-                    f'Could not find weights at {weight_path}'
-                )
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
             model = VPRModel(
                 backbone_arch="resnet50",
                 layers_to_crop=[],
@@ -313,9 +309,7 @@ class ResNet50_ConvAP(BaseModelWrapper):
                     map_location=torch.device("cpu"),
                 )
             else:
-                state_dict = torch.load(
-                    weight_path
-                )
+                state_dict = torch.load(weight_path)
 
             model.load_state_dict(state_dict)
         else:

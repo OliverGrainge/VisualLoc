@@ -442,22 +442,21 @@ class BaseModelWrapper(BaseFunctionality):
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         self.set_map(all_desc)
         return all_desc
-    
+
     def compute_feature(self, img: Image) -> np.ndarray:
         """
         Compute the descriptor of a single PIL image
 
-        Args: 
+        Args:
             img (PIL.Image): The PIL image on which the descriptors will be computed
-        Returns: 
+        Returns:
             desc (np.ndarray): The np.ndarray descriptor. Dimensions will be [1, descriptor_dimension]
         """
-        
-        if not isinstance(img, Image): 
+
+        if not isinstance(img, Image):
             print("img must be of type PIL.Image")
-        
+
         img = self.preprocess(img)
-        with torch.no_grad(): 
+        with torch.no_grad():
             desc = self.model(img[None, :].to(self.device)).detach().cpu().numpy()
         return desc
-        

@@ -10,8 +10,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.registry import register_model
 from torch.hub import load_state_dict_from_url
-from torch.nn import (Dropout, Identity, LayerNorm, Linear, Module, ModuleList,
-                      Parameter, init)
+from torch.nn import (
+    Dropout,
+    Identity,
+    LayerNorm,
+    Linear,
+    Module,
+    ModuleList,
+    Parameter,
+    init,
+)
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
@@ -874,13 +882,15 @@ class Tokenizer(nn.Module):
                         bias=conv_bias,
                     ),
                     nn.Identity() if activation is None else activation(),
-                    nn.MaxPool2d(
-                        kernel_size=pooling_kernel_size,
-                        stride=pooling_stride,
-                        padding=pooling_padding,
-                    )
-                    if max_pool
-                    else nn.Identity(),
+                    (
+                        nn.MaxPool2d(
+                            kernel_size=pooling_kernel_size,
+                            stride=pooling_stride,
+                            padding=pooling_padding,
+                        )
+                        if max_pool
+                        else nn.Identity()
+                    ),
                 )
                 for i in range(n_conv_layers)
             ]
@@ -930,13 +940,15 @@ class TextTokenizer(nn.Module):
                 bias=False,
             ),
             nn.Identity() if activation is None else activation(),
-            nn.MaxPool2d(
-                kernel_size=(pooling_kernel_size, 1),
-                stride=(pooling_stride, 1),
-                padding=(pooling_padding, 0),
-            )
-            if max_pool
-            else nn.Identity(),
+            (
+                nn.MaxPool2d(
+                    kernel_size=(pooling_kernel_size, 1),
+                    stride=(pooling_stride, 1),
+                    padding=(pooling_padding, 0),
+                )
+                if max_pool
+                else nn.Identity()
+            ),
         )
 
         self.apply(self.init_weight)
@@ -1513,9 +1525,9 @@ class NetVLAD(nn.Module):
                         image_descriptors.shape[1], descs_num_per_image, replace=False
                     )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[
-                        startix : startix + descs_num_per_image, :
-                    ] = image_descriptors[ix, sample, :]
+                    descriptors[startix : startix + descs_num_per_image, :] = (
+                        image_descriptors[ix, sample, :]
+                    )
         kmeans = faiss.Kmeans(
             args.features_dim, self.clusters_num, niter=100, verbose=False
         )
@@ -1596,16 +1608,10 @@ class CCT_NetVLAD(BaseModelWrapper):
         name = "cct_netvlad"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            if not os.path.exists(
-                weight_path
-            ):
-                raise Exception(
-                    f'Could not find weights at {weight_path}'
-                )
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
             if torch.cuda.is_available():
-                state_dict = torch.load(
-                    weight_path
-                )["model_state_dict"]
+                state_dict = torch.load(weight_path)["model_state_dict"]
             else:
                 state_dict = torch.load(
                     weight_path,

@@ -31,4 +31,6 @@ class ResNet50_EigenPlaces(BaseModelWrapper):
         if not pretrained:
             model.apply(utils.init_weights)
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet50_eigenplaces")
+        super().__init__(
+            model=model, preprocess=preprocess, name="resnet50_eigenplaces"
+        )

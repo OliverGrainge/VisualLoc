@@ -21,7 +21,6 @@ def amosnet():
     return Methods.AlexNet_AmosNet(pretrained=False)
 
 
-
 @pytest.fixture
 def cct_netvlad():
     return Methods.CCT_NetVLAD(pretrained=False)

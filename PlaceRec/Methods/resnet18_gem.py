@@ -66,6 +66,3 @@ class ResNet18_GeM(BaseModelWrapper):
 
         self.model.to(self.device)
         self.model.eval()
-
-
-

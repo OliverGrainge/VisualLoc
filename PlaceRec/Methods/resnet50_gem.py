@@ -63,4 +63,3 @@ class ResNet50_GeM(BaseModelWrapper):
             model.load_state_dict(torch.load(weight_path))
 
         super().__init__(model=model, preprocess=preprocess, name=name)
-

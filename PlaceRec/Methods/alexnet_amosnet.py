@@ -180,15 +180,9 @@ class AlexNet_AmosNet(BaseModelWrapper):
 
         if pretrained:
             if os.path.exists(weight_path):
-                model.load_state_dict(
-                    torch.load(
-                        weight_path
-                    )
-                )
+                model.load_state_dict(torch.load(weight_path))
             else:
-                raise Exception(
-                    f'Could not find weights at {weight_path}'
-                )
+                raise Exception(f"Could not find weights at {weight_path}")
 
         self.device = "cpu"
         model.to("cpu")

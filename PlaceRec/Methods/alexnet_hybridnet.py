@@ -188,13 +188,7 @@ class AlexNet_HybridNet(BaseModelWrapper):
         name = "alexnet_hybridnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            if not os.path.exists(
-                weight_path
-            ):
-                raise Exception(
-                    f'Could not find weights at {weight_path}'
-                )
-            model.load_state_dict(
-                torch.load(weight_path)
-            )
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            model.load_state_dict(torch.load(weight_path))
         super().__init__(model=model, preprocess=preprocess, name="alexnet_hybridnet")
