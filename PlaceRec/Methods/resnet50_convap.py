@@ -287,12 +287,14 @@ preprocess = transforms.Compose(
 
 class ResNet50_ConvAP(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
+        name = "resnet50_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(
-                join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
+                weight_path
             ):
                 raise Exception(
-                    f'Could not find weights at {join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")}'
+                    f'Could not find weights at {weight_path}'
                 )
             model = VPRModel(
                 backbone_arch="resnet50",
@@ -307,12 +309,12 @@ class ResNet50_ConvAP(BaseModelWrapper):
             )
             if not torch.cuda.is_available():
                 state_dict = torch.load(
-                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt"),
+                    weight_path,
                     map_location=torch.device("cpu"),
                 )
             else:
                 state_dict = torch.load(
-                    join(config["weights_directory"], "resnet50_ConvAP_1024_2x2.ckpt")
+                    weight_path
                 )
 
             model.load_state_dict(state_dict)
@@ -329,4 +331,4 @@ class ResNet50_ConvAP(BaseModelWrapper):
                 },
             )
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet50_convap")
+        super().__init__(model=model, preprocess=preprocess, name=name)

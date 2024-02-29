@@ -55,13 +55,12 @@ preprocess = transforms.Compose(
 class ResNet50_GeM(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = Resnet50gemModel()
+        name = "resnet50_gem"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            weights_pth = os.path.join(
-                config["weights_directory"], "t2_msls_r50l3_gem.pth"
-            )
-            if not os.path.exists(weights_pth):
-                raise Exception(f"Could not find weights at {weights_pth}")
-            model.load_state_dict(torch.load(weights_pth))
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            model.load_state_dict(torch.load(weight_path))
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet50_gem")
+        super().__init__(model=model, preprocess=preprocess, name=name)
 

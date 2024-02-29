@@ -100,3 +100,30 @@ def eval_arguments():
 
     args = parser.parse_args()
     return args
+
+
+def train_arguments():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--training_method", type=str, default=config["train"]["training_method"]
+    )
+
+    parser.add_argument(
+        "--method", type=str, default=config["train"]["method"]
+    )
+
+    parser.add_argument(
+        "--pretrained", type=bool, default=config["train"]["pretrained"]
+    )
+
+    parser.add_argument(
+        "--image_resolution", type=int, default=config["train"]["image_resolution"], nargs="+"
+    )
+
+    parser.add_argument(
+        "--batch_size", type=int, default=config["train"]["batch_size"]
+    )
+
+    args = parser.parse_args()
+    return args

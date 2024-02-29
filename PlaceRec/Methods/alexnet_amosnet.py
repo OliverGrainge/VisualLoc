@@ -175,23 +175,25 @@ else:
 
 class AlexNet_AmosNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = False):
+        name = "alexnet_amosnet"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+
         if pretrained:
-            if os.path.exists(config["weights_directory"]):
+            if os.path.exists(weight_path):
                 model.load_state_dict(
                     torch.load(
-                        join(config["weights_directory"], "AmosNet.caffemodel.pt")
+                        weight_path
                     )
                 )
             else:
                 raise Exception(
-                    f'Could not find weights at {config["weights_directory"]}'
+                    f'Could not find weights at {weight_path}'
                 )
 
         self.device = "cpu"
         model.to("cpu")
 
-        super().__init__(model=model, preprocess=preprocess, name="alexnet_amosnet")
-        # some layers not implemented on metal
+        super().__init__(model=model, preprocess=preprocess, name=name)
         # some layers not implemented on metal
         if self.device == "mps":
             self.device = "cpu"

@@ -179,12 +179,11 @@ preprocess = transforms.Compose(
 class ResNet18_NetVLAD(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = ResNet_NetVLAD()
+        name = "resnet18_netvlad"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            weights_pth = join(
-                config["weights_directory"], "msls_r18l3_netvlad_partial.pth"
-            )
-            if not os.path.exists(weights_pth):
-                raise Exception(f"Could not find weights at {weights_pth}")
-            model.load_state_dict(torch.load(weights_pth))
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            model.load_state_dict(torch.load(weight_path))
 
-        super().__init__(model=model, preprocess=preprocess, name="resnet18_netvlad")
+        super().__init__(model=model, preprocess=preprocess, name=name)

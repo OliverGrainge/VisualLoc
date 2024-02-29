@@ -24,4 +24,13 @@ eval:
   distance: "l2" # either l2 or cosine
 
 
+train: 
+  training_method: "gsv_cities"
+  method: "resnet50_gem"
+  pretrained: False
+  image_resolution: [320, 320]
+  batch_size: 32
+  
+
+
 

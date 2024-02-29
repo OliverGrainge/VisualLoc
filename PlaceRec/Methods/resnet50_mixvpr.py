@@ -362,17 +362,15 @@ preprocess = transforms.Compose(
 
 class ResNet50_MixVPR(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
+        name = "resnet50_mixvpr"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            weight_pth = join(
-                config["weights_directory"],
-                "resnet50_MixVPR_512_channels(256)_rows(2).ckpt",
-            )
-            if not os.path.exists(weight_pth):
-                raise Exception(f"Could not find weights at {weight_pth}")
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
 
             if torch.cuda.is_available == "cuda":
-                state_dict = torch.load(weight_pth)
+                state_dict = torch.load(weight_path)
             else:
-                state_dict = torch.load(weight_pth, map_location=torch.device("cpu"))
+                state_dict = torch.load(weight_path, map_location=torch.device("cpu"))
             model.load_state_dict(state_dict)
-        super().__init__(model=model, preprocess=preprocess, name="resnet50_mixvpr")
+        super().__init__(model=model, preprocess=preprocess, name=name)

@@ -185,14 +185,16 @@ else:
 
 class AlexNet_HybridNet(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
+        name = "alexnet_hybridnet"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(
-                join(config["weights_directory"], "HybridNet.caffemodel.pt")
+                weight_path
             ):
                 raise Exception(
-                    f'Could not find weights at {join(config["weights_directory"], "HybridNet.caffemodel.pt")}'
+                    f'Could not find weights at {weight_path}'
                 )
             model.load_state_dict(
-                torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
+                torch.load(weight_path)
             )
         super().__init__(model=model, preprocess=preprocess, name="alexnet_hybridnet")
