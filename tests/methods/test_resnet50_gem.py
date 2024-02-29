@@ -130,4 +130,4 @@ def test_mps_acceleration(dataset, resnet50_gem):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.ResNet50GeM(pretrained=True)
+    obj = Methods.ResNet50_GeM(pretrained=True)

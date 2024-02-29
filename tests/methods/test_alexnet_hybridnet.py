@@ -115,4 +115,4 @@ def test_cuda_acceleration(dataset, hybridnet):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.HybridNet(pretrained=True)
+    obj = Methods.AlexNet_HybridNet(pretrained=True)

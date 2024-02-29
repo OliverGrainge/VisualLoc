@@ -115,4 +115,4 @@ def test_cuda_acceleration(dataset, cct_netvlad):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.CCT384_NetVLAD(pretrained=True)
+    obj = Methods.CCT_NetVLAD(pretrained=True)

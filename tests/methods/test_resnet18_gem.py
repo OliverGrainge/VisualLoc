@@ -115,4 +115,4 @@ def test_cuda_acceleration(dataset, resnet18_gem):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.ResNet18GeM(pretrained=True)
+    obj = Methods.ResNet18_GeM(pretrained=True)

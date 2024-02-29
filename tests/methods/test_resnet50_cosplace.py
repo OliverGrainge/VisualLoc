@@ -111,4 +111,4 @@ def test_cuda_acceleration(dataset, cosplace):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.CosPlace(pretrained=True)
+    obj = Methods.ResNet50_CosPlace(pretrained=True)

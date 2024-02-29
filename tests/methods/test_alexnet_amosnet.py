@@ -111,4 +111,4 @@ def test_cuda_acceleration(dataset, amosnet):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.AmosNet(pretrained=True)
+    obj = Methods.AlexNet_AmosNet(pretrained=True)

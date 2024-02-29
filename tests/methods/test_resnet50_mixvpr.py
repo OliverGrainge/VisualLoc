@@ -109,4 +109,4 @@ def test_cuda_acceleration(dataset, mixvpr):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.MixVPR(pretrained=True)
+    obj = Methods.ResNet50_MixVPR(pretrained=True)

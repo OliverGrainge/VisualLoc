@@ -8,16 +8,16 @@ weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
 #####################################################################################################################################################
   
 run: 
-  datasets: ["inriaholidays"]
-  methods: ["amosnet", "hybridnet"]
+  datasets: ["pitts30k"]
+  methods: ["resnet50_cosplace", "resnet50_eigenplaces"]
   num_workers: 0
   pin_memory: False
   batchsize: 10
   device: "cuda"
 
 eval: 
-  datasets: ["inriaholidays"]
-  methods: ["amosnet", "hybridnet"]
+  datasets: ["pitts30k"]
+  methods: ["resnet50_cosplace", "resnet50_eigenplaces"]
   partition: "test"
   device: "cpu"
   metrics: ["recall@1", "recall@5"]

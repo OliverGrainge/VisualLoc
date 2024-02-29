@@ -115,4 +115,4 @@ def test_cuda_acceleration(dataset, eigenplaces):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.EigenPlaces(pretrained=True)
+    obj = Methods.ResNet50_EigenPlaces(pretrained=True)

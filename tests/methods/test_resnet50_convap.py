@@ -115,4 +115,4 @@ def test_cuda_acceleration(dataset, resnet50convap):
     reason="Full training tests require downloaded weights",
 )
 def test_loading_weights():
-    obj = Methods.ResNet50ConvAP(pretrained=True)
+    obj = Methods.ResNet50_ConvAP(pretrained=True)

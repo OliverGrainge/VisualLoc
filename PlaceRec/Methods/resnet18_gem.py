@@ -69,5 +69,4 @@ class ResNet18_GeM(BaseModelWrapper):
         self.model.eval()
 
 
-if __name__ == "__main__":
-    model = ResNet18GeM()
+

@@ -65,6 +65,3 @@ class ResNet50_GeM(BaseModelWrapper):
 
         super().__init__(model=model, preprocess=preprocess, name="resnet50_gem")
 
-
-if __name__ == "__main__":
-    model = ResNet50GeM()

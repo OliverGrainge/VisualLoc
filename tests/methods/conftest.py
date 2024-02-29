@@ -18,59 +18,50 @@ def dataset():
 
 @pytest.fixture
 def amosnet():
-    return Methods.AmosNet(pretrained=False)
+    return Methods.AlexNet_AmosNet(pretrained=False)
 
-
-@pytest.fixture
-def calc():
-    return Methods.CALC(pretrained=False)
 
 
 @pytest.fixture
 def cct_netvlad():
-    return Methods.CCT384_NetVLAD(pretrained=False)
+    return Methods.CCT_NetVLAD(pretrained=False)
 
 
 @pytest.fixture
 def resnet50convap():
-    return Methods.ResNet50ConvAP(pretrained=False)
-
-
-@pytest.fixture
-def resnet34convap():
-    return Methods.ResNet34ConvAP(pretrained=False)
+    return Methods.ResNet50_ConvAP(pretrained=False)
 
 
 @pytest.fixture
 def cosplace():
-    return Methods.CosPlace(pretrained=False)
+    return Methods.ResNet50_CosPlace(pretrained=False)
 
 
 @pytest.fixture
 def hybridnet():
-    return Methods.HybridNet(pretrained=False)
+    return Methods.AlexNet_HybridNet(pretrained=False)
 
 
 @pytest.fixture
 def mixvpr():
-    return Methods.MixVPR(pretrained=False)
+    return Methods.ResNet50_MixVPR(pretrained=False)
 
 
 @pytest.fixture
 def netvlad():
-    return Methods.NetVLAD(pretrained=False)
+    return Methods.ResNet18_NetVLAD(pretrained=False)
 
 
 @pytest.fixture
 def resnet18_gem():
-    return Methods.ResNet18GeM(pretrained=False)
+    return Methods.ResNet18_GeM(pretrained=False)
 
 
 @pytest.fixture
 def resnet50_gem():
-    return Methods.ResNet50GeM(pretrained=False)
+    return Methods.ResNet50_GeM(pretrained=False)
 
 
 @pytest.fixture
 def eigenplaces():
-    return Methods.EigenPlaces(pretrained=False)
+    return Methods.ResNet50_EigenPlaces(pretrained=False)
