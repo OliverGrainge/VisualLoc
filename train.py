@@ -59,7 +59,7 @@ if args.training_method == "gsv_cities":
     #------------------
     # we instantiate a trainer
     trainer = pl.Trainer(
-        dirpath='Checkpoints/'
+        dirpath='Checkpoints/',
         accelerator='gpu', devices=[0],
         default_root_dir=f'./LOGS/{method.name}', # Tensorflow can be used to viz 
         num_sanity_val_steps=0, # runs N validation steps before stating training
