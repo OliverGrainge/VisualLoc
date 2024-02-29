@@ -99,20 +99,13 @@ class VPRModel(pl.LightningModule):
         
         # ----------------------------------
         # get the backbone and the aggregator
-        if backbone_arch == "dinov2":
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            backbone.cpu()
-            img = torch.randn(1, 3, 308, 308).cpu()
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
-            aggregator.cpu()
-        else: 
-            backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
-            backbone.cpu()
-            img = torch.randn(1, 3, 320, 320).cpu()
-            feature_map_shape = backbone(img)[0].shape
-            aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
-            aggregator.cpu()
+
+        backbone = helper.get_backbone(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
+        backbone.cpu()
+        img = torch.randn(1, 3, 320, 320).cpu()
+        feature_map_shape = backbone(img)[0].shape
+        aggregator = helper.get_aggregator(agg_arch, feature_map_shape, out_dim=self.descriptor_size)
+        aggregator.cpu()
 
 
         # get the right transform 

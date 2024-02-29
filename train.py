@@ -360,7 +360,7 @@ if __name__ == '__main__':
         reload_dataloaders_every_n_epochs=1, # we reload the dataset to shuffle the order
         log_every_n_steps=20,
         #fast_dev_run=True # comment if you want to start training the network and saving checkpoints
-        limit_train_batches=500
+        #limit_train_batches=500
     )
 
 

@@ -310,7 +310,7 @@ if __name__ == '__main__':
     # if you want to train on specific cities, you can comment/uncomment
     # cities from the list TRAIN_CITIES
     datamodule = GSVCitiesDataModule(
-        batch_size=40,
+        batch_size=30,
         img_per_place=4,
         min_img_per_place=4,
         cities=FINETUNE_CITIES, # you can sppecify cities here or in GSVCitiesDataloader.py

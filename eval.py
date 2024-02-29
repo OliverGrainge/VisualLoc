@@ -110,16 +110,6 @@ for dataset_name in args.datasets:
         except:
             print("==============================", "excepting")
             table_data = {}
-
-        if (np.isnan(table_data["memory"]) or np.isnan(table_data["gpu_desktop_latency"])) and ("measure_memory" in args.metrics and "gpu_desktop_latency" in args.metrics):
-            print("#############################3 Quantizing Model")
-            method.model = quantize_model_trt(method.model, precision=args.precision, force_recalibration=True, model_name=method.name, descriptor_size=args.descriptor_size)
-        else: 
-            print(":########################### SKIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIPPPPPPPPPPPPPPPPPPPPPPPPPPPIIIIIIIIIIIIIIIIIIIIINNNNNNNNNNNNNNNNNNNNNNNNNNNNNGGGGGGGGGGGGG")
-            if "measure_memory" in args.metrics:
-                args.metrics.remove("measure_memory")
-            if "gpu_desktop_latency" in args.metrics:
-                args.metrics.remove("gpu_desktop_latency")
         # only load pretrained weights if required
 
     

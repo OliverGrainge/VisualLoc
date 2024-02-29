@@ -43,6 +43,16 @@ def get_backbone(backbone_arch='resnet50',
         # unfreeze the final block, freeze the rest
         for param in vit.parameters():
             param.requires_grad=False
+        
+        for name, child in vit.blocks.named_children():
+            if name in ["9", "10", "11"]:
+                print("=====================================================================> Turning Grad on for layer: ", name)
+                for param in child.parameters():
+                    param.requires_grad=True
+        
+        for param in vit.norm.parameters():
+            param.requires_grad=True
+
         vit = vit.cuda()
         return vit
 
