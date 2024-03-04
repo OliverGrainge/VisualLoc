@@ -5,6 +5,7 @@ import logging
 import torchmetrics
 from tqdm import tqdm
 import multiprocessing
+from multiprocessing import freeze_support
 from datetime import datetime
 import torchvision.transforms as tfm
 

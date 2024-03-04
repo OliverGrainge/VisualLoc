@@ -30,6 +30,7 @@ train:
   pretrained: False
   image_resolution: [320, 320]
   batch_size: 32
+  device: "cuda"
   
 
 

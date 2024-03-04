@@ -11,6 +11,7 @@ from PIL import ImageFile
 import torchvision.transforms as tfm
 from collections import defaultdict
 from parsers import train_arguments
+import torchvision
 
 from PlaceRec.Training.EigenPlaces.datasets.map_utils import create_map
 import PlaceRec.Training.EigenPlaces.datasets.dataset_utils as dataset_utils
@@ -167,7 +168,6 @@ class EigenPlacesDataset(torch.utils.data.Dataset):
             pil_crop.paste(crop1, (0, 0))
             pil_crop.paste(crop2, (crop1.size[0], 0))
         crop = tfm.functional.to_tensor(pil_crop)
-        img = torch.functional.resize(crop, ())
         return crop
 
     def __getitem__(self, class_num):
@@ -177,7 +177,7 @@ class EigenPlacesDataset(torch.utils.data.Dataset):
         focal_point = self.focal_point_per_class[class_id]
         pano_path = self.dataset_folder + "/" + random.choice(self.images_per_class[class_id])
         crop = self.get_crop(pano_path, focal_point)
-        img = torch.functional.resize(crop, train_args.image_resolution)
+        img = torchvision.transforms.functional.resize(crop, train_args.image_resolution)
         return img, class_num, pano_path
     
     def get_images_num(self):
