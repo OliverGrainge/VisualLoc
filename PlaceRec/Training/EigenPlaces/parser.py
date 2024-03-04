@@ -2,8 +2,12 @@ import os
 from os.path import join
 import argparse
 from PlaceRec.utils import get_config 
+from parsers import train_arguments
+
+train_args = train_arguments()
 
 config = get_config()
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -25,7 +29,7 @@ def parse_arguments():
     parser.add_argument("--fc_output_dim", type=int, default=512,
                         help="Output dimension of final fully connected layer")
     # Training parameters
-    parser.add_argument("--batch_size", type=int, default=32, help="_")
+    parser.add_argument("--batch_size", type=int, default=train_args.batch_size, help="_")
     parser.add_argument("--epochs_num", type=int, default=40, help="_")
     parser.add_argument("--iterations_per_epoch", type=int, default=5000, help="_")
     parser.add_argument("--lr", type=float, default=0.00001, help="_")
