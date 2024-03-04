@@ -58,11 +58,11 @@ def parse_arguments():
     
     # Paths parameters
     dataset_dir = config["datasets_directory"]
-    parser.add_argument("--train_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/small/train"),
+    parser.add_argument("--train_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/train"),
                         help="path of the folder with training images")
-    parser.add_argument("--val_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/small/val"),
+    parser.add_argument("--val_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/val"),
                         help="path of the folder with val images (split in database/queries)")
-    parser.add_argument("--test_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/small/test"),
+    parser.add_argument("--test_dataset_folder", type=str, default=join(dataset_dir, "SF_XL/small/test"),
                         help="path of the folder with test images (split in database/queries)")
     parser.add_argument("--save_dir", type=str, default="default",
                         help="name of directory on which to save the logs, under logs/save_dir")
