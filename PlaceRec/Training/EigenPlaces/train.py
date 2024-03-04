@@ -33,7 +33,8 @@ logging.info(f"The outputs are being saved in {output_folder}")
 
 #### Model
 #model = eigenplaces_network.GeoLocalizationNet_(args.backbone, args.fc_output_dim)
-def train_eigenplaces(model):
+def train_eigenplaces(model, features_dim):
+    args.fc_output_dim = features_dim
     logging.info(f"There are {torch.cuda.device_count()} GPUs and {multiprocessing.cpu_count()} CPUs.")
 
     if args.resume_model is not None:

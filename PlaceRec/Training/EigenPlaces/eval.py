@@ -8,7 +8,6 @@ import PlaceRec.Training.EigenPlaces.test as test
 import PlaceRec.Training.EigenPlaces.parser as parser
 import PlaceRec.Training.EigenPlaces.commons as commons
 from PlaceRec.Training.EigenPlaces.datasets.test_dataset import TestDataset
-from eigenplaces_model import eigenplaces_network
 
 torch.backends.cudnn.benchmark = True  # Provides a speedup
 
@@ -26,16 +25,6 @@ logging.info(f"There are {torch.cuda.device_count()} GPUs and {multiprocessing.c
 if args.resume_model == "torchhub":
     model = torch.hub.load("gmberton/eigenplaces", "get_trained_model",
                            backbone=args.backbone, fc_output_dim=args.fc_output_dim)
-else:
-    model = eigenplaces_network.GeoLocalizationNet_(args.backbone, args.fc_output_dim)
-    
-    if args.resume_model is not None:
-        logging.info(f"Loading model_ from {args.resume_model}")
-        model_state_dict = torch.load(args.resume_model)
-        model.load_state_dict(model_state_dict)
-    else:
-        logging.info("WARNING: You didn't provide a path to resume the model_ (--resume_model parameter). " +
-                     "Evaluation will be computed using randomly initialized weights.")
 
 model = model.to(args.device)
 

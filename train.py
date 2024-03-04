@@ -85,7 +85,7 @@ if args.training_method == "gsv_cities":
 elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
     method = get_method(args.method, args.pretrained)
-    train_eigenplaces(method.model)
+    train_eigenplaces(method.model, features_dim=method.features_dim)
 
 elif args.training_method == "cosplace":
     raise NotImplementedError

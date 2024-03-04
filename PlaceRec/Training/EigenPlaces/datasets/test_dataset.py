@@ -4,9 +4,13 @@ from PIL import Image
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from sklearn.neighbors import NearestNeighbors
+import torch
+
 
 import PlaceRec.Training.EigenPlaces.datasets.dataset_utils as dataset_utils
+from parsers import train_arguments
 
+train_args = train_arguments()
 
 class TestDataset(data.Dataset):
     def __init__(self, dataset_folder, database_folder="database",
@@ -56,6 +60,7 @@ class TestDataset(data.Dataset):
         image_path = self.images_paths[index]
         pil_img = Image.open(image_path)
         normalized_img = self.base_transform(pil_img)
+        img = torch.functional.resize(normalized_img, train_args.image_resolution)
         return normalized_img, index
     
     def __len__(self):
