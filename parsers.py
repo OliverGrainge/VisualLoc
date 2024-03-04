@@ -116,6 +116,10 @@ def train_arguments():
     )
 
     parser.add_argument(
+        "--device", type=str, default=config["train"]["device"]
+    )
+
+    parser.add_argument(
         "--image_resolution",
         type=int,
         default=config["train"]["image_resolution"],

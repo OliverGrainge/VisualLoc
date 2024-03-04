@@ -53,7 +53,7 @@ def parse_arguments():
                         help="path to model_ to resume, e.g. logs/.../best_model.pth. "
                         "Use \"torchhub\" if you want to use one of our pretrained models")
     # Other parameters
-    parser.add_argument("--device", type=str, default="cuda",
+    parser.add_argument("--device", type=str, default=train_args.device,
                         choices=["cuda", "cpu"], help="_")
     parser.add_argument("--seed", type=int, default=0, help="_")
     parser.add_argument("--num_workers", type=int, default=8, help="_")

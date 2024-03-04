@@ -24,7 +24,7 @@ torch.backends.cudnn.benchmark = True  # Provides a speedup
 
 args = parser.parse_arguments()
 start_time = datetime.now()
-output_folder = os.path.join(os.getcwd(), "Checkpoints/eigenplaces/{args.save_dir}/{start_time.strftime('%Y-%m-%d_%H-%M-%S')}")
+output_folder = os.path.join(os.getcwd(), f"Checkpoints/eigenplaces/{args.save_dir}/{start_time.strftime('%Y-%m-%d_%H-%M-%S')}")
 commons.make_deterministic(args.seed)
 commons.setup_logging(output_folder, console="debug")
 logging.info(" ".join(sys.argv))

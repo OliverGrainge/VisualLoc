@@ -1,6 +1,7 @@
 import torch
 from typing import Tuple, Union
 import torchvision.transforms as T
+from multiprocessing import freeze_support
 
 
 class DeviceAgnosticColorJitter(T.ColorJitter):
@@ -35,6 +36,7 @@ class DeviceAgnosticRandomResizedCrop(T.RandomResizedCrop):
 
 
 if __name__ == "__main__":
+    freeze_support()
     """
     You can run this script to visualize the transformations, and verify that
     the augmentations are applied individually on each image of the batch.
@@ -42,7 +44,6 @@ if __name__ == "__main__":
     from PIL import Image
     # Import skimage in here, so it is not necessary to install it unless you run this script
     from skimage import data
-    
     # Initialize DeviceAgnosticRandomResizedCrop
     random_crop = DeviceAgnosticRandomResizedCrop(size=[256, 256], scale=[0.5, 1])
     # Create a batch with 2 astronaut images
