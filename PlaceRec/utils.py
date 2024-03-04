@@ -107,6 +107,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet50_EigenPlaces
 
         method = ResNet50_EigenPlaces(pretrained=pretrained)
+    elif name == "dinov2_anyloc":
+        from PlaceRec.Methods import DINOv2_AnyLoc
+
+        method = DINOv2_AnyLoc(pretrained=pretrained)
     elif name == "resnet18_netvlad":
         from PlaceRec.Methods import ResNet18_NetVLAD
 
