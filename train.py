@@ -61,7 +61,7 @@ if args.training_method == "gsv_cities":
     # ------------------
     # we instantiate a trainer
     trainer = pl.Trainer(
-        dirpath="Checkpoints/",
+        dirpath="Checkpoints/gsv_cities/",
         accelerator="gpu",
         devices=[0],
         default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
@@ -82,9 +82,10 @@ if args.training_method == "gsv_cities":
     trainer.fit(model=model, datamodule=datamodule)
 
 
-elif config["train"]["training_method"] == "eigenplaces":
-    raise NotImplementedError
+elif args.training_method == "eigenplaces":
+    from PlaceRec.Training.EigenPlaces import train_eigenplaces
+    method = get_method(args.method, args.pretrained)
+    train_eigenplaces(method.model)
 
-
-elif config["train"]["training_method"] == "cosplace":
+elif args.training_method == "cosplace":
     raise NotImplementedError
