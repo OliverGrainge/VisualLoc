@@ -2,6 +2,7 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from typing import Tuple
+import torch.nn as nn
 
 import faiss
 import numpy as np
@@ -371,16 +372,17 @@ class BaseModelWrapper(BaseFunctionality):
         self.name = name
         self.model = model
         self.preprocess = preprocess
-        self.model.eval()
+        if isinstance(self.model, nn.Module):
+            self.model.eval()
         self.features_dim = self.features_size()
-        self.model.to(self.device)
+        self.set_device(self.device)
         self.model.eval()
 
     def features_size(self):
         img = np.random.rand(224, 224, 3) * 255
         img = Image.fromarray(img.astype(np.uint8))
         img = self.preprocess(img)
-        self.model = self.model.to("cpu")
+        self.set_device("cpu")
         with torch.no_grad():
             features = self.model(img[None, :].to("cpu")).detach().cpu()
         return features.size(1)

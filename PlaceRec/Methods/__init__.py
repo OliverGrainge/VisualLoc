@@ -10,3 +10,4 @@ from .resnet50_eigenplaces import ResNet50_EigenPlaces
 from .resnet50_gem import ResNet50_GeM
 from .resnet50_mixvpr import ResNet50_MixVPR
 from .dinov2g14_vlad import DINOv2_AnyLoc
+from .vit_cls import ViT_CLS
