@@ -1,7 +1,7 @@
 datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
-weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
-#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
-#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+#weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 
 #####################################################################################################################################################
 ################################################               RUN CONFIGURATION          #####################################################
@@ -13,7 +13,7 @@ run:
   num_workers: 0
   pin_memory: False
   batchsize: 1
-  device: "cuda"
+  device: "cpu"
 
 eval: 
   datasets: ["pitts30k"]

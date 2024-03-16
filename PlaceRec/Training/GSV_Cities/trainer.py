@@ -23,7 +23,7 @@ class VPRModel(pl.LightningModule):
         # ---- VPR Method to Train
         method,
         # ---- Train hyperparameters
-        lr=0.03,
+        lr=0.05,
         optimizer="sgd",
         weight_decay=1e-3,
         momentum=0.9,

@@ -11,3 +11,5 @@ from .resnet50_gem import ResNet50_GeM
 from .resnet50_mixvpr import ResNet50_MixVPR
 from .dinov2g14_vlad import DINOv2_AnyLoc
 from .vit_cls import ViT_CLS
+from .dinov2b14_cls import DINOv2B14_CLS
+from .dinov2s14_cls import DINOv2S14_CLS
