@@ -25,8 +25,8 @@ eval:
 
 
 train: 
-  training_method: "gsv_cities"
-  method: "resnet50_mixvpr"
+  training_method: "eigenplaces"
+  method: "resnet50_gem"
   pretrained: False
   image_resolution: [320, 320]
   batch_size: 128

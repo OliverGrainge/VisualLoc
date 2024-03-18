@@ -6,7 +6,7 @@ from parsers import train_arguments
 from PlaceRec.utils import get_config, get_method
 
 args = train_arguments()
-method = get_method(args.method, args.pretrained)
+method = get_method(args.method, False)
 
 if args.training_method == "gsv_cities":
     from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
@@ -74,7 +74,7 @@ if args.training_method == "gsv_cities":
         ],  # we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
-        limit_train_batches=100,
+        # limit_train_batches=50,
         # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
