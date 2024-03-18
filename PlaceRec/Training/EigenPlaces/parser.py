@@ -104,19 +104,19 @@ def parse_arguments():
     parser.add_argument(
         "--train_dataset_folder",
         type=str,
-        default=join(dataset_dir, "SF_XL/small/train"),
+        default=join(dataset_dir, "SF_XL/processed/train"),
         help="path of the folder with training images",
     )
     parser.add_argument(
         "--val_dataset_folder",
         type=str,
-        default=join(dataset_dir, "SF_XL/small/val"),
+        default=join(dataset_dir, "SF_XL/processed/val"),
         help="path of the folder with val images (split in database/queries)",
     )
     parser.add_argument(
         "--test_dataset_folder",
         type=str,
-        default=join(dataset_dir, "SF_XL/small/test"),
+        default=join(dataset_dir, "SF_XL/processed/test"),
         help="path of the folder with test images (split in database/queries)",
     )
     parser.add_argument(
