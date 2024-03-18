@@ -49,6 +49,7 @@ if args.training_method == "gsv_cities":
 
     # model params saving using Pytorch Lightning
     checkpoint_cb = ModelCheckpoint(
+        dirpath="Checkpoints/gsv_cities/",
         monitor="pitts30k_val/R1",
         filename=f"{method.name}"
         + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
@@ -61,12 +62,11 @@ if args.training_method == "gsv_cities":
     # ------------------
     # we instantiate a trainer
     trainer = pl.Trainer(
-        dirpath="Checkpoints/gsv_cities/",
         accelerator="gpu",
         devices=[0],
         default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
         num_sanity_val_steps=0,  # runs N validation steps before stating training
-        precision="16",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
+        precision="16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
         max_epochs=30,
         check_val_every_n_epoch=1,  # run validation every epoch
         callbacks=[
@@ -74,6 +74,7 @@ if args.training_method == "gsv_cities":
         ],  # we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
+        limit_train_batches=100,
         # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
@@ -84,6 +85,7 @@ if args.training_method == "gsv_cities":
 
 elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
+
     method = get_method(args.method, args.pretrained)
     train_eigenplaces(method.model, features_dim=method.features_dim)
 

@@ -51,7 +51,7 @@ class VPRModel(pl.LightningModule):
         self.miner_name = miner_name
         self.miner_margin = miner_margin
 
-        self.save_hyperparameters()  # write hyperparams into a file
+        # self.save_hyperparameters()  # write hyperparams into a file
 
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
