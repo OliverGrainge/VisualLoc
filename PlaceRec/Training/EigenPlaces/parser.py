@@ -1,8 +1,9 @@
+import argparse
 import os
 from os.path import join
-import argparse
-from PlaceRec.utils import get_config
+
 from parsers import train_arguments
+from PlaceRec.utils import get_config
 
 train_args = train_arguments()
 

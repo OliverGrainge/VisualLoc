@@ -28,8 +28,8 @@ class ResNet50_EigenPlaces(BaseModelWrapper):
         )
         sys.stdout = original_stdout
 
-        if not pretrained:
-            model.apply(utils.init_weights)
+        # if not pretrained:
+        #    model.apply(utils.init_weights)
 
         super().__init__(
             model=model, preprocess=preprocess, name="resnet50_eigenplaces"

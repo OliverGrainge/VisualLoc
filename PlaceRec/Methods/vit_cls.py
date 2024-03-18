@@ -1,19 +1,22 @@
 import os
 import pickle
 import sys
+from os.path import join
 from typing import Tuple
 
 import numpy as np
 import sklearn
 import torch
+import torch.nn.functional as F
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from torch import nn
 from torchvision import transforms
 from tqdm import tqdm
 from transformers import ViTModel
-from os.path import join
+
 from PlaceRec.utils import get_config
+
 from .base_method import BaseModelWrapper
 
 config = get_config()
@@ -33,7 +36,9 @@ class VitWrapper(nn.Module):
         self.vit_model = vit_model
 
     def forward(self, x):
-        return self.vit_model(x).last_hidden_state[:, 0, :]
+        x = self.vit_model(x).last_hidden_state[:, 0, :]
+        x = F.normalize(x.flatten(1), p=2, dim=-1)
+        return x
 
 
 preprocess = transforms.Compose(
@@ -63,7 +68,7 @@ class ViT_CLS(BaseModelWrapper):
                 state_dict = torch.load(weight_path, map_location=torch.device("cpu"))[
                     "model_state_dict"
                 ]
-        state_dict = rename_state_dict(state_dict, "module.backbone.", "")
-        true_state_dict = model.vit_model.state_dict()
-        model.vit_model.load_state_dict(state_dict)
+            state_dict = rename_state_dict(state_dict, "module.backbone.", "")
+            true_state_dict = model.vit_model.state_dict()
+            model.vit_model.load_state_dict(state_dict)
         super().__init__(model=model, preprocess=preprocess, name=name)

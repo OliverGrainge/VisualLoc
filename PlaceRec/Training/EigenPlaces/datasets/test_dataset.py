@@ -1,11 +1,12 @@
 import os
+
 import numpy as np
-from PIL import Image
-import torch.utils.data as data
-import torchvision.transforms as transforms
-from sklearn.neighbors import NearestNeighbors
 import torch
+import torch.utils.data as data
 import torchvision
+import torchvision.transforms as transforms
+from PIL import Image
+from sklearn.neighbors import NearestNeighbors
 
 import PlaceRec.Training.EigenPlaces.datasets.dataset_utils as dataset_utils
 from parsers import train_arguments

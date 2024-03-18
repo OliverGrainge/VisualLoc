@@ -3,10 +3,10 @@ from os.path import join
 
 import torch
 import torch.nn as nn
+import torchvision
 from torch.nn import functional as F
 from torchvision import models, transforms
 from torchvision.models import ResNet50_Weights
-import torchvision
 
 from PlaceRec.utils import L2Norm, get_config
 
@@ -20,14 +20,18 @@ class GeM(nn.Module):
     def __init__(self, p: int = 3, eps: float = 1e-6):
         super().__init__()
         self.p = nn.Parameter(torch.ones(1) * p)
+        self.flatten = nn.Flatten()
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return (
+        x = (
             F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1)))
             .pow(1.0 / self.p)
             .view(x.shape[0], -1)
         )
+        print(type(x))
+        print(x.shape)
+        x = F.normalize(x.flatten(1), p=2, dim=-1)
 
 
 class ResNet(nn.Module):

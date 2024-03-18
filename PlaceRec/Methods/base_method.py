@@ -2,11 +2,11 @@ import os
 import pickle
 from abc import ABC, abstractmethod
 from typing import Tuple
-import torch.nn as nn
 
 import faiss
 import numpy as np
 import torch
+import torch.nn as nn
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader

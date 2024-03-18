@@ -47,6 +47,8 @@ if args.training_method == "gsv_cities":
         faiss_gpu=False,
     )
 
+    print(model)
+
     # model params saving using Pytorch Lightning
     checkpoint_cb = ModelCheckpoint(
         dirpath="Checkpoints/gsv_cities/",
@@ -74,7 +76,7 @@ if args.training_method == "gsv_cities":
         ],  # we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
-        # limit_train_batches=50,
+        limit_train_batches=50,
         # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
@@ -87,7 +89,9 @@ elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
 
     method = get_method(args.method, args.pretrained)
-    train_eigenplaces(method.model, features_dim=method.features_dim)
+    model = method.model
+    model.train()
+    train_eigenplaces(model, features_dim=method.features_dim)
 
 elif args.training_method == "cosplace":
     raise NotImplementedError

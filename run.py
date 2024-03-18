@@ -19,7 +19,7 @@ for method_name in args.methods:
             preprocess=method.preprocess,
             num_workers=args.num_workers,
             pin_memory=args.pin_memory,
-            batch_size=args.batchsize
+            batch_size=args.batchsize,
         )
         _ = method.compute_map_desc(dataloader=map_loader)
         del map_loader
@@ -27,7 +27,7 @@ for method_name in args.methods:
             preprocess=method.preprocess,
             num_workers=args.num_workers,
             pin_memory=args.pin_memory,
-            batch_size=args.batchsize
+            batch_size=args.batchsize,
         )
         _ = method.compute_query_desc(dataloader=query_loader)
         del query_loader

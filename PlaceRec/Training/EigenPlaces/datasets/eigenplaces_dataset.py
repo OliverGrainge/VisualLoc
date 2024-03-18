@@ -1,20 +1,20 @@
-import os
-import utm
-import math
-import torch
-import random
-import imageio
 import logging
-import numpy as np
-from PIL import Image
-from PIL import ImageFile
-import torchvision.transforms as tfm
+import math
+import os
+import random
 from collections import defaultdict
-from parsers import train_arguments
-import torchvision
 
-from PlaceRec.Training.EigenPlaces.datasets.map_utils import create_map
+import imageio
+import numpy as np
+import torch
+import torchvision
+import torchvision.transforms as tfm
+import utm
+from PIL import Image, ImageFile
+
 import PlaceRec.Training.EigenPlaces.datasets.dataset_utils as dataset_utils
+from parsers import train_arguments
+from PlaceRec.Training.EigenPlaces.datasets.map_utils import create_map
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 

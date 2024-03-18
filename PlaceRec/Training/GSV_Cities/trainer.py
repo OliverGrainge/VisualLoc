@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 import PlaceRec.Training.GSV_Cities.utils as utils
+from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )
@@ -64,6 +65,8 @@ class VPRModel(pl.LightningModule):
         # ----------------------------------
         # get the backbone and the aggregator
         self.model = method.model
+        self.model.train()
+        assert isinstance(self.model, torch.nn.Module)
 
     # the forward pass of the lightning model
     def forward(self, x):
@@ -149,7 +152,6 @@ class VPRModel(pl.LightningModule):
         # reshape places and labels
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-
         # Feed forward the batch to the model
         descriptors = self(
             images

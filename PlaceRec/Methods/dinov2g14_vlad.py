@@ -1,37 +1,31 @@
-import torch
-from torchvision import transforms
-from torchvision.transforms import functional as T
-from PIL import Image
-import numpy as np
-import tyro
-import os
-import sys
 import glob
-import natsort
-from tqdm.auto import tqdm
+import os
+import random
+import sys
 from dataclasses import dataclass
-from onedrivedownloader import download
-from typing import Literal, Union, List
+from typing import List, Literal, Union
 
-
-import numpy as np
-import torch
-from torch import nn
-import transformers as hft
-from torch.nn import functional as F
 import einops as ein
-import fast_pytorch_kmeans as fpk
 import faiss
 import faiss.contrib.torch_utils
-import random
-import os
+import fast_pytorch_kmeans as fpk
+import natsort
+import numpy as np
+import torch
+import transformers as hft
+import tyro
+from onedrivedownloader import download
 from PIL import Image
 from sklearn.decomposition import PCA
+from torch import nn
+from torch.nn import functional as F
+from torchvision import transforms
+from torchvision.transforms import functional as T
+from tqdm.auto import tqdm
 
 from PlaceRec import utils
 
 from .base_method import BaseModelWrapper
-
 
 od_down_links = {
     # VLAD cache (vocabularies)
