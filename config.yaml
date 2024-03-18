@@ -1,4 +1,5 @@
 datasets_directory: "/home/oliver/Documents/github/Datasets"
+datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
 weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
 #datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
