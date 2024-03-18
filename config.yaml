@@ -30,7 +30,7 @@ train:
   method: "resnet50_mixvpr"
   pretrained: False
   image_resolution: [320, 320]
-  batch_size: 120
+  batch_size: 480
   device: "cuda"
   
 
