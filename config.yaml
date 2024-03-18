@@ -29,7 +29,7 @@ train:
   method: "resnet50_gem"
   pretrained: False
   image_resolution: [320, 320]
-  batch_size: 128
+  batch_size: 64
   device: "cuda"
   
 
