@@ -47,8 +47,6 @@ if args.training_method == "gsv_cities":
         faiss_gpu=False,
     )
 
-    print(model)
-
     # model params saving using Pytorch Lightning
     checkpoint_cb = ModelCheckpoint(
         dirpath="Checkpoints/gsv_cities/",
@@ -85,6 +83,84 @@ if args.training_method == "gsv_cities":
     trainer.fit(model=model, datamodule=datamodule)
 
 
+elif args.training_method == "gsv_cities_sparse":
+    method = get_method(args.method, True)
+
+    from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
+        GSVCitiesDataModule,
+    )
+    from PlaceRec.Training.GSV_Cities.sparse_utils import (
+        GlobalL1PruningCallback,
+        SaveLastModelCallback,
+    )
+    from PlaceRec.Training.GSV_Cities.trainer import VPRModel
+
+    pl.seed_everything(seed=1, workers=True)
+    torch.set_float32_matmul_precision("medium")
+    prune_amount = 0.1
+
+    for imp_idx in range(20):
+        datamodule = GSVCitiesDataModule(
+            batch_size=int(args.batch_size / 4),
+            img_per_place=4,
+            min_img_per_place=4,
+            # cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
+            shuffle_all=False,  # shuffle all images or keep shuffling in-city only
+            random_sample_from_each_place=True,
+            image_size=args.image_resolution,
+            num_workers=8,
+            show_data_stats=False,
+            val_set_names=["pitts30k_val"],  # pitts30k_val
+        )
+
+        model = VPRModel(
+            method=method,
+            lr=0.0002,  # 0.03 for sgd
+            optimizer="adam",  # sgd, adam or adamw
+            weight_decay=0,  # 0.001 for sgd or 0.0 for adam
+            momentum=0.9,
+            warmup_steps=150,
+            milestones=[2, 4, 6, 8],
+            lr_mult=0.3,
+            # ---------------------------------
+            # ---- Training loss function -----
+            loss_name="MultiSimilarityLoss",
+            miner_name="MultiSimilarityMiner",  # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
+            miner_margin=0.1,
+            faiss_gpu=False,
+        )
+
+        # model params saving using Pytorch Lightning
+        checkpoint_cb = SaveLastModelCallback(
+            dirpath=f"Checkpoints/gsv_cities_sparse/{method.name}",
+            filename=f"{method.name}_Sparsity[{1-(1-prune_amount)**(imp_idx+1):.3f}].ckpt",
+        )
+
+        # Pruning callback
+        pruning_cb = GlobalL1PruningCallback(prune_amount=prune_amount)
+
+        # we instantiate a trainer
+        trainer = pl.Trainer(
+            accelerator="gpu",
+            devices=[0],
+            default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
+            num_sanity_val_steps=0,  # runs N validation steps before stating training
+            precision="16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
+            max_epochs=10,
+            callbacks=[
+                pruning_cb,
+                checkpoint_cb,
+            ],  # we run the checkpointing callback (you can add more)
+            enable_checkpointing=True,
+            reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
+            log_every_n_steps=20,
+            limit_train_batches=50,
+            # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
+        )
+
+        trainer.fit(model=model, datamodule=datamodule)
+
+
 elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
 
@@ -92,6 +168,7 @@ elif args.training_method == "eigenplaces":
     model = method.model
     model.train()
     train_eigenplaces(model, features_dim=method.features_dim)
+
 
 elif args.training_method == "cosplace":
     raise NotImplementedError

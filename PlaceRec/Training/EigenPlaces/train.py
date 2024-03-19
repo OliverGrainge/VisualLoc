@@ -154,7 +154,6 @@ def train_eigenplaces(model, features_dim):
     scaler = torch.cuda.amp.GradScaler()
 
     for epoch_num in range(start_epoch_num, args.epochs_num):
-
         #### Train
         epoch_start_time = datetime.now()
 

@@ -603,7 +603,6 @@ class AnyLoc(nn.Module):
 
 class DINOv2_AnyLoc(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-
         model = AnyLoc()
         if not pretrained:
             model.apply(utils.init_weights)

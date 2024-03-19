@@ -101,7 +101,6 @@ def get_edges(coordinates, enlarge=0):
 def create_map(
     coordinates, colors=None, dot_sizes=None, legend_names=None, map_intensity=0.6
 ):
-
     dot_sizes = dot_sizes if dot_sizes is not None else [10] * len(coordinates)
     colors = colors if colors is not None else ["r"] * len(coordinates)
     assert len(coordinates) == len(dot_sizes) == len(colors), (
