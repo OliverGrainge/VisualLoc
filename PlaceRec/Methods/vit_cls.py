@@ -58,17 +58,11 @@ class ViT_CLS(BaseModelWrapper):
         model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
         model.encoder.layer = model.encoder.layer[:10]
         model = VitWrapper(model)
+
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-
-            if torch.cuda.is_available == "cuda":
-                state_dict = torch.load(weight_path)["model_state_dict"]
-            else:
-                state_dict = torch.load(weight_path, map_location=torch.device("cpu"))[
-                    "model_state_dict"
-                ]
-            state_dict = rename_state_dict(state_dict, "module.backbone.", "")
-            true_state_dict = model.vit_model.state_dict()
-            model.vit_model.load_state_dict(state_dict)
+            sd = torch.load(weight_path)["state_dict"]
+            sd = rename_state_dict(sd, "model.vit_model", "vit_model")
+            model.load_state_dict(sd)
         super().__init__(model=model, preprocess=preprocess, name=name)

@@ -1,5 +1,6 @@
 import os
 import sys
+from os.path import join
 
 import torch
 import torch.nn as nn
@@ -8,6 +9,9 @@ from torchvision import transforms
 
 import PlaceRec.utils as utils
 from PlaceRec.Methods import BaseModelWrapper
+from PlaceRec.utils import get_config
+
+config = get_config()
 
 preprocess = transforms.Compose(
     [
@@ -42,11 +46,24 @@ class VitWrapper(nn.Module):
         return x
 
 
+def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
+    new_dict = {}
+    for key in list(orig_dict.keys()):
+        new_key = key.replace(pattern1, pattern2)
+        new_dict[new_key] = orig_dict[key]
+    return new_dict
+
+
 class DINOv2B14_CLS(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, "w")
         model = VitWrapper(torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14"))
-        sys.stdout = original_stdout
+        name = "dinov2b14_cls"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            sd = torch.load(weight_path)["state_dict"]
+            sd = rename_state_dict(sd, "model.vit_model", "vit_model")
+            model.load_state_dict(sd)
 
         super().__init__(model=model, preprocess=preprocess, name="dinov2b14_cls")
