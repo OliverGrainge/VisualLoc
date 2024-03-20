@@ -1,4 +1,4 @@
-#VisualLoc
+##VisualLoc
 
 VisualLoc is a library built to unify the research in the field of visual place recognition.
 It is the case that many state of the art algorithms reported in the literature are deployed
