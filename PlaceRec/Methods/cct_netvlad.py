@@ -10,16 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.registry import register_model
 from torch.hub import load_state_dict_from_url
-from torch.nn import (
-    Dropout,
-    Identity,
-    LayerNorm,
-    Linear,
-    Module,
-    ModuleList,
-    Parameter,
-    init,
-)
+from torch.nn import (Dropout, Identity, LayerNorm, Linear, Module, ModuleList,
+                      Parameter, init)
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
@@ -1525,9 +1517,9 @@ class NetVLAD(nn.Module):
                         image_descriptors.shape[1], descs_num_per_image, replace=False
                     )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[startix : startix + descs_num_per_image, :] = (
-                        image_descriptors[ix, sample, :]
-                    )
+                    descriptors[
+                        startix : startix + descs_num_per_image, :
+                    ] = image_descriptors[ix, sample, :]
         kmeans = faiss.Kmeans(
             args.features_dim, self.clusters_num, niter=100, verbose=False
         )
