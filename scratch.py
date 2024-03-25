@@ -1,14 +1,12 @@
 import time
 
 import torch
+import torch.nn as nn
 import torch_pruning as tp
+from apex.contrib.sparsity import ASP
+from torch.nn.utils import prune
 
 from PlaceRec.utils import get_method
-import torch
-from torch.nn.utils import prune
-import torch.nn as nn
-
-from apex.contrib.sparsity import ASP
 
 method = get_method("resnet50_eigenplaces", pretrained=True)
 
@@ -19,4 +17,3 @@ model.to("cpu")
 optimizer = torch.nn.optim.Adam(model.parameters(), lr=0.001)
 
 ASP.prune_trained_model(model, optimizer)
-

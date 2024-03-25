@@ -272,7 +272,7 @@ class VPRModel(pl.LightningModule):
         macs, nparams = tp.utils.count_ops_and_params(self.model, self.example_img)
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
-        print("===============> macs: ", macs/1e6, "    nparams", nparams)
+        print("===============> macs: ", macs / 1e6, "    nparams", nparams)
 
 
 # =================================== Training Loop ================================

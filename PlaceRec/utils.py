@@ -111,6 +111,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import CCT_CLS
 
         method = CCT_CLS(pretrained=pretrained)
+    elif name == "vgg16_sfrs":
+        from PlaceRec.Methods import VGG16_SFRS
+
+        method = VGG16_SFRS(pretrained=pretrained)
     elif name == "cct_seqpool":
         from PlaceRec.Methods import CCT_SEQPOOL
 

@@ -14,4 +14,5 @@ from .resnet50_cosplace import ResNet50_CosPlace
 from .resnet50_eigenplaces import ResNet50_EigenPlaces
 from .resnet50_gem import ResNet50_GeM
 from .resnet50_mixvpr import ResNet50_MixVPR
+from .vgg16_sfrs import VGG16_SFRS
 from .vit_cls import ViT_CLS
