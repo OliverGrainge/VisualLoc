@@ -90,7 +90,7 @@ class VPRModel(pl.LightningModule):
             self.example_img,
             imp,
             iterative_steps=10,
-            pruning_ratio=0.99,
+            pruning_ratio=1.0,
         )
 
     # the forward pass of the lightning model
@@ -272,7 +272,7 @@ class VPRModel(pl.LightningModule):
         macs, nparams = tp.utils.count_ops_and_params(self.model, self.example_img)
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
-        print("===============> macs: ", macs, "    nparams", nparams)
+        print("===============> macs: ", macs/1e6, "    nparams", nparams)
 
 
 # =================================== Training Loop ================================
@@ -322,7 +322,7 @@ def unstructured_sparse_trainer(args):
         default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
         num_sanity_val_steps=0,  # runs N validation steps before stating traininclg
         precision="16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
-        max_epochs=300,
+        max_epochs=110,
         callbacks=[
             checkpoint_cb,
         ],  # we run the checkpointing callback (you can add more)
