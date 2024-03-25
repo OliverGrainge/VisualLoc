@@ -71,7 +71,7 @@ class NMPruningMethod(prune.BasePruningMethod):
 
 
 
-def apply_NM_model(model):
+def apply_NM_sparsity(model):
     for module in model.modules():
     # Check if the module is a convolutional or linear layer
         if isinstance(module, (nn.Conv2d, nn.Linear)):
@@ -134,7 +134,7 @@ class VPRModel(pl.LightningModule):
         # ----------------------------------
         # get the backbone and the aggregator
         self.model = method.model
-        self.model = apply_NM_model(self.model)
+        self.model = apply_NM_sparsity(self.model)
         self.model.train()
         assert isinstance(self.model, torch.nn.Module)
 
@@ -383,5 +383,5 @@ def semistructured_sparse_trainer(args):
         limit_train_batches=50,
         # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
-    
+
     trainer.fit(model=model, datamodule=datamodule)
