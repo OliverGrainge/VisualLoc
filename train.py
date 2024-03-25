@@ -99,6 +99,7 @@ elif args.training_method == "gsv_cities_sparse":
     torch.set_float32_matmul_precision("medium")
     prune_amount = 0.1
 
+
     for imp_idx in range(20):
         datamodule = GSVCitiesDataModule(
             batch_size=int(args.batch_size / 4),

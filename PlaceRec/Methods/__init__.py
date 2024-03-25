@@ -13,3 +13,5 @@ from .resnet50_eigenplaces import ResNet50_EigenPlaces
 from .resnet50_gem import ResNet50_GeM
 from .resnet50_mixvpr import ResNet50_MixVPR
 from .vit_cls import ViT_CLS
+from .cct_cls import CCT_CLS
+from .cct_seqpool import CCT_SEQPOOL

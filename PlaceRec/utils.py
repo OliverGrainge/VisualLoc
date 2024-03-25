@@ -107,6 +107,14 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet50_EigenPlaces
 
         method = ResNet50_EigenPlaces(pretrained=pretrained)
+    elif name == "cct_cls": 
+        from PlaceRec.Methods import CCT_CLS
+
+        method = CCT_CLS(pretrained=pretrained)
+    elif name == "cct_seqpool": 
+        from PlaceRec.Methods import CCT_SEQPOOL
+
+        method = CCT_SEQPOOL(pretrained=pretrained)
     elif name == "dinov2b14_cls":
         from PlaceRec.Methods import DINOv2B14_CLS
 
