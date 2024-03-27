@@ -1,4 +1,13 @@
-import time
+import torch
+import torchvision.models as models
+from torchvision.ops.feature_pyramid_network import FeaturePyramidNetwork
+from torchvision.models._utils import IntermediateLayerGetter
+from PIL import Image
+import numpy as np
+from torchvision import transforms
+from torch import nn
+from PlaceRec.Methods import BaseModelWrapper
+
 
 import torch
 import torch.nn as nn
@@ -74,9 +83,9 @@ class GatingInceptionBlock(nn.Module):
         return fused_features
 
 
-class GatingInceptionLarge(nn.Module):
+class GatingInceptionModelLarge(nn.Module):
     def __init__(self, descriptor_size=2048): 
-        super(GatingInceptionLarge, self).__init__()
+        super(GatingInceptionModelLarge, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=2)
         self.conv2 = nn.Conv2d(32, 32, kernel_size=3, stride=1)
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
@@ -129,9 +138,9 @@ class GatingInceptionLarge(nn.Module):
         return x
 
 
-class GatingInceptionSmall(nn.Module):
+class GatingInceptionModelSmall(nn.Module):
     def __init__(self, descriptor_size=2048):
-        super(GatingInceptionSmall, self).__init__()
+        super(GatingInceptionModelSmall, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=2)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
         self.pool3 = nn.MaxPool2d(kernel_size=3, stride=2)
@@ -174,13 +183,37 @@ class GatingInceptionSmall(nn.Module):
 
 
 
+preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Resize((480, 640), antialias=True),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
 
 
+class GatingInceptionLarge(BaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        model = GatingInceptionModelLarge()
+        super().__init__(model=model, preprocess=preprocess, name="gatinginceptionlarge")
 
+        self.set_device(self.device)
 
-# Example usage
-input = torch.randn(1, 3, 320, 320)
-block = GatingInceptionSmall()
-out = block(input)
-print(out.shape)
-print(torch.norm(out))
+    def set_device(self, device: str) -> None:
+        if "mps" in device:
+            device = "cpu"
+        self.device = device
+        self.model.to(device)
+
+class GatingInceptionSmall(BaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        model = GatingInceptionModelSmall()
+        super().__init__(model=model, preprocess=preprocess, name="gatinginceptionsmall")
+
+        self.set_device(self.device)
+
+    def set_device(self, device: str) -> None:
+        if "mps" in device:
+            device = "cpu"
+        self.device = device
+        self.model.to(device)

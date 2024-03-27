@@ -188,7 +188,22 @@ class AlexNet_HybridNet(BaseModelWrapper):
         name = "alexnet_hybridnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            if not os.path.exists(weight_path):
-                raise Exception(f"Could not find weights at {weight_path}")
-            model.load_state_dict(torch.load(weight_path))
-        super().__init__(model=model, preprocess=preprocess, name="alexnet_hybridnet")
+            if not os.path.exists(
+                join(config["weights_directory"], "HybridNet.caffemodel.pt")
+            ):
+                raise Exception(
+                    f'Could not find weights at {join(config["weights_directory"], "HybridNet.caffemodel.pt")}'
+                )
+            model.load_state_dict(
+                torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
+            )
+        super().__init__(model=model, preprocess=preprocess, name="hybridnet")
+        # hybridnet layers not implemented on metal
+        # some layers not implemented on metal
+        self.set_device(self.device)
+
+    def set_device(self, device: str) -> None:
+        if "mps" in device:
+            device = "cpu"
+        self.device = device
+        self.model.to(device)
