@@ -64,3 +64,25 @@ def resnet50_gem():
 @pytest.fixture
 def eigenplaces():
     return Methods.ResNet50_EigenPlaces(pretrained=False)
+
+
+@pytest.fixture
+def gatinginceptionsmall():
+    return Methods.GatingInceptionSmall(pretrained=False)
+
+
+@pytest.fixture
+def gatinginceptionlarge():
+    return Methods.GatingInceptionLarge(pretrained=False)
+
+
+
+@pytest.fixture
+def gatinginceptionsmall():
+    return Methods.GatingInceptionSmall(pretrained=False)
+
+
+@pytest.fixture
+def gatinginceptionlarge():
+    return Methods.GatingInceptionLarge(pretrained=False)
+
