@@ -1592,11 +1592,30 @@ class cct384_cls(nn.Module):
         return x
 
 
+def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
+    new_dict = {}
+    for key in list(orig_dict.keys()):
+        new_key = key.replace(pattern1, pattern2)
+        new_dict[new_key] = orig_dict[key]
+    return new_dict
+
+
+
 class CCT_CLS(BaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        self.model = cct384_cls()
+        model = cct384_cls()
         name = "cct_cls"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            raise NotImplementedError
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
 
-        super().__init__(model=self.model, preprocess=preprocess, name=name)
+            if torch.cuda.is_available == "cuda":
+                state_dict = torch.load(weight_path)
+            else:
+                state_dict = torch.load(weight_path, map_location=torch.device("cpu"))
+            state_dict = state_dict["state_dict"]
+            state_dict = rename_state_dict(state_dict, "model.backbone", "backbone")
+            model.load_state_dict(state_dict)
+
+        super().__init__(model=model, preprocess=preprocess, name=name)
