@@ -9,3 +9,4 @@ LOGS/*
 *.ckpt
 scratch.py
 *pyc
+PlaceRec/Training/GSV_Cities/dataloaders/__pycache__/*
