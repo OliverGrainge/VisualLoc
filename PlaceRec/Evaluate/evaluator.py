@@ -11,10 +11,13 @@ from PIL import Image
 
 
 class Eval:
-    def __init__(self, method: BaseTechnique, dataset: BaseTechnique):
+    def __init__(
+        self, method: BaseTechnique, dataset: Union[BaseTechnique, None] = None
+    ):
         self.dataset = dataset
         self.method = method
-        self.gt = dataset.ground_truth()
+        if self.dataset is not None:
+            self.gt = dataset.ground_truth()
 
         self.results = {}
 
