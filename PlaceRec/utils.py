@@ -103,7 +103,7 @@ def get_dataset(name: str = None):
 
 def get_method(name: str = None, pretrained: bool = True):
     name = name.lower()
-    if name == "resnet50_eigenplaces":
+    if name == "eigenplaces":
         from PlaceRec.Methods import EigenPlaces
 
         method = EigenPlaces(pretrained=pretrained)
@@ -111,7 +111,7 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import CCT_CLS
 
         method = CCT_CLS(pretrained=pretrained)
-    elif name == "vgg16_sfrs":
+    elif name == "sfrs":
         from PlaceRec.Methods import SFRS
 
         method = SFRS(pretrained=pretrained)
@@ -131,7 +131,7 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ViT_CLS
 
         method = ViT_CLS(pretrained=pretrained)
-    elif name == "dinov2_anyloc":
+    elif name == "anyloc":
         from PlaceRec.Methods import DINOv2_AnyLoc
 
         method = DINOv2_AnyLoc(pretrained=pretrained)
@@ -139,23 +139,23 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import ResNet18_NetVLAD
 
         method = ResNet18_NetVLAD(pretrained=pretrained)
-    elif name == "resnet50_cosplace":
+    elif name == "cosplace":
         from PlaceRec.Methods import CosPlace
 
         method = CosPlace(pretrained=pretrained)
-    elif name == "alexnet_hybridnet":
+    elif name == "hybridnet":
         from PlaceRec.Methods import HybridNet
 
         method = HybridNet(pretrained=pretrained)
-    elif name == "alexnet_amosnet":
+    elif name == "amosnet":
         from PlaceRec.Methods import AmosNet
 
         method = AmosNet(pretrained=pretrained)
-    elif name == "resnet50_convap":
+    elif name == "convap":
         from PlaceRec.Methods import ConvAP
 
         method = ConvAP(pretrained=pretrained)
-    elif name == "resnet50_mixvpr":
+    elif name == "mixvpr":
         from PlaceRec.Methods import MixVPR
 
         method = MixVPR(pretrained=pretrained)
