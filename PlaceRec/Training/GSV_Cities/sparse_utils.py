@@ -1,7 +1,9 @@
+import os
+
 import pytorch_lightning as pl
-import pytorch_pruning as tp
 import torch
 import torch.nn.utils.prune as prune
+import torch_pruning as tp
 from pytorch_lightning.callbacks import Callback
 
 
@@ -44,12 +46,34 @@ class SaveFullModelCallback(pl.Callback):
         super().__init__()
         self.save_path = save_path
 
-    def on_validation_start(self, trainer, pl_module):
+    def on_validation_end(self, trainer, pl_module):
         _, nparams = tp.utils.count_ops_and_params(
-            pl_module.model, pl_module.example_img
+            pl_module.model, pl_module.example_img.cuda()
         )
         sparsity = nparams / pl_module.orig_nparams
-        filepath = f"{self.save_path}/{pl_module.name}/{pl_module.name}_R1[{pl_module.val_R1}]_SPARSITY[{sparsity:.03f}].ckpt"
+        filepath = f"{self.save_path}/{pl_module.name}/{pl_module.name}_R1[{pl_module.val_R1:.03f}]_SPARSITY[{sparsity:.03f}].ckpt"
+
+        if not os.path.exists(f"{self.save_path}/{pl_module.name}"):
+            os.makedirs(f"{self.save_path}/{pl_module.name}")
         # Save the entire model
         torch.save(pl_module.model, filepath)
         print(f"Full model saved to {filepath}")
+
+
+def calculate_sparsity(model):
+    total_weights = 0
+    zero_weights = 0
+
+    # Iterate over all parameters in the model
+    for param in model.parameters():
+        # Flatten the parameter tensor and convert it to a numpy array
+        param_copy = param.clone().detach().cpu()
+        param_data = param_copy.data.view(-1).numpy()
+
+        # Update total and zero-valued weights counts
+        total_weights += param_data.size
+        zero_weights += (param_data == 0).sum()
+
+    # Calculate sparsity
+    sparsity = zero_weights / total_weights
+    return sparsity
