@@ -6,17 +6,17 @@ import torch
 import torch_pruning as tp
 from PIL import Image
 from pytorch_lightning.callbacks import ModelCheckpoint, ModelPruning
-from sparse_utils import SaveFullModelCallback
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
-from utils import get_method
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import \
     GSVCitiesDataModule
 from PlaceRec.Training.GSV_Cities.sparse_utils import (GlobalL1PruningCallback,
+                                                       SaveFullModelCallback,
                                                        SaveLastModelCallback)
+from PlaceRec.utils import get_method
 
 
 class VPRModel(pl.LightningModule):
@@ -77,10 +77,17 @@ class VPRModel(pl.LightningModule):
         self.pruning_setup()
 
     def pruning_setup(self):
-        img = Image.fromarray(np.random.randint(224, 224, 3).astype(np.uint8))
+        img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         self.example_img = self.preprocess(img)[None, :]
         self.orig_macs, self.orig_nparams = tp.utils.count_ops_and_params(
             self.model, self.example_img
+        )
+
+        print(
+            "===============> macs: ",
+            self.orig_macs / 1e6,
+            "    nparams",
+            self.orig_nparams,
         )
 
         imp = tp.importance.MagnitudeImportance(p=2)
@@ -89,8 +96,8 @@ class VPRModel(pl.LightningModule):
             self.model,
             self.example_img,
             imp,
-            iterative_steps=10,
-            pruning_ratio=1.0,
+            iterative_steps=20,
+            pruning_ratio=0.99,
         )
 
     # the forward pass of the lightning model
@@ -188,6 +195,9 @@ class VPRModel(pl.LightningModule):
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
 
+    def on_train_epoch_start(self):
+        pass
+
     def on_train_epoch_end(self) -> None:
         """
         Hook called at the end of a training epoch to reset or update certain parameters.
@@ -267,16 +277,25 @@ class VPRModel(pl.LightningModule):
                 f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True
             )
         print("\n\n")
-        self.pruner.step()
         self.val_R1 = recalls_dict[1]
-        macs, nparams = tp.utils.count_ops_and_params(self.model, self.example_img)
+        macs, nparams = tp.utils.count_ops_and_params(
+            self.model, self.example_img.cuda()
+        )
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
-        print("===============> macs: ", macs / 1e6, "    nparams", nparams)
+        print(
+            "===============> macs reduction: ",
+            macs / self.orig_macs,
+            "  params reduction",
+            nparams / self.orig_nparams,
+        )
+
+    def on_validation_end(self):
+        self.pruner.step()
 
 
 # =================================== Training Loop ================================
-def unstructured_sparse_trainer(args):
+def sparse_structured_trainer(args):
     method = get_method(args.method, True)
 
     pl.seed_everything(seed=1, workers=True)
@@ -302,7 +321,7 @@ def unstructured_sparse_trainer(args):
         weight_decay=0,  # 0.001 for sgd or 0.0 for adam
         momentum=0.9,
         warmup_steps=50,
-        milestones=[1000],
+        milestones=[5, 8],
         lr_mult=0.3,
         # ---------------------------------
         # ---- Training loss function -----
@@ -313,25 +332,24 @@ def unstructured_sparse_trainer(args):
     )
 
     checkpoint_cb = SaveFullModelCallback("Checkpoints/gsv_cities_sparse_structured")
-    # we instantiate a trainer
+
     trainer = pl.Trainer(
         logger=True,
-        enable_progress_bar=False,
+        enable_progress_bar=True,
         accelerator="gpu",
         devices=[0],
         default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
         num_sanity_val_steps=0,  # runs N validation steps before stating traininclg
         precision="16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
-        max_epochs=110,
+        max_epochs=100,
         callbacks=[
             checkpoint_cb,
-        ],  # we run the checkpointing callback (you can add more)
+        ],
         enable_checkpointing=True,
-        reload_dataloaders_every_n_epochs=10,  # we reload the dataset to shuffle the order
+        reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=5,
         check_val_every_n_epoch=10,
         # limit_train_batches=10
-        # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
     trainer.fit(model=model, datamodule=datamodule)
