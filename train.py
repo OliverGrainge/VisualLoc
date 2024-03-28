@@ -6,8 +6,6 @@ from parsers import train_arguments
 from PlaceRec.utils import get_config, get_method
 
 args = train_arguments()
-method = get_method(args.method, False)
-
 
 # ================================ GSVCities Training ==================================
 if args.training_method == "gsv_cities_dense":
