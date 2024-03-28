@@ -257,8 +257,9 @@ def dense_trainer(args):
     )
 
     trainer = pl.Trainer(
+        gpus=torch.cuda.device_count(),
         accelerator="gpu",
-        devices=[0],
+        strategy="ddp" if torch.cuda.device_count() > 1 else None,
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
