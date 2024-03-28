@@ -2,6 +2,7 @@ from .alexnet_amosnet import AlexNet_AmosNet
 from .alexnet_hybridnet import AlexNet_HybridNet
 from .base_method import BaseModelWrapper
 from .cct_cls import CCT_CLS
+from .cct_seqpool import CCT_SEQPOOL
 from .cct_netvlad import CCT_NetVLAD
 from .cct_seqpool import CCT_SEQPOOL
 from .dinov2b14_cls import DINOv2B14_CLS
@@ -15,3 +16,4 @@ from .resnet50_eigenplaces import ResNet50_EigenPlaces
 from .resnet50_gem import ResNet50_GeM
 from .vgg16_sfrs import VGG16_SFRS
 from .vit_cls import ViT_CLS
+from .resnet50_mixvpr import ResNet50_MixVPR
