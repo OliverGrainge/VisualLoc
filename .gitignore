@@ -1,0 +1,7 @@
+*.log
+*.err
+*.jpg
+*.png
+*.pyc
+__pycache__/*
+*__pycache__/*
