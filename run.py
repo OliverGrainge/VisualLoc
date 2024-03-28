@@ -9,7 +9,7 @@ config = get_config()
 args = run_arguments()
 
 
-#################################### Computing Descriptors ###########################################
+# ================================ Compute Descriptors ==================================
 for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
     method.set_device(args.device)

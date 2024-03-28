@@ -16,7 +16,6 @@ from PlaceRec.Metrics import (
     recall_at_100p,
     recallatk,
 )
-
 from PlaceRec.utils import get_dataset, get_method
 
 args = eval_arguments()
