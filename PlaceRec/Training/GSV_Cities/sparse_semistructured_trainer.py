@@ -380,7 +380,7 @@ def sparse_semistructured_trainer(args):
         ],  # we run the checkpointing callback (you can add more)
         reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=20,
-        limit_train_batches=50,
+        #limit_train_batches=50,
         # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
