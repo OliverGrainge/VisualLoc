@@ -6,13 +6,13 @@ from pytorch_lightning.callbacks import ModelCheckpoint, ModelPruning
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
-from utils import get_method
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import \
     GSVCitiesDataModule
 from PlaceRec.Training.GSV_Cities.sparse_utils import (GlobalL1PruningCallback,
                                                        SaveLastModelCallback)
+from PlaceRec.utils import get_method
 
 
 class VPRModel(pl.LightningModule):
@@ -272,7 +272,7 @@ class VPRModel(pl.LightningModule):
 
 
 # =================================== Training Loop ================================
-def unstructured_sparse_trainer(args):
+def sparse_unstructured_trainer(args):
     method = get_method(args.method, True)
 
     pl.seed_everything(seed=1, workers=True)
@@ -343,7 +343,7 @@ def unstructured_sparse_trainer(args):
     # we instantiate a trainer
     trainer = pl.Trainer(
         logger=True,
-        enable_progress_bar=False,
+        enable_progress_bar=True,
         accelerator="gpu",
         devices=[0],
         default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
@@ -355,7 +355,7 @@ def unstructured_sparse_trainer(args):
             checkpoint_cb,
         ],  # we run the checkpointing callback (you can add more)
         enable_checkpointing=True,
-        reload_dataloaders_every_n_epochs=10,  # we reload the dataset to shuffle the order
+        reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
         log_every_n_steps=5,
         check_val_every_n_epoch=10,
         # limit_train_batches=10
