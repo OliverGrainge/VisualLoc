@@ -47,10 +47,14 @@ class Eval:
     def ratk(self, k: int) -> Dict:
         self.method.load_descriptors(self.dataset.name)
         if self.method.query_desc == None:
-            warnings.warn("Query descriptors are not pre-computed")
+            warnings.warn(
+                f"Query descriptors are not pre-computed for {self.dataset.name}"
+            )
             return None
         elif self.method.map_desc == None:
-            warnings.warn("Map Descriptors are not pre-computed")
+            warnings.warn(
+                f"Map Descriptors are not pre-computed for {self.dataset.name}"
+            )
             return None
         kmatches = self.matches[:, :k]
         result = [

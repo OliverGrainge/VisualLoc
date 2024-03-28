@@ -8,10 +8,13 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 import PlaceRec.Training.GSV_Cities.utils as utils
-from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import \
-    GSVCitiesDataModule
-from PlaceRec.Training.GSV_Cities.sparse_utils import (GlobalL1PruningCallback,
-                                                       SaveLastModelCallback)
+from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
+    GSVCitiesDataModule,
+)
+from PlaceRec.Training.GSV_Cities.sparse_utils import (
+    GlobalL1PruningCallback,
+    SaveLastModelCallback,
+)
 from PlaceRec.utils import get_method
 
 

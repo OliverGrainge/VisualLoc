@@ -3,10 +3,12 @@ from prettytable import PrettyTable
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
 
-from PlaceRec.Training.GSV_Cities.dataloaders.train.GSVCitiesDataset import \
-    GSVCitiesDataset
-from PlaceRec.Training.GSV_Cities.dataloaders.val.PittsburghDataset import \
-    PittsburghDataset
+from PlaceRec.Training.GSV_Cities.dataloaders.train.GSVCitiesDataset import (
+    GSVCitiesDataset,
+)
+from PlaceRec.Training.GSV_Cities.dataloaders.val.PittsburghDataset import (
+    PittsburghDataset,
+)
 from PlaceRec.utils import get_config
 
 config = get_config()
