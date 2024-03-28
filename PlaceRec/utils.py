@@ -104,17 +104,17 @@ def get_dataset(name: str = None):
 def get_method(name: str = None, pretrained: bool = True):
     name = name.lower()
     if name == "resnet50_eigenplaces":
-        from PlaceRec.Methods import ResNet50_EigenPlaces
+        from PlaceRec.Methods import EigenPlaces
 
-        method = ResNet50_EigenPlaces(pretrained=pretrained)
+        method = EigenPlaces(pretrained=pretrained)
     elif name == "cct_cls":
         from PlaceRec.Methods import CCT_CLS
 
         method = CCT_CLS(pretrained=pretrained)
     elif name == "vgg16_sfrs":
-        from PlaceRec.Methods import VGG16_SFRS
+        from PlaceRec.Methods import SFRS
 
-        method = VGG16_SFRS(pretrained=pretrained)
+        method = SFRS(pretrained=pretrained)
     elif name == "cct_seqpool":
         from PlaceRec.Methods import CCT_SEQPOOL
 
@@ -140,25 +140,25 @@ def get_method(name: str = None, pretrained: bool = True):
 
         method = ResNet18_NetVLAD(pretrained=pretrained)
     elif name == "resnet50_cosplace":
-        from PlaceRec.Methods import ResNet50_CosPlace
+        from PlaceRec.Methods import CosPlace
 
-        method = ResNet50_CosPlace(pretrained=pretrained)
+        method = CosPlace(pretrained=pretrained)
     elif name == "alexnet_hybridnet":
-        from PlaceRec.Methods import AlexNet_HybridNet
+        from PlaceRec.Methods import HybridNet
 
-        method = AlexNet_HybridNet(pretrained=pretrained)
+        method = HybridNet(pretrained=pretrained)
     elif name == "alexnet_amosnet":
-        from PlaceRec.Methods import AlexNet_AmosNet
+        from PlaceRec.Methods import AmosNet
 
-        method = AlexNet_AmosNet(pretrained=pretrained)
+        method = AmosNet(pretrained=pretrained)
     elif name == "resnet50_convap":
-        from PlaceRec.Methods import ResNet50_ConvAP
+        from PlaceRec.Methods import ConvAP
 
-        method = ResNet50_ConvAP(pretrained=pretrained)
+        method = ConvAP(pretrained=pretrained)
     elif name == "resnet50_mixvpr":
-        from PlaceRec.Methods import ResNet50_MixVPR
+        from PlaceRec.Methods import MixVPR
 
-        method = ResNet50_MixVPR(pretrained=pretrained)
+        method = MixVPR(pretrained=pretrained)
     elif name == "resnet18_gem":
         from PlaceRec.Methods import ResNet18_GeM
 
@@ -171,14 +171,6 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import CCT_NetVLAD
 
         method = CCT_NetVLAD(pretrained=pretrained)
-    elif name == "gatinginceptionlarge":
-        from PlaceRec.Methods import GatingInceptionLarge
-
-        method = GatingInceptionLarge(pretrained=pretrained)
-    elif name == "gatinginceptionsmall":
-        from PlaceRec.Methods import GatingInceptionSmall
-
-        method = GatingInceptionSmall(pretrained=pretrained)
     else:
         raise Exception("Method not implemented")
     return method
