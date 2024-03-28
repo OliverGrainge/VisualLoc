@@ -21,31 +21,17 @@ class Eval:
 
         self.results = {}
 
-    def eval_all(self):
-        self.compute_all_matches()
-        self.ratk(1)
-        self.ratk(5)
-        self.ratk(10)
-        self.ratk(20)
+    def eval(self):
+        if self.dataset is not None:
+            self.compute_all_matches()
+            self.ratk(1)
+            self.ratk(5)
+            self.ratk(10)
+            self.ratk(20)
         self.cpu_latency()
         self.gpu_latency()
         self.count_params()
         self.count_flops()
-        return self.results
-
-    def eval_performance(self):
-        self.cpu_latency()
-        self.gpu_latency()
-        self.count_params()
-        self.count_flops()
-        return self.results
-
-    def eval_accuracy(self):
-        self.compute_all_matches()
-        self.ratk(1)
-        self.ratk(5)
-        self.ratk(10)
-        self.ratk(20)
         return self.results
 
     def compute_all_matches(self, k=20):
