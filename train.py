@@ -9,7 +9,7 @@ args = train_arguments()
 
 # ================================ GSVCities Training ==================================
 if args.training_method == "gsv_cities_dense":
-    from PlaceRec.Training.GSV_Cities import dense_trainer
+    from PlaceRec.Training.GSV_Cities.dense_trainer import dense_trainer
 
     dense_trainer(args)
 

@@ -263,8 +263,9 @@ def sparse_semistructured_trainer(args):
     )
 
     trainer = pl.Trainer(
-        accelerator="gpu",
-        devices=[0],
+        devices="auto",
+        accelerator="auto",
+        strategy="auto",
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",

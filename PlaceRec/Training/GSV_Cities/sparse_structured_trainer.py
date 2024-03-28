@@ -300,10 +300,9 @@ def sparse_structured_trainer(args):
     checkpoint_cb = SaveFullModelCallback("Checkpoints/gsv_cities_sparse_structured")
 
     trainer = pl.Trainer(
-        logger=True,
-        enable_progress_bar=True,
-        accelerator="gpu",
-        devices=[0],
+        devices="auto",
+        accelerator="auto",
+        strategy="auto",
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
