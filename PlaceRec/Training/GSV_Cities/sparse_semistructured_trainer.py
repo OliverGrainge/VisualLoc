@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
+from apex.contrib.sparsity import ASP
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.nn.utils import prune
 from torch.optim import lr_scheduler
@@ -12,6 +13,7 @@ from torch.optim.optimizer import Optimizer
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import \
     GSVCitiesDataModule
+from PlaceRec.Training.GSV_Cities.sparse_utils import calculate_sparsity
 from PlaceRec.utils import get_method
 
 
@@ -133,8 +135,9 @@ class VPRModel(pl.LightningModule):
         # ----------------------------------
         # get the backbone and the aggregator
         self.model = method.model
-        self.model = apply_NM_sparsity(self.model)
-        self.model.train()
+        self.orig_sparsity = 1 - calculate_sparsity(method.model)
+        # self.model = apply_NM_sparsity(self.model)
+        # self.model.train()
         assert isinstance(self.model, torch.nn.Module)
 
     # the forward pass of the lightning model
@@ -173,6 +176,7 @@ class VPRModel(pl.LightningModule):
             ),
             "interval": "step",  # Step-wise scheduler
         }
+        ASP.prune_trained_model(self.model, optimizer)
         return [optimizer], [warmup_scheduler, scheduler]
 
     #  The loss function call (this method will be called at each training iteration)
@@ -242,6 +246,7 @@ class VPRModel(pl.LightningModule):
         """
         Hook called at the start of a validation epoch to initialize or reset parameters.
         """
+        self.log("sparsity", (1 - calculate_sparsity(self.model)) / self.orig_sparsity)
         if len(self.trainer.datamodule.val_set_names) == 1:
             self.val_step_outputs = []
         else:
@@ -314,7 +319,7 @@ class VPRModel(pl.LightningModule):
 
 
 # =================================== Training Loop ================================
-def semistructured_sparse_trainer(args):
+def sparse_semistructured_trainer(args):
     method = get_method(args.method, True)
 
     pl.seed_everything(seed=1, workers=True)
@@ -355,7 +360,7 @@ def semistructured_sparse_trainer(args):
         dirpath=f"Checkpoints/gsv_cities_sparse_semistructured/{method.name}/",
         monitor="pitts30k_val/R1",
         filename=f"{method.name}"
-        + "_epoch[{epoch:02d}]_step[{step:04d}]_R1[{pitts30k_val/R1:.4f}]",
+        + "_epoch[{epoch:02d}]_step[{step:04d}]_R1[{pitts30k_val/R1:.4f}]_SPARSITY[{sparsity:.3f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
         save_top_k=1,
