@@ -187,8 +187,6 @@ def get_training_logger(config: dict, project_name: Union[str, None] = None):
 
 
 def cosine_distance(x1, x2):
-    # Cosine similarity ranges from -1 to 1, so we add 1 to make it non-negative
-    # and then normalize it to range from 0 to 1
     cosine_sim = nn.CosineSimilarity(dim=0)(x1, x2)
     return 1 - cosine_sim
 
