@@ -78,8 +78,6 @@ class GardensPointWalking(BaseDataset):
         query_images = [img.split("/")[-1] for img in self.query_paths]
         map_images = [img.split("/")[-1] for img in self.map_paths]
 
-        print(len(query_images), len(map_images))
-
         # Create a dictionary mapping image names to a list of their indices in map_images
         map_dict = {}
         for idx, img in enumerate(map_images):
@@ -87,7 +85,6 @@ class GardensPointWalking(BaseDataset):
 
         # Get the indices using the dictionary
         ground_truth = [np.array(map_dict.get(query, [])) for query in query_images]
-        print(len(ground_truth))
         return ground_truth
 
 

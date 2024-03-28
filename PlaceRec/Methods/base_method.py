@@ -1,7 +1,7 @@
 import os
 import pickle
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Tuple, Union, Dict
 
 import faiss
 import numpy as np
@@ -11,6 +11,7 @@ from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import warnings
 
 from PlaceRec.utils import get_config
 
@@ -211,19 +212,37 @@ class BaseFunctionality(BaseTechnique):
         """
         self.map_desc = map_descriptors
         if config["eval"]["distance"] == "cosine":
-            self.map = faiss.IndexFlatIP(map_descriptors.shape[1])
-            faiss.normalize_L2(map_descriptors)
-            self.map.add(map_descriptors)
+            self.map = faiss.IndexFlatIP(map_descriptors["global_descriptors"].shape[1])
+            faiss.normalize_L2(map_descriptors["global_descriptors"])
+            self.map.add(map_descriptors["global_descriptors"])
         elif config["eval"]["distance"] == "l2":
-            self.map = faiss.IndexFlatL2(map_descriptors.shape[1])
-            self.map.add(map_descriptors)
+            self.map = faiss.IndexFlatL2(map_descriptors["global_descriptors"].shape[1])
+            faiss.normalize_L2(map_descriptors["global_descriptors"])
+            self.map.add(map_descriptors["global_descriptors"])
         else:
             raise NotImplementedError("Distance Measure Not Implemented")
 
+    def compute_feature(self, img: Image) -> np.ndarray:
+        """
+        Compute the descriptor of a single PIL image
+
+        Args:
+            img (PIL.Image): The PIL image on which the descriptors will be computed
+        Returns:
+            desc (np.ndarray): The np.ndarray descriptor. Dimensions will be [1, descriptor_dimension]
+        """
+
+        if not isinstance(img, Image):
+            print("img must be of type PIL.Image")
+
+        img = self.preprocess(img)
+        with torch.no_grad():
+            desc = self.model(img[None, :].to(self.device)).detach().cpu().numpy()
+        return desc.astype(np.float32)
+
     def place_recognise(
         self,
-        dataloader: torch.utils.data.dataloader.DataLoader = None,
-        query_desc: np.ndarray = None,
+        query: Union[torch.utils.data.dataloader.DataLoader, Dict, Image.Image],
         k: int = 1,
         pbar: bool = True,
     ) -> Tuple[np.ndarray, np.ndarray]:
@@ -231,16 +250,20 @@ class BaseFunctionality(BaseTechnique):
         Recognize places based on images or a dataloader.
 
         Args:
-            images (torch.Tensor): A batch of images.
-            dataloader (torch.utils.data.dataloader.DataLoader): A DataLoader for images.
-            top_n (int): Number of top results to return.
-            pbar (bool): Whether to show a progress bar.
+            query (Union[DataLoader, np.ndarray, Image.Image]): a query for place recognition
+            k (int): the number of place matches to retrieve
+            pbar (bool): whether to show a progress bar when using a dataloader for querying
 
         Returns:
             Tuple[np.ndarray, np.ndarray]: Indices and distances of recognized places.
         """
-        if isinstance(dataloader, DataLoader):
-            query_desc = self.compute_query_desc(dataloader=dataloader, pbar=pbar)
+        if isinstance(query, DataLoader):
+            query_desc = self.compute_query_desc(dataloader=query, pbar=pbar)
+        elif isinstance(query, Dict):
+            query_desc = query["global_descriptors"].astype(np.float32)
+        elif isinstance(query, Image.Image):
+            query_desc = self.compute_feature(query)
+
         if config["eval"]["distance"] == "cosine":
             faiss.normalize_L2(query_desc)
         dist, idx = self.map.search(query_desc, k)
@@ -302,7 +325,8 @@ class BaseFunctionality(BaseTechnique):
             Exception: If descriptors for the given dataset are not found.
         """
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
-            raise Exception("Descriptor not yet computed for: " + dataset_name)
+            warnings.warn("Descriptor not yet computed for: " + dataset_name)
+            return None
         with open(
             package_directory
             + "/descriptors/"
@@ -414,8 +438,9 @@ class BaseModelWrapper(BaseFunctionality):
                 all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
-        self.set_query(all_desc)
-        return all_desc
+        query_results = {"global_descriptors": all_desc}
+        self.set_query(query_results)
+        return query_results
 
     def compute_map_desc(
         self,
@@ -444,23 +469,6 @@ class BaseModelWrapper(BaseFunctionality):
                 all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
-        self.set_map(all_desc)
-        return all_desc
-
-    def compute_feature(self, img: Image) -> np.ndarray:
-        """
-        Compute the descriptor of a single PIL image
-
-        Args:
-            img (PIL.Image): The PIL image on which the descriptors will be computed
-        Returns:
-            desc (np.ndarray): The np.ndarray descriptor. Dimensions will be [1, descriptor_dimension]
-        """
-
-        if not isinstance(img, Image):
-            print("img must be of type PIL.Image")
-
-        img = self.preprocess(img)
-        with torch.no_grad():
-            desc = self.model(img[None, :].to(self.device)).detach().cpu().numpy()
-        return desc
+        map_result = {"global_descriptors": all_desc}
+        self.set_map(map_result)
+        return map_result
