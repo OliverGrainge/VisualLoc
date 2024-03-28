@@ -1,8 +1,12 @@
+# Desktop
 datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
 weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
+# Laptop
 #weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 #datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
-#datasets_directory: "/ssdfs/users/oeg1n18/datasets/"
+#HPC
+#datasets_directory: "/ssdfs/users/oeg1n18/datasets"
+#weights_directory: "/ssdfs/users/oeg1n18/VisualLoc_Weight"
 
 
 #####################################################################################################################################################
