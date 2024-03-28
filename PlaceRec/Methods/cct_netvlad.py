@@ -10,16 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from timm.models.registry import register_model
 from torch.hub import load_state_dict_from_url
-from torch.nn import (
-    Dropout,
-    Identity,
-    LayerNorm,
-    Linear,
-    Module,
-    ModuleList,
-    Parameter,
-    init,
-)
+from torch.nn import (Dropout, Identity, LayerNorm, Linear, Module, ModuleList,
+                      Parameter, init)
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm

@@ -1,13 +1,14 @@
-from PlaceRec import Metrics
-import numpy as np
-from PlaceRec.Methods.base_method import BaseTechnique
-from typing import List, Union, Dict
 import time
-import torch
 import warnings
+from typing import Dict, List, Union
+
+import numpy as np
+import torch
 import torch.nn as nn
-from ptflops import get_model_complexity_info
 from PIL import Image
+from ptflops import get_model_complexity_info
+
+from PlaceRec.Methods.base_method import BaseTechnique
 
 
 class Eval:

@@ -9,9 +9,8 @@ from torch.optim.optimizer import Optimizer
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
-from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
-    GSVCitiesDataModule,
-)
+from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import \
+    GSVCitiesDataModule
 from PlaceRec.utils import get_method
 
 

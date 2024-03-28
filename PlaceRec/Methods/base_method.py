@@ -1,7 +1,8 @@
 import os
 import pickle
+import warnings
 from abc import ABC, abstractmethod
-from typing import Tuple, Union, Dict
+from typing import Dict, Tuple, Union
 
 import faiss
 import numpy as np
@@ -11,7 +12,6 @@ from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import warnings
 
 from PlaceRec.utils import get_config
 
