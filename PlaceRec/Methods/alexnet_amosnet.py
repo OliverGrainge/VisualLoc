@@ -196,4 +196,3 @@ class AlexNet_AmosNet(BaseModelWrapper):
             device = "cpu"
         self.device = device
         self.model.to(device)
-

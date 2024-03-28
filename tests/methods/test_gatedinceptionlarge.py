@@ -67,7 +67,9 @@ def test_load_descriptors(gatinginceptionlarge):
 
 
 def test_compute_query_desc(dataset, gatinginceptionlarge):
-    dataloader = dataset.query_images_loader(batch_size=1, preprocess=gatinginceptionlarge.preprocess)
+    dataloader = dataset.query_images_loader(
+        batch_size=1, preprocess=gatinginceptionlarge.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -79,7 +81,9 @@ def test_compute_query_desc(dataset, gatinginceptionlarge):
 
 
 def test_compute_map_desc(dataset, gatinginceptionlarge):
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=gatinginceptionlarge.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=gatinginceptionlarge.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -97,7 +101,9 @@ def test_compute_map_desc(dataset, gatinginceptionlarge):
 )
 def test_cuda_acceleration(dataset, gatinginceptionlarge):
     gatinginceptionlarge.set_device("cuda")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=gatinginceptionlarge.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=gatinginceptionlarge.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)
@@ -110,7 +116,9 @@ def test_cuda_acceleration(dataset, gatinginceptionlarge):
 )
 def test_mps_acceleration(dataset, gatinginceptionlarge):
     gatinginceptionlarge.set_device("mps")
-    dataloader = dataset.map_images_loader(batch_size=1, preprocess=gatinginceptionlarge.preprocess)
+    dataloader = dataset.map_images_loader(
+        batch_size=1, preprocess=gatinginceptionlarge.preprocess
+    )
     dataset = dataloader.dataset
     dataset = Subset(dataset, list(range(2)))
     dataloader = DataLoader(dataset, batch_size=1)

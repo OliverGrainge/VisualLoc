@@ -52,9 +52,7 @@ class VPRModel(pl.LightningModule):
 
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
-        self.batch_acc = (
-            []
-        )  
+        self.batch_acc = []
 
         self.faiss_gpu = faiss_gpu
         self.model = method.model
@@ -93,7 +91,7 @@ class VPRModel(pl.LightningModule):
                 optimizer,
                 lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_steps),
             ),
-            "interval": "step", 
+            "interval": "step",
         }
         return [optimizer], [warmup_scheduler, scheduler]
 
@@ -105,7 +103,7 @@ class VPRModel(pl.LightningModule):
             nb_mined = len(set(miner_outputs[0].detach().cpu().numpy()))
             batch_acc = 1.0 - (nb_mined / nb_samples)
 
-        else: 
+        else:
             loss = self.loss_fn(descriptors, labels)
             batch_acc = 0.0
             if type(loss) == tuple:
@@ -120,18 +118,13 @@ class VPRModel(pl.LightningModule):
         )
         return loss
 
-
     def training_step(self, batch, batch_idx):
         places, labels = batch
         BS, N, ch, h, w = places.shape
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-        descriptors = self(
-            images
-        )
-        loss = self.loss_function(
-            descriptors, labels
-        )  
+        descriptors = self(images)
+        loss = self.loss_function(descriptors, labels)
 
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
@@ -188,7 +181,7 @@ class VPRModel(pl.LightningModule):
         total_params = 0
         zero_params = 0
         for module in model.modules():
-            if hasattr(module, "weight"):  
+            if hasattr(module, "weight"):
                 total_params += module.weight.numel()
                 mask = None
                 for hook in module._forward_pre_hooks.values():
@@ -209,7 +202,7 @@ class VPRModel(pl.LightningModule):
         val_step_outputs = self.val_step_outputs
         self.val_step_outputs = []
         dm = self.trainer.datamodule
-        if len(dm.val_datasets) == 1: 
+        if len(dm.val_datasets) == 1:
             val_step_outputs = [val_step_outputs]
 
         for i, (val_set_name, val_dataset) in enumerate(
@@ -256,24 +249,23 @@ def sparse_unstructured_trainer(args):
         image_size=args.image_resolution,
         num_workers=16,
         show_data_stats=False,
-        val_set_names=["pitts30k_val"],  
+        val_set_names=["pitts30k_val"],
     )
 
     model = VPRModel(
         method=method,
-        lr=0.0001,  
-        optimizer="adam", 
-        weight_decay=0, 
+        lr=0.0001,
+        optimizer="adam",
+        weight_decay=0,
         momentum=0.9,
         warmup_steps=50,
         milestones=[1000],
         lr_mult=0.3,
         loss_name="MultiSimilarityLoss",
-        miner_name="MultiSimilarityMiner", 
+        miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
     )
-
 
     checkpoint_cb = ModelCheckpoint(
         dirpath=f"Checkpoints/gsv_cities_sparse_unstructured/{method.name}/",
@@ -294,27 +286,25 @@ def sparse_unstructured_trainer(args):
         if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d)):
             parameters_to_prune.append((module, "weight"))
 
-
     pruning_cb = ModelPruning(
         parameters_to_prune=parameters_to_prune,
-        pruning_fn="l1_unstructured",  
-        amount=0.15,  
-        use_global_unstructured=True,  
+        pruning_fn="l1_unstructured",
+        amount=0.15,
+        use_global_unstructured=True,
         verbose=True,
-        make_pruning_permanent=True, 
+        make_pruning_permanent=True,
         apply_pruning=prune_every_10_epochs,
         prune_on_train_epoch_end=False,
     )
-
 
     trainer = pl.Trainer(
         logger=True,
         enable_progress_bar=True,
         accelerator="gpu",
         devices=[0],
-        default_root_dir=f"./LOGS/{method.name}", 
-        num_sanity_val_steps=0,  
-        precision="16-mixed", 
+        default_root_dir=f"./LOGS/{method.name}",
+        num_sanity_val_steps=0,
+        precision="16-mixed",
         max_epochs=300,
         callbacks=[
             pruning_cb,

@@ -1517,9 +1517,9 @@ class NetVLAD(nn.Module):
                         image_descriptors.shape[1], descs_num_per_image, replace=False
                     )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[
-                        startix : startix + descs_num_per_image, :
-                    ] = image_descriptors[ix, sample, :]
+                    descriptors[startix : startix + descs_num_per_image, :] = (
+                        image_descriptors[ix, sample, :]
+                    )
         kmeans = faiss.Kmeans(
             args.features_dim, self.clusters_num, niter=100, verbose=False
         )
@@ -1590,6 +1590,7 @@ class cct384_seqpool(nn.Module):
     def forward(self, x):
         x = self.backbone(x)
         return x
+
 
 def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
     new_dict = {}

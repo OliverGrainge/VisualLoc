@@ -1517,9 +1517,9 @@ class NetVLAD(nn.Module):
                         image_descriptors.shape[1], descs_num_per_image, replace=False
                     )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[
-                        startix : startix + descs_num_per_image, :
-                    ] = image_descriptors[ix, sample, :]
+                    descriptors[startix : startix + descs_num_per_image, :] = (
+                        image_descriptors[ix, sample, :]
+                    )
         kmeans = faiss.Kmeans(
             args.features_dim, self.clusters_num, niter=100, verbose=False
         )
@@ -1598,7 +1598,6 @@ def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
         new_key = key.replace(pattern1, pattern2)
         new_dict[new_key] = orig_dict[key]
     return new_dict
-
 
 
 class CCT_CLS(BaseModelWrapper):

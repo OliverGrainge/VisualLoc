@@ -15,17 +15,20 @@ if args.training_method == "gsv_cities_dense":
     dense_trainer(args)
 
 elif args.training_method == "gsv_cities_unstructured_sparse":
-    from PlaceRec.Training.GSV_Cities.sparse_unstructured_trainer import sparse_unstructured_trainer
+    from PlaceRec.Training.GSV_Cities.sparse_unstructured_trainer import \
+        sparse_unstructured_trainer
 
     sparse_unstructured_trainer(args)
 
 elif args.training_method == "gsv_cities_semistructured_sparse":
-    from PlaceRec.Training.GSV_Cities.sparse_semistructured_trainer import sparse_semistructured_trainer
+    from PlaceRec.Training.GSV_Cities.sparse_semistructured_trainer import \
+        sparse_semistructured_trainer
 
     sparse_semistructured_trainer(args)
 
 elif args.training_method == "gsv_cities_structured_sparse":
-    from PlaceRec.Training.GSV_Cities.sparse_structured_trainer import sparse_structured_trainer
+    from PlaceRec.Training.GSV_Cities.sparse_structured_trainer import \
+        sparse_structured_trainer
 
     sparse_structured_trainer(args)
 

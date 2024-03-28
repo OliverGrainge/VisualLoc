@@ -76,7 +76,6 @@ def gatinginceptionlarge():
     return Methods.GatingInceptionLarge(pretrained=False)
 
 
-
 @pytest.fixture
 def gatinginceptionsmall():
     return Methods.GatingInceptionSmall(pretrained=False)
@@ -85,4 +84,3 @@ def gatinginceptionsmall():
 @pytest.fixture
 def gatinginceptionlarge():
     return Methods.GatingInceptionLarge(pretrained=False)
-

@@ -17,7 +17,6 @@ from PlaceRec.Training.GSV_Cities.sparse_utils import calculate_sparsity
 from PlaceRec.utils import get_method
 
 
-
 class VPRModel(pl.LightningModule):
     """This is the main model for Visual Place Recognition
     we use Pytorch Lightning for modularity purposes.
@@ -55,9 +54,7 @@ class VPRModel(pl.LightningModule):
 
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
-        self.batch_acc = (
-            []
-        )
+        self.batch_acc = []
 
         self.faiss_gpu = faiss_gpu
 
@@ -97,11 +94,10 @@ class VPRModel(pl.LightningModule):
                 optimizer,
                 lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_steps),
             ),
-            "interval": "step",  
+            "interval": "step",
         }
         ASP.prune_trained_model(self.model, optimizer)
         return [optimizer], [warmup_scheduler, scheduler]
-
 
     def loss_function(self, descriptors, labels):
         if self.miner is not None:
@@ -126,19 +122,15 @@ class VPRModel(pl.LightningModule):
             logger=True,
         )
         return loss
-    
+
     def training_step(self, batch, batch_idx):
         places, labels = batch
         BS, N, ch, h, w = places.shape
 
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-        descriptors = self(
-            images
-        ) 
-        loss = self.loss_function(
-            descriptors, labels
-        )  
+        descriptors = self(images)
+        loss = self.loss_function(descriptors, labels)
 
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
@@ -193,7 +185,7 @@ class VPRModel(pl.LightningModule):
         val_step_outputs = self.val_step_outputs
         self.val_step_outputs = []
         dm = self.trainer.datamodule
-        if len(dm.val_datasets) == 1:  
+        if len(dm.val_datasets) == 1:
             val_step_outputs = [val_step_outputs]
 
         for i, (val_set_name, val_dataset) in enumerate(
@@ -245,9 +237,9 @@ def sparse_semistructured_trainer(args):
 
     model = VPRModel(
         method=method,
-        lr=0.0002, 
-        optimizer="adam", 
-        weight_decay=0, 
+        lr=0.0002,
+        optimizer="adam",
+        weight_decay=0,
         momentum=0.9,
         warmup_steps=600,
         milestones=[5, 10, 15, 25],
@@ -274,12 +266,10 @@ def sparse_semistructured_trainer(args):
         devices=[0],
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
-        precision="16-mixed", 
+        precision="16-mixed",
         max_epochs=10,
         check_val_every_n_epoch=1,
-        callbacks=[
-            checkpoint_cb
-        ],
+        callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
     )
 

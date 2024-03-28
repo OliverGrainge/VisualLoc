@@ -54,12 +54,9 @@ class VPRModel(pl.LightningModule):
         self.miner_name = miner_name
         self.miner_margin = miner_margin
 
-
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
-        self.batch_acc = (
-            []
-        )
+        self.batch_acc = []
 
         self.faiss_gpu = faiss_gpu
 
@@ -126,7 +123,7 @@ class VPRModel(pl.LightningModule):
                 optimizer,
                 lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_steps),
             ),
-            "interval": "step", 
+            "interval": "step",
         }
         return [optimizer], [warmup_scheduler, scheduler]
 
@@ -154,18 +151,13 @@ class VPRModel(pl.LightningModule):
         )
         return loss
 
-
     def training_step(self, batch, batch_idx):
         places, labels = batch
         BS, N, ch, h, w = places.shape
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-        descriptors = self(
-            images
-        ) 
-        loss = self.loss_function(
-            descriptors, labels
-        )
+        descriptors = self(images)
+        loss = self.loss_function(descriptors, labels)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
 
@@ -284,14 +276,14 @@ def sparse_structured_trainer(args):
         image_size=args.image_resolution,
         num_workers=16,
         show_data_stats=False,
-        val_set_names=["pitts30k_val"], 
+        val_set_names=["pitts30k_val"],
     )
 
     model = VPRModel(
         method=method,
         lr=0.0001,
         optimizer="adam",
-        weight_decay=0, 
+        weight_decay=0,
         momentum=0.9,
         warmup_steps=50,
         milestones=[4, 7, 8],
