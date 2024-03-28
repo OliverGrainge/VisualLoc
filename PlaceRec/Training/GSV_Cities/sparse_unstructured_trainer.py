@@ -22,9 +22,7 @@ class VPRModel(pl.LightningModule):
 
     def __init__(
         self,
-        # ---- VPR Method to Train
         method,
-        # ---- Train hyperparameters
         lr=0.05,
         optimizer="sgd",
         weight_decay=1e-3,
@@ -32,7 +30,6 @@ class VPRModel(pl.LightningModule):
         warmup_steps=500,
         milestones=[5, 10, 15],
         lr_mult=0.3,
-        # ----- Loss
         loss_name="MultiSimilarityLoss",
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
@@ -53,28 +50,21 @@ class VPRModel(pl.LightningModule):
         self.miner_name = miner_name
         self.miner_margin = miner_margin
 
-        # self.save_hyperparameters()  # write hyperparams into a file
-
         self.loss_fn = utils.get_loss(loss_name)
         self.miner = utils.get_miner(miner_name, miner_margin)
         self.batch_acc = (
             []
-        )  # we will keep track of the % of trivial pairs/triplets at the loss level
+        )  
 
         self.faiss_gpu = faiss_gpu
-
-        # ----------------------------------
-        # get the backbone and the aggregator
         self.model = method.model
         self.model.train()
         assert isinstance(self.model, torch.nn.Module)
 
-    # the forward pass of the lightning model
     def forward(self, x):
         x = self.model(x)
         return x
 
-    # configure the optimizer
     def configure_optimizers(self) -> Tuple[List[Optimizer], List[_LRScheduler]]:
         if self.optimizer.lower() == "sgd":
             optimizer = torch.optim.SGD(
@@ -103,37 +93,25 @@ class VPRModel(pl.LightningModule):
                 optimizer,
                 lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_steps),
             ),
-            "interval": "step",  # Step-wise scheduler
+            "interval": "step", 
         }
         return [optimizer], [warmup_scheduler, scheduler]
 
-    #  The loss function call (this method will be called at each training iteration)
     def loss_function(self, descriptors, labels):
-        # we mine the pairs/triplets if there is an online mining strategy
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
-
-            # calculate the % of trivial pairs/triplets
-            # which do not contribute in the loss value
             nb_samples = descriptors.shape[0]
             nb_mined = len(set(miner_outputs[0].detach().cpu().numpy()))
             batch_acc = 1.0 - (nb_mined / nb_samples)
 
-        else:  # no online mining
+        else: 
             loss = self.loss_fn(descriptors, labels)
             batch_acc = 0.0
             if type(loss) == tuple:
-                # somes losses do the online mining inside (they don't need a miner objet),
-                # so they return the loss and the batch accuracy
-                # for example, if you are developping a new loss function, you might be better
-                # doing the online mining strategy inside the forward function of the loss class,
-                # and return a tuple containing the loss value and the batch_accuracy (the % of valid pairs or triplets)
                 loss, batch_acc = loss
 
-        # keep accuracy of every batch and later reset it at epoch start
         self.batch_acc.append(batch_acc)
-        # log it
         self.log(
             "b_acc",
             sum(self.batch_acc) / len(self.batch_acc),
@@ -142,24 +120,18 @@ class VPRModel(pl.LightningModule):
         )
         return loss
 
-    # This is the training step that's executed at each iteration
+
     def training_step(self, batch, batch_idx):
         places, labels = batch
-
-        # Note that GSVCities yields places (each containing N images)
-        # which means the dataloader will return a batch containing BS places
         BS, N, ch, h, w = places.shape
-
-        # reshape places and labels
         images = places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-        # Feed forward the batch to the model
         descriptors = self(
             images
-        )  # Here we are calling the method forward that we defined above
+        )
         loss = self.loss_function(
             descriptors, labels
-        )  # Call the loss_function we defined above
+        )  
 
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
@@ -216,19 +188,16 @@ class VPRModel(pl.LightningModule):
         total_params = 0
         zero_params = 0
         for module in model.modules():
-            if hasattr(module, "weight"):  # Check if the module has a weight parameter
+            if hasattr(module, "weight"):  
                 total_params += module.weight.numel()
-                # Check for a pruning mask
                 mask = None
                 for hook in module._forward_pre_hooks.values():
                     if hasattr(hook, "mask"):
                         mask = hook.mask
                         break
                 if mask is not None:
-                    # If there's a mask, use it to count zero parameters
                     zero_params += torch.sum(mask == 0).item()
                 else:
-                    # If no mask, just count the zeros in the weights directly
                     zero_params += torch.sum(module.weight == 0).item()
         sparsity = (zero_params / total_params) * 100
         return sparsity
@@ -240,7 +209,7 @@ class VPRModel(pl.LightningModule):
         val_step_outputs = self.val_step_outputs
         self.val_step_outputs = []
         dm = self.trainer.datamodule
-        if len(dm.val_datasets) == 1:  # we need to put the outputs in a list
+        if len(dm.val_datasets) == 1: 
             val_step_outputs = [val_step_outputs]
 
         for i, (val_set_name, val_dataset) in enumerate(
@@ -282,33 +251,30 @@ def sparse_unstructured_trainer(args):
         batch_size=int(args.batch_size / 4),
         img_per_place=4,
         min_img_per_place=4,
-        # cities=['London', 'Boston', 'Melbourne'], # you can sppecify cities here or in GSVCitiesDataloader.py
-        shuffle_all=False,  # shuffle all images or keep shuffling in-city only
+        shuffle_all=False,
         random_sample_from_each_place=True,
         image_size=args.image_resolution,
         num_workers=16,
         show_data_stats=False,
-        val_set_names=["pitts30k_val"],  # pitts30k_val
+        val_set_names=["pitts30k_val"],  
     )
 
     model = VPRModel(
         method=method,
-        lr=0.0001,  # 0.03 for sgd
-        optimizer="adam",  # sgd, adam or adamw
-        weight_decay=0,  # 0.001 for sgd or 0.0 for adam
+        lr=0.0001,  
+        optimizer="adam", 
+        weight_decay=0, 
         momentum=0.9,
         warmup_steps=50,
         milestones=[1000],
         lr_mult=0.3,
-        # ---------------------------------
-        # ---- Training loss function -----
         loss_name="MultiSimilarityLoss",
-        miner_name="MultiSimilarityMiner",  # example: TripletMarginMiner, MultiSimilarityMiner, PairMarginMiner
+        miner_name="MultiSimilarityMiner", 
         miner_margin=0.1,
         faiss_gpu=False,
     )
 
-    # Pruning callback
+
     checkpoint_cb = ModelCheckpoint(
         dirpath=f"Checkpoints/gsv_cities_sparse_unstructured/{method.name}/",
         monitor="pitts30k_val/R1",
@@ -328,38 +294,36 @@ def sparse_unstructured_trainer(args):
         if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d)):
             parameters_to_prune.append((module, "weight"))
 
-    # Define the model pruning callback
+
     pruning_cb = ModelPruning(
         parameters_to_prune=parameters_to_prune,
-        pruning_fn="l1_unstructured",  # Type of pruning
-        amount=0.15,  # Pruning amount
-        use_global_unstructured=True,  # Apply pruning globally across parameters
+        pruning_fn="l1_unstructured",  
+        amount=0.15,  
+        use_global_unstructured=True,  
         verbose=True,
-        make_pruning_permanent=True,  # Make pruning permanent during training
+        make_pruning_permanent=True, 
         apply_pruning=prune_every_10_epochs,
         prune_on_train_epoch_end=False,
     )
 
-    # we instantiate a trainer
+
     trainer = pl.Trainer(
         logger=True,
         enable_progress_bar=True,
         accelerator="gpu",
         devices=[0],
-        default_root_dir=f"./LOGS/{method.name}",  # Tensorflow can be used to viz
-        num_sanity_val_steps=0,  # runs N validation steps before stating traininclg
-        precision="16-mixed",  # we use half precision to reduce  memory usage (and 2x speed on RTX)
+        default_root_dir=f"./LOGS/{method.name}", 
+        num_sanity_val_steps=0,  
+        precision="16-mixed", 
         max_epochs=300,
         callbacks=[
             pruning_cb,
             checkpoint_cb,
-        ],  # we run the checkpointing callback (you can add more)
+        ],
         enable_checkpointing=True,
-        reload_dataloaders_every_n_epochs=1,  # we reload the dataset to shuffle the order
+        reload_dataloaders_every_n_epochs=1,
         log_every_n_steps=5,
         check_val_every_n_epoch=10,
-        # limit_train_batches=10
-        # fast_dev_run=True # comment if you want to start training the network and saving checkpoints
     )
 
     trainer.fit(model=model, datamodule=datamodule)
