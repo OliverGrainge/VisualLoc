@@ -1,6 +1,5 @@
 from pytorch_metric_learning import losses, miners
-from pytorch_metric_learning.distances import (CosineSimilarity,
-                                               DotProductSimilarity)
+from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
 
 
 def get_loss(loss_name):

@@ -17,8 +17,9 @@ import PlaceRec.Training.EigenPlaces.parser as parser
 import PlaceRec.Training.EigenPlaces.test as test
 import PlaceRec.Training.EigenPlaces.util as util
 from parsers import train_arguments
-from PlaceRec.Training.EigenPlaces.datasets.eigenplaces_dataset import \
-    EigenPlacesDataset
+from PlaceRec.Training.EigenPlaces.datasets.eigenplaces_dataset import (
+    EigenPlacesDataset,
+)
 from PlaceRec.Training.EigenPlaces.datasets.test_dataset import TestDataset
 from PlaceRec.utils import get_config
 
