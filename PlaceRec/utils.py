@@ -221,3 +221,15 @@ def init_weights(m):
         nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
+
+
+def get_logger():
+    import logging
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        filename="app.log",
+        filemode="w",
+        format="%(name)s - %(levelname)s - %(message)s",
+    )
+    return logging

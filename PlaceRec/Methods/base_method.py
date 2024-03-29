@@ -13,11 +13,12 @@ from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from PlaceRec.utils import get_config
+from PlaceRec.utils import get_config, get_logger
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 config = get_config()
+logger = get_logger()
 
 
 class BaseTechnique(ABC):
@@ -325,7 +326,16 @@ class BaseFunctionality(BaseTechnique):
             Exception: If descriptors for the given dataset are not found.
         """
         if not os.path.isdir(package_directory + "/descriptors/" + dataset_name):
-            warnings.warn("Descriptor not yet computed for: " + dataset_name)
+            os.makedirs(package_directory + "/descriptors/" + dataset_name)
+        if not os.path.exists(
+            package_directory
+            + "/descriptors/"
+            + dataset_name
+            + "/"
+            + self.name
+            + "_query.pkl"
+        ):
+            logger.info("Descriptor not yet computed for: " + dataset_name)
             return None
         with open(
             package_directory

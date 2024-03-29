@@ -7,8 +7,11 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
+from PlaceRec.utils import get_logger
 
 from PlaceRec.Methods.base_method import BaseTechnique
+
+logger = get_logger()
 
 
 class Eval:
@@ -47,14 +50,8 @@ class Eval:
     def ratk(self, k: int) -> Dict:
         self.method.load_descriptors(self.dataset.name)
         if self.method.query_desc == None:
-            warnings.warn(
-                f"Query descriptors are not pre-computed for {self.dataset.name}"
-            )
             return None
         elif self.method.map_desc == None:
-            warnings.warn(
-                f"Map Descriptors are not pre-computed for {self.dataset.name}"
-            )
             return None
         kmatches = self.matches[:, :k]
         result = [
