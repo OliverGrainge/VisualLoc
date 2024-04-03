@@ -85,10 +85,15 @@ class VPRModel(pl.LightningModule):
         )
 
         imp = tp.importance.MagnitudeImportance(p=2)
-        ignored_layers = []
-        for name, layer in self.model.named_modules():
-            if "attention" in name or "attn" in name:
-                ignored_layers.append(layer)
+        dont_prune = []
+        for name, layer in model.named_modules():
+            if (
+                "attention" in name
+                or "attn" in name
+                or "channel_proj" in name
+                or "mix" in name
+            ):
+                dont_prune.append(layer)
 
         self.pruner = tp.pruner.MagnitudePruner(
             self.model,
@@ -96,7 +101,7 @@ class VPRModel(pl.LightningModule):
             imp,
             iterative_steps=20,
             pruning_ratio=0.99,
-            ignored_layers=ignored_layers,
+            ignored_layers=dont_prune,
         )
 
     def forward(self, x):
