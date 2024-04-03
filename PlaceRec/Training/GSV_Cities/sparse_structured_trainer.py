@@ -86,7 +86,7 @@ class VPRModel(pl.LightningModule):
 
         imp = tp.importance.MagnitudeImportance(p=2)
         dont_prune = []
-        for name, layer in model.named_modules():
+        for name, layer in self.model.named_modules():
             if (
                 "attention" in name
                 or "attn" in name
