@@ -62,7 +62,10 @@ class ViT_CLS(BaseModelWrapper):
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-            sd = torch.load(weight_path)["state_dict"]
+            if torch.cuda.is_available() == "cuda":
+                sd = torch.load(weight_path, map_location="cuda")["state_dict"]
+            else:
+                sd = torch.load(weight_path, map_location="cpu")["state_dict"]
             sd = rename_state_dict(sd, "model.vit_model", "vit_model")
             model.load_state_dict(sd)
         super().__init__(model=model, preprocess=preprocess, name=name)
