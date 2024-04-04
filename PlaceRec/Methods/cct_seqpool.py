@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 
-from .base_method import SingleStageBaseModelWrapper
+from PlaceRec.Methods import SingleStageBaseModelWrapper
 from PlaceRec.utils import L2Norm, get_config
 
 filepath = os.path.dirname(os.path.abspath(__file__))

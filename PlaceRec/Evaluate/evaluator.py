@@ -8,6 +8,7 @@ import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
 from PlaceRec.utils import get_logger
+import os
 
 from PlaceRec.Methods.base_method import BaseTechnique
 
@@ -32,10 +33,11 @@ class Eval:
             self.ratk(5)
             self.ratk(10)
             self.ratk(20)
-        self.cpu_latency()
-        self.gpu_latency()
+        self.extraction_cpu_latency()
+        self.extraction_gpu_latency()
+        self.matching_latency()
+        # self.count_flops()
         self.count_params()
-        self.count_flops()
         return self.results
 
     def compute_all_matches(self, k=20):
@@ -61,7 +63,25 @@ class Eval:
         self.results[f"r@{k}_{self.dataset.name}"] = ratk
         return ratk
 
-    def cpu_latency(self, num_runs: int = 100) -> float:
+    def matching_latency(self, num_runs: int = 20) -> float:
+        self.method.load_descriptors(self.dataset.name)
+        single_query_desc = {}
+        for key, value in self.method.query_desc.items():
+            single_query_desc[key] = value[0][None, :]
+
+        st = time.time()
+        for _ in range(num_runs):
+            self.matches, self.distances = self.method.place_recognise(
+                single_query_desc, k=20
+            )
+        et = time.time()
+
+        self.results[f"{self.dataset.name}_matching_latency_ms"] = (
+            (et - st) / num_runs * 1000
+        )
+        return (et - st) / num_runs * 1000
+
+    def extraction_cpu_latency(self, num_runs: int = 100) -> float:
         model = self.method.model
         model.eval()
         model = model.cpu()
@@ -78,10 +98,10 @@ class Eval:
         average_time = (
             (end_time - start_time) / num_runs * 1000
         )  # Convert to milliseconds
-        self.results["cpu_latency_ms"] = average_time
+        self.results["extraction_cpu_latency_ms"] = average_time
         return average_time
 
-    def gpu_latency(self, num_runs: int = 100) -> float:
+    def extraction_gpu_latency(self, num_runs: int = 100) -> float:
         if not torch.cuda.is_available():
             warnings.warn("Cuda is not available: Cannot evaluate gpu latency")
             return None
@@ -103,7 +123,7 @@ class Eval:
         end_event.record()
         torch.cuda.synchronize()
         average_time = start_event.elapsed_time(end_event) / num_runs
-        self.results["gpu_latency_ms"] = average_time
+        self.results["extraction_gpu_latency_ms"] = average_time
         return average_time
 
     def count_params(self) -> int:
@@ -117,15 +137,21 @@ class Eval:
         return int(total_params)
 
     def count_flops(self) -> int:
-        self.method.model.eval()
-        img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
-        img = self.method.preprocess(img)
-        flops, params = get_model_complexity_info(
-            self.method.model,
-            tuple(img.shape),
-            as_strings=False,
-            print_per_layer_stat=False,
-            verbose=False,
-        )
-        self.results["flops"] = flops
-        return flops
+        try:
+            self.method.model.eval()
+            img = Image.fromarray(
+                np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8)
+            )
+            img = self.method.preprocess(img)
+            flops, params = get_model_complexity_info(
+                self.method.model,
+                tuple(img.shape),
+                as_strings=False,
+                print_per_layer_stat=False,
+                verbose=False,
+            )
+            self.results["flops"] = flops
+            return flops
+        except:
+            logger.info(f"Could not compute flops for {self.method.name}")
+            return None
