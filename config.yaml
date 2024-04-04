@@ -37,6 +37,7 @@ train:
   image_resolution: [320, 320]
   batch_size: 120
   device: "cuda"
+  optimizer: "adam"
   
 
 

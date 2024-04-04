@@ -14,7 +14,7 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from ..utils import get_config
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
@@ -183,7 +183,7 @@ else:
     )
 
 
-class HybridNet(BaseModelWrapper):
+class HybridNet(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "alexnet_hybridnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")

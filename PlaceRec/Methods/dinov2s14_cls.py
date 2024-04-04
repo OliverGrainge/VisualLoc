@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torchvision import transforms
 
 import PlaceRec.utils as utils
-from PlaceRec.Methods import BaseModelWrapper
+from PlaceRec.Methods import SingleStageBaseModelWrapper
 
 preprocess = transforms.Compose(
     [
@@ -42,7 +42,7 @@ class VitWrapper(nn.Module):
         return x
 
 
-class DINOv2S14_CLS(BaseModelWrapper):
+class DINOv2S14_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")

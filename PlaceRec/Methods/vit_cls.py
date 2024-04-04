@@ -17,7 +17,7 @@ from transformers import ViTModel
 
 from PlaceRec.utils import get_config
 
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 config = get_config()
 
@@ -50,7 +50,7 @@ preprocess = transforms.Compose(
 )
 
 
-class ViT_CLS(BaseModelWrapper):
+class ViT_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "vit_cls"
         weight_path = join(config["weights_directory"], name + ".ckpt")

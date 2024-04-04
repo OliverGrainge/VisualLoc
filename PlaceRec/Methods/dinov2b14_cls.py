@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torchvision import transforms
 
 import PlaceRec.utils as utils
-from PlaceRec.Methods import BaseModelWrapper
+from PlaceRec.Methods import SingleStageBaseModelWrapper
 from PlaceRec.utils import get_config
 
 config = get_config()
@@ -54,7 +54,7 @@ def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
     return new_dict
 
 
-class DINOv2B14_CLS(BaseModelWrapper):
+class DINOv2B14_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = VitWrapper(torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14"))
         name = "dinov2b14_cls"

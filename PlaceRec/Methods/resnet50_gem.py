@@ -10,7 +10,7 @@ from torchvision.models import ResNet50_Weights
 
 from PlaceRec.utils import L2Norm, get_config
 
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 filepath = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
@@ -162,7 +162,7 @@ preprocess = transforms.Compose(
 )
 
 
-class ResNet50_GeM(BaseModelWrapper):
+class ResNet50_GeM(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = Resnet50gemModel()
         name = "resnet50_gem"

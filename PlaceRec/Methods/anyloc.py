@@ -25,7 +25,7 @@ from tqdm.auto import tqdm
 
 from PlaceRec import utils
 
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 od_down_links = {
     # VLAD cache (vocabularies)
@@ -601,7 +601,7 @@ class AnyLoc(nn.Module):
         return desc
 
 
-class AnyLoc(BaseModelWrapper):
+class AnyLoc(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = AnyLoc()
         if not pretrained:

@@ -107,6 +107,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import EigenPlaces
 
         method = EigenPlaces(pretrained=pretrained)
+    elif name == "selavpr":
+        from PlaceRec.Methods import SelaVPR
+
+        method = SelaVPR(pretrained=pretrained)
     elif name == "cct_cls":
         from PlaceRec.Methods import CCT_CLS
 

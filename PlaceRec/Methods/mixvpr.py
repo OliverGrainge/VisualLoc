@@ -20,7 +20,7 @@ from torchvision.models import ResNet50_Weights
 from tqdm import tqdm
 
 from ..utils import get_config
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
@@ -360,7 +360,7 @@ preprocess = transforms.Compose(
 )
 
 
-class MixVPR(BaseModelWrapper):
+class MixVPR(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "mixvpr"
         weight_path = join(config["weights_directory"], name + ".ckpt")

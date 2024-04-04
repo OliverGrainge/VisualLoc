@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 
-from PlaceRec.Methods import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 from PlaceRec.utils import L2Norm, get_config
 
 filepath = os.path.dirname(os.path.abspath(__file__))
@@ -1602,7 +1602,7 @@ class cct384_netvlad(nn.Module):
         return x
 
 
-class CCT_NetVLAD(BaseModelWrapper):
+class CCT_NetVLAD(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = cct384_netvlad()
         name = "cct_netvlad"

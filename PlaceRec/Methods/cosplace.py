@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from PlaceRec import utils
 
-from .base_method import BaseModelWrapper
+from .base_method import SingleStageBaseModelWrapper
 
 cosplace_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -39,7 +39,7 @@ preprocess = transforms.Compose(
 )
 
 
-class CosPlace(BaseModelWrapper):
+class CosPlace(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         if not pretrained:
             model.apply(utils.init_weights)

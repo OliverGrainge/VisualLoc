@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
 from tqdm import tqdm
 
-from PlaceRec.Methods import BaseModelWrapper
+from PlaceRec.Methods import SingleStageBaseModelWrapper
 from PlaceRec.utils import L2Norm, get_config
 
 filepath = os.path.dirname(os.path.abspath(__file__))
@@ -1608,7 +1608,7 @@ def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
     return new_dict
 
 
-class CCT_CLS(BaseModelWrapper):
+class CCT_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         model = cct384_cls()
         name = "cct_cls"

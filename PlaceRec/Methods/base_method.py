@@ -377,7 +377,7 @@ class BaseFunctionality(BaseTechnique):
         self.model.to(device)
 
 
-class BaseModelWrapper(BaseFunctionality):
+class SingleStageBaseModelWrapper(BaseFunctionality):
     """
     A wrapper for models that provides methods to compute query and map descriptors.
 
@@ -419,7 +419,8 @@ class BaseModelWrapper(BaseFunctionality):
         self.set_device("cpu")
         with torch.no_grad():
             features = self.model(img[None, :].to("cpu")).detach().cpu()
-        return features.size(1)
+        shapes = {"global_feature_shape": tuple(features[0].shape)}
+        return shapes
 
     def compute_query_desc(
         self,
@@ -438,7 +439,8 @@ class BaseModelWrapper(BaseFunctionality):
         """
 
         all_desc = np.empty(
-            (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
+            (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
+            dtype=np.float32,
         )
         with torch.no_grad():
             for indicies, batch in tqdm(
@@ -469,7 +471,8 @@ class BaseModelWrapper(BaseFunctionality):
         """
 
         all_desc = np.empty(
-            (dataloader.dataset.__len__(), self.features_dim), dtype=np.float32
+            (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
+            dtype=np.float32,
         )
         with torch.no_grad():
             for indicies, batch in tqdm(
@@ -480,5 +483,140 @@ class BaseModelWrapper(BaseFunctionality):
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         map_result = {"global_descriptors": all_desc}
+        self.set_map(map_result)
+        return map_result
+
+
+class TwoStageBaseModelWrapper(BaseFunctionality):
+    """
+    A wrapper for models that provides methods to compute query and map descriptors.
+
+    This class inherits from `BaseFunctionality` and provides an interface
+    to set up a model, preprocess its inputs, and compute descriptors for given data.
+
+    Attributes:
+        name (str): A name or identifier for the model.
+        model (torch.nn.Module): The PyTorch model instance.
+        preprocess (callable): A function or callable to preprocess input data.
+        device (str): The device on which the model runs (inherited from `BaseFunctionality`).
+        features_dim (int): the dimension of the descriptor
+    """
+
+    def __init__(self, model, preprocess, name):
+        """
+        Initializes a BaseModelWrapper instance.
+
+        Args:
+            model (torch.nn.Module): The PyTorch model to be wrapped.
+            preprocess (callable): A function or callable to preprocess the input data.
+            name (str): A name or identifier for the model.
+        """
+
+        super().__init__()
+        self.name = name
+        self.model = model
+        self.preprocess = preprocess
+        if isinstance(self.model, nn.Module):
+            self.model.eval()
+        self.features_dim = self.features_size()
+        self.set_device(self.device)
+        self.model.eval()
+
+    def features_size(self):
+        img = np.random.rand(224, 224, 3) * 255
+        img = Image.fromarray(img.astype(np.uint8))
+        img = self.preprocess(img)
+        self.set_device("cpu")
+        with torch.no_grad():
+            local_features, global_features = self.model(img[None, :].to("cpu"))
+            global_features = global_features.detach().cpu()
+            local_features = local_features.detach().cpu()
+        shapes = {
+            "global_feature_shape": tuple(global_features[0].shape),
+            "local_feature_shape": tuple(local_features[0].shape),
+        }
+        return shapes
+
+    def compute_query_desc(
+        self,
+        dataloader: torch.utils.data.dataloader.DataLoader = None,
+        pbar: bool = True,
+    ) -> dict:
+        """
+        Compute the query descriptors for the given data.
+
+        Args:
+            dataloader (torch.utils.data.dataloader.DataLoader, optional): DataLoader providing the data.
+            pbar (bool, optional): If True, display a progress bar. Defaults to True.
+
+        Returns:
+            dict: A dictionary containing the computed query descriptors.
+        """
+
+        global_desc = np.empty(
+            (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
+            dtype=np.float32,
+        )
+        local_desc = np.empty(
+            (dataloader.dataset.__len__(), *self.features_dim["local_feature_shape"]),
+            dtype=np.float32,
+        )
+
+        with torch.no_grad():
+            for indicies, batch in tqdm(
+                dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar
+            ):
+                local_features, global_features = self.model(batch.to(self.device))
+                global_features = global_features.detach().cpu().numpy()
+                local_features = local_features.detach().cpu().numpy()
+                global_desc[indicies.numpy(), :] = global_features
+                local_desc[indicies.numpy(), :] = local_features
+
+        query_results = {
+            "global_descriptors": global_desc,
+            "local_features": local_features,
+        }
+        self.set_query(query_results)
+        return query_results
+
+    def compute_map_desc(
+        self,
+        dataloader: torch.utils.data.dataloader.DataLoader = None,
+        pbar: bool = True,
+    ) -> dict:
+        """
+        Compute the map descriptors for the given data.
+
+        Args:
+            dataloader (torch.utils.data.dataloader.DataLoader, optional): DataLoader providing the data.
+            pbar (bool, optional): If True, display a progress bar. Defaults to True.
+
+        Returns:
+            dict: A dictionary containing the computed map descriptors.
+        """
+
+        global_desc = np.empty(
+            (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
+            dtype=np.float32,
+        )
+        local_desc = np.empty(
+            (dataloader.dataset.__len__(), *self.features_dim["local_feature_shape"]),
+            dtype=np.float32,
+        )
+        with torch.no_grad():
+            for indicies, batch in tqdm(
+                dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar
+            ):
+                local_features, global_features = self.model(batch.to(self.device))
+                global_features = global_features.detach().cpu().numpy()
+                local_features = local_features.detach().cpu().numpy()
+
+                global_desc[indicies.numpy(), :] = global_features
+                local_desc[indicies.numpy(), :] = local_features
+
+        map_result = {
+            "global_descriptors": global_desc,
+            "local_features": local_features,
+        }
         self.set_map(map_result)
         return map_result

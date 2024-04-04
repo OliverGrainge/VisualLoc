@@ -5,7 +5,7 @@ import torch
 from torchvision import transforms
 
 import PlaceRec.utils as utils
-from PlaceRec.Methods import BaseModelWrapper
+from PlaceRec.Methods import SingleStageBaseModelWrapper
 
 preprocess = transforms.Compose(
     [
@@ -19,7 +19,7 @@ preprocess = transforms.Compose(
 )
 
 
-class SFRS(BaseModelWrapper):
+class SFRS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
