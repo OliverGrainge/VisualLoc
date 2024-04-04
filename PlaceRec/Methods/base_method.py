@@ -574,7 +574,7 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
 
         query_results = {
             "global_descriptors": global_desc,
-            "local_features": local_features,
+            "local_descriptors": local_desc,
         }
         self.set_query(query_results)
         return query_results
@@ -616,7 +616,27 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
 
         map_result = {
             "global_descriptors": global_desc,
-            "local_features": local_features,
+            "local_descriptors": local_desc,
         }
         self.set_map(map_result)
         return map_result
+
+    def compute_feature(self, img: Image) -> np.ndarray:
+        """
+        Compute the descriptor of a single PIL image
+
+        Args:
+            img (PIL.Image): The PIL image on which the descriptors will be computed
+        Returns:
+            desc (np.ndarray): The np.ndarray descriptor. Dimensions will be [1, descriptor_dimension]
+        """
+
+        if not isinstance(img, Image):
+            print("img must be of type PIL.Image")
+
+        img = self.preprocess(img)
+        with torch.no_grad():
+            local_desc, global_desc = (
+                self.model(img[None, :].to(self.device)).detach().cpu().numpy()
+            )
+        return local_desc, global_desc
