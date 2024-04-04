@@ -233,7 +233,6 @@ def dense_trainer(args):
     model = VPRModel(
         method=method,
         lr=0.0002,
-        optimizer="adam",
         weight_decay=0,
         momentum=0.9,
         warmup_steps=600,
@@ -243,6 +242,7 @@ def dense_trainer(args):
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
+        optimizer=args.optimizer,
     )
 
     checkpoint_cb = ModelCheckpoint(

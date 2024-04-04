@@ -127,5 +127,6 @@ def train_arguments():
 
     parser.add_argument("--batch_size", type=int, default=config["train"]["batch_size"])
 
+    parser.add_argument("--optimizer", type=str, default=config["train"]["optimizer"])
     args = parser.parse_args()
     return args

@@ -97,7 +97,10 @@ class VPRModel(pl.LightningModule):
             ),
             "interval": "step",
         }
-        ASP.prune_trained_model(self.model, optimizer)
+
+        ASP.init_model_for_pruning(self.model, verbosity=2, allow_permutation=False)
+        ASP.init_optimizer_for_pruning(optimizer)
+        ASP.compute_sparse_masks()
         return [optimizer], [warmup_scheduler, scheduler]
 
     def loss_function(self, descriptors, labels):
@@ -239,11 +242,11 @@ def sparse_semistructured_trainer(args):
     model = VPRModel(
         method=method,
         lr=0.0002,
-        optimizer="adam",
+        optimizer=args.optimizer,
         weight_decay=0,
         momentum=0.9,
         warmup_steps=600,
-        milestones=[5, 10, 15, 25],
+        milestones=[3, 7, 10, 15],
         lr_mult=0.3,
         loss_name="MultiSimilarityLoss",
         miner_name="MultiSimilarityMiner",
@@ -263,13 +266,14 @@ def sparse_semistructured_trainer(args):
     )
 
     trainer = pl.Trainer(
+        enable_progress_bar=False,
         devices="auto",
         accelerator="auto",
         strategy="auto",
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=10,
+        max_epochs=20,
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
