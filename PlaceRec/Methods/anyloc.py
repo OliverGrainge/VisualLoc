@@ -613,9 +613,9 @@ class AnyLoc(SingleStageBaseModelWrapper):
             self.set_device("cuda")
         else:
             self.set_device("cpu")
-        self.device = "cpu"
 
     def set_device(self, device: str) -> None:
+        self.device = device
         if device == "mps":
-            device = "cpu"
+            self.device = "cpu"
         self.model.dino.dino_model = self.model.dino.dino_model.eval().to(device)
