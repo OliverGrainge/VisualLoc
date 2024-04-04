@@ -1,28 +1,34 @@
-import torch
 import logging
-from torch import nn
-from torch.nn.parameter import Parameter
-import torch.nn.functional as F
-from functools import partial
-from torchvision import transforms
-from .base_method import TwoStageBaseModelWrapper
-import numpy as np
-from torch.nn.init import trunc_normal_
-from tqdm import tqdm
-from typing import Sequence, Tuple, Union, Callable, Optional, List, Any, Dict
-from torch import Tensor
 import math
-from PlaceRec.utils import get_config, get_logger
-from PIL import Image
+from functools import partial
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+
 import faiss
+import numpy as np
+import torch
+import torch.nn.functional as F
+from PIL import Image
+from torch import Tensor, nn
+from torch.nn.init import trunc_normal_
+from torch.nn.parameter import Parameter
+from torchvision import transforms
+from tqdm import tqdm
+
+from PlaceRec.utils import get_config, get_logger
+
+from .base_method import TwoStageBaseModelWrapper
 
 logger = get_logger()
 config = get_config()
 
 try:
-    from xformers.ops import fmha
-    from xformers.ops import scaled_index_add, index_select_cat
-    from xformers.ops import memory_efficient_attention, unbind, fmha
+    from xformers.ops import (
+        fmha,
+        index_select_cat,
+        memory_efficient_attention,
+        scaled_index_add,
+        unbind,
+    )
 
     XFORMERS_AVAILABLE = True
 

@@ -1,13 +1,13 @@
 import argparse
+import os
+import pickle
+from os.path import join
 
 import pandas as pd
 import yaml
-from PlaceRec.Evaluate import Eval
-from parsers import eval_arguments
-import pickle
-from os.path import join
-import os
 
+from parsers import eval_arguments
+from PlaceRec.Evaluate import Eval
 from PlaceRec.utils import get_dataset, get_method
 
 args = eval_arguments()

@@ -576,7 +576,7 @@ preprocess = transforms.Compose(
 )
 
 
-class AnyLoc(nn.Module):
+class AnyLocModel(nn.Module):
     def __init__(self):
         super().__init__()
         download_cache()
@@ -603,11 +603,19 @@ class AnyLoc(nn.Module):
 
 class AnyLoc(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        model = AnyLoc()
+        model = AnyLocModel()
         if not pretrained:
             model.apply(utils.init_weights)
 
         super().__init__(model=model, preprocess=preprocess, name="anyloc")
 
+        if torch.cuda.is_available():
+            self.set_device("cuda")
+        else:
+            self.set_device("cpu")
+        self.device = "cpu"
+
     def set_device(self, device: str) -> None:
+        if device == "mps":
+            device = "cpu"
         self.model.dino.dino_model = self.model.dino.dino_model.eval().to(device)

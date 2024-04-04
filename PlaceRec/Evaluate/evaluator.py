@@ -1,3 +1,4 @@
+import os
 import time
 import warnings
 from typing import Dict, List, Union
@@ -7,10 +8,9 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
-from PlaceRec.utils import get_logger
-import os
 
 from PlaceRec.Methods.base_method import BaseTechnique
+from PlaceRec.utils import get_logger
 
 logger = get_logger()
 
@@ -38,6 +38,7 @@ class Eval:
         self.matching_latency()
         # self.count_flops()
         self.count_params()
+        print(self.results)
         return self.results
 
     def compute_all_matches(self, k=20):

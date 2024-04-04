@@ -107,6 +107,10 @@ def get_method(name: str = None, pretrained: bool = True):
         from PlaceRec.Methods import EigenPlaces
 
         method = EigenPlaces(pretrained=pretrained)
+    elif name == "dino_salad":
+        from PlaceRec.Methods import DinoSalad
+
+        method = DinoSalad(pretrained=pretrained)
     elif name == "selavpr":
         from PlaceRec.Methods import SelaVPR
 
@@ -136,9 +140,9 @@ def get_method(name: str = None, pretrained: bool = True):
 
         method = ViT_CLS(pretrained=pretrained)
     elif name == "anyloc":
-        from PlaceRec.Methods import DINOv2_AnyLoc
+        from PlaceRec.Methods import AnyLoc
 
-        method = DINOv2_AnyLoc(pretrained=pretrained)
+        method = AnyLoc(pretrained=pretrained)
     elif name == "resnet18_netvlad":
         from PlaceRec.Methods import ResNet18_NetVLAD
 
