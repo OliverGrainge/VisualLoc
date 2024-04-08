@@ -46,7 +46,14 @@ class DINOv2S14_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        model = VitWrapper(torch.hub.load("facebookresearch/dinov2", "dinov2_vits14"))
+        self.model = VitWrapper(
+            torch.hub.load("facebookresearch/dinov2", "dinov2_vits14")
+        )
         sys.stdout = original_stdout
 
-        super().__init__(model=model, preprocess=preprocess, name="dinov2s14_cls")
+        super().__init__(
+            model=self.model,
+            preprocess=preprocess,
+            name="dinov2s14_cls",
+            weight_path=None,
+        )

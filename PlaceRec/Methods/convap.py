@@ -289,40 +289,28 @@ class ConvAP(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "convap"
         weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="resnet50",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 2048,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-            model = VPRModel(
-                backbone_arch="resnet50",
-                layers_to_crop=[],
-                agg_arch="ConvAP",
-                agg_config={
-                    "in_channels": 2048,
-                    "out_channels": 1024,
-                    "s1": 2,
-                    "s2": 2,
-                },
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
             )
-            if not torch.cuda.is_available():
-                state_dict = torch.load(
-                    weight_path,
-                    map_location=torch.device("cpu"),
-                )
-            else:
-                state_dict = torch.load(weight_path)
-
-            model.load_state_dict(state_dict)
         else:
-            model = VPRModel(
-                backbone_arch="resnet50",
-                layers_to_crop=[],
-                agg_arch="ConvAP",
-                agg_config={
-                    "in_channels": 2048,
-                    "out_channels": 1024,
-                    "s1": 2,
-                    "s2": 2,
-                },
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
             )
-
-        super().__init__(model=model, preprocess=preprocess, name=name)

@@ -333,20 +333,6 @@ class VPRModel(pl.LightningModule):
 
 
 # Note that images must be resized to 320x320
-model = VPRModel(
-    backbone_arch="resnet50",
-    layers_to_crop=[4],
-    agg_arch="mixvpr",
-    agg_config={
-        "in_channels": 1024,
-        "in_h": 20,
-        "in_w": 20,
-        "out_channels": 256,
-        "mix_depth": 4,
-        "mlp_ratio": 1,
-        "out_rows": 2,
-    },
-)
 
 
 preprocess = transforms.Compose(
@@ -364,13 +350,33 @@ class MixVPR(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "mixvpr"
         weight_path = join(config["weights_directory"], name + ".ckpt")
+
+        self.model = VPRModel(
+            backbone_arch="resnet50",
+            layers_to_crop=[4],
+            agg_arch="mixvpr",
+            agg_config={
+                "in_channels": 1024,
+                "in_h": 20,
+                "in_w": 20,
+                "out_channels": 256,
+                "mix_depth": 4,
+                "mlp_ratio": 1,
+                "out_rows": 2,
+            },
+        )
+
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-
-            if torch.cuda.is_available == "cuda":
-                state_dict = torch.load(weight_path)
-            else:
-                state_dict = torch.load(weight_path, map_location=torch.device("cpu"))
-            model.load_state_dict(state_dict)
-        super().__init__(model=model, preprocess=preprocess, name=name)
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )

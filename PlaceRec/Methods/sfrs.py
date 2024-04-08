@@ -23,12 +23,12 @@ class SFRS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        model = torch.hub.load(
+        self.model = torch.hub.load(
             "yxgeee/OpenIBL", "vgg16_netvlad", pretrained=True
         ).eval()
         sys.stdout = original_stdout
 
         if not pretrained:
-            model.apply(utils.init_weights)
+            self.model.apply(utils.init_weights)
 
-        super().__init__(model=model, preprocess=preprocess, name="sfrs")
+        super().__init__(model=self.model, preprocess=preprocess, name="sfrs")

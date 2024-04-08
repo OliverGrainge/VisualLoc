@@ -20,6 +20,8 @@ preprocess = transforms.Compose(
 
 class DinoSalad(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        model = torch.hub.load("serizba/salad", "dinov2_salad")
+        self.model = torch.hub.load("serizba/salad", "dinov2_salad")
 
-        super().__init__(model=model, preprocess=preprocess, name="dinosalad")
+        super().__init__(
+            model=self.model, preprocess=preprocess, name="dinosalad", weight_path=None
+        )

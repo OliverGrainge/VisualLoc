@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -1167,13 +1168,22 @@ preprocess = transforms.Compose(
 class SelaVPR(TwoStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         weight_path = config["weights_directory"] + "/selavpr.ckpt"
-        model = GeoLocalizationNet()
+        self.model = GeoLocalizationNet()
+        name = "selavpr"
         if pretrained:
-            state_dict = torch.load(weight_path, map_location="cpu")["model_state_dict"]
-            state_dict = rename_state_dict(state_dict, "module.", "")
-            model.load_state_dict(state_dict)
-
-        super().__init__(model=model, preprocess=preprocess, name="selavpr")
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
 
     def place_recognise(
         self,

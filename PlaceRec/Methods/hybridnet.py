@@ -151,8 +151,6 @@ class ChannelSwap:
 
 ################################ HybridNet #########################################################
 
-model = HybridNetModel()
-
 
 try:
     mean_image = torch.Tensor(
@@ -187,17 +185,21 @@ class HybridNet(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "alexnet_hybridnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = HybridNetModel()
         if pretrained:
-            if not os.path.exists(
-                join(config["weights_directory"], "HybridNet.caffemodel.pt")
-            ):
-                raise Exception(
-                    f'Could not find weights at {join(config["weights_directory"], "HybridNet.caffemodel.pt")}'
-                )
-            model.load_state_dict(
-                torch.load(join(config["weights_directory"], "HybridNet.caffemodel.pt"))
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
             )
-        super().__init__(model=model, preprocess=preprocess, name="hybridnet")
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
         # hybridnet layers not implemented on metal
         # some layers not implemented on metal
         self.set_device(self.device)

@@ -55,17 +55,21 @@ class ViT_CLS(SingleStageBaseModelWrapper):
         name = "vit_cls"
         weight_path = join(config["weights_directory"], name + ".ckpt")
 
-        model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
-        model.encoder.layer = model.encoder.layer[:10]
-        model = VitWrapper(model)
+        self.model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
+        self.model.encoder.layer = self.model.encoder.layer[:10]
+        self.model = VitWrapper(self.model)
 
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-            if torch.cuda.is_available() == "cuda":
-                sd = torch.load(weight_path, map_location="cuda")["state_dict"]
-            else:
-                sd = torch.load(weight_path, map_location="cpu")["state_dict"]
-            sd = rename_state_dict(sd, "model.vit_model", "vit_model")
-            model.load_state_dict(sd)
-        super().__init__(model=model, preprocess=preprocess, name=name)
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )

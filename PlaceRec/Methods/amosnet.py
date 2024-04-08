@@ -142,7 +142,7 @@ scale_transform = transforms.Lambda(lambda x: x * 255.0)
 
 
 ######################################### AMOSNET #######################################################
-model = AmosNetModel()
+
 
 try:
     mean_image = torch.Tensor(
@@ -175,20 +175,25 @@ else:
 
 class AmosNet(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = False):
+        self.model = AmosNetModel()
         name = "amosnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")
 
         if pretrained:
-            if os.path.exists(weight_path):
-                model.load_state_dict(torch.load(weight_path))
-            else:
+            if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-
-        self.device = "cpu"
-        model.to("cpu")
-
-        super().__init__(model=model, preprocess=preprocess, name=name)
-        # some layers not implemented on metal
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+        # some layers not implemented on mps backend
         self.set_device(self.device)
 
     def set_device(self, device: str) -> None:

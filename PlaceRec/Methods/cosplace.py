@@ -19,17 +19,6 @@ from .base_method import SingleStageBaseModelWrapper
 cosplace_directory = os.path.dirname(os.path.abspath(__file__))
 
 
-original_stdout = sys.stdout
-sys.stdout = open(os.devnull, "w")
-model = torch.hub.load(
-    "gmberton/cosplace",
-    "get_trained_model",
-    backbone="ResNet50",
-    fc_output_dim=2048,
-    verbose=False,
-)
-sys.stdout = original_stdout
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -41,6 +30,18 @@ preprocess = transforms.Compose(
 
 class CosPlace(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
+        original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
+        model = torch.hub.load(
+            "gmberton/cosplace",
+            "get_trained_model",
+            backbone="ResNet50",
+            fc_output_dim=2048,
+            verbose=False,
+        )
+        sys.stdout = original_stdout
         if not pretrained:
             model.apply(utils.init_weights)
-        super().__init__(model=model, preprocess=preprocess, name="cosplace")
+        super().__init__(
+            model=model, preprocess=preprocess, name="cosplace", weight_path=None
+        )

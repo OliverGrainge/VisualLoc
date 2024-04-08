@@ -3,6 +3,7 @@ import os
 import random
 import sys
 from dataclasses import dataclass
+from os.path import join
 from typing import List, Literal, Union
 
 import einops as ein
@@ -22,6 +23,10 @@ from torch.nn import functional as F
 from torchvision import transforms
 from torchvision.transforms import functional as T
 from tqdm.auto import tqdm
+
+from PlaceRec.utils import get_config
+
+config = get_config()
 
 from PlaceRec import utils
 
@@ -603,12 +608,25 @@ class AnyLocModel(nn.Module):
 
 class AnyLoc(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        model = AnyLocModel()
-        if not pretrained:
-            model.apply(utils.init_weights)
+        self.model = AnyLocModel()
+        name = "anyloc"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
 
-        super().__init__(model=model, preprocess=preprocess, name="anyloc")
-
+        # mps backend does not work with anyloc
         if torch.cuda.is_available():
             self.set_device("cuda")
         else:

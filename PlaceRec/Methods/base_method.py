@@ -188,12 +188,27 @@ class BaseFunctionality(BaseTechnique):
         self.name = None
         self.model = None
 
-        if torch.cuda.is_available():
-            self.device = "cuda"
-        elif torch.backends.mps.is_available():
-            self.device = "mps"
-        else:
-            self.device = "cpu"
+    def load_weights(self, weights_path):
+        state_dict = torch.load(weights_path, map_location="cpu")
+        if "state_dict" in list(state_dict.keys()):
+            state_dict = state_dict["state_dict"]
+        elif "model_state_dict" in list(state_dict.keys()):
+            state_dict = state_dict["model_state_dict"]
+
+        def adapt_state_dict(model, state_dict):
+            model_keys = list(model.state_dict().keys())
+            sd_keys = list(state_dict.keys())
+            prefix = sd_keys[0].replace(model_keys[0], "")
+            if len(prefix) == 0:
+                return state_dict
+
+            new_sd = {}
+            for key, value in state_dict.items():
+                new_sd[key[len(prefix) :]] = value
+            return new_sd
+
+        state_dict = adapt_state_dict(self.model, state_dict)
+        self.model.load_state_dict(state_dict)
 
     def set_query(self, query_descriptors: dict) -> None:
         """
@@ -359,7 +374,7 @@ class BaseFunctionality(BaseTechnique):
             self.map_desc = pickle.load(f)
             self.set_map(self.map_desc)
 
-    def set_device(self, device: str) -> None:
+    def set_device(self, device: str = None) -> None:
         """
         Set the device for the model.
 
@@ -373,7 +388,15 @@ class BaseFunctionality(BaseTechnique):
         Returns:
             None
         """
-        self.device = device
+        if device == None:
+            if torch.cuda.is_available():
+                self.device = "cuda"
+            elif torch.backends.mps.is_available():
+                self.device = "mps"
+            else:
+                self.device = "cpu"
+        else:
+            self.device = device
         self.model.to(device)
 
 
@@ -392,7 +415,7 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
         features_dim (int): the dimension of the descriptor
     """
 
-    def __init__(self, model, preprocess, name):
+    def __init__(self, model, preprocess, name, weight_path=None):
         """
         Initializes a BaseModelWrapper instance.
 
@@ -409,7 +432,9 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
         if isinstance(self.model, nn.Module):
             self.model.eval()
         self.features_dim = self.features_size()
-        self.set_device(self.device)
+        if weight_path:
+            self.load_weights(weight_path)
+        self.set_device()
         self.model.eval()
 
     def features_size(self):
@@ -502,7 +527,7 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
         features_dim (int): the dimension of the descriptor
     """
 
-    def __init__(self, model, preprocess, name):
+    def __init__(self, model, preprocess, name, weight_path=None):
         """
         Initializes a BaseModelWrapper instance.
 
@@ -519,7 +544,10 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
         if isinstance(self.model, nn.Module):
             self.model.eval()
         self.features_dim = self.features_size()
-        self.set_device(self.device)
+
+        if weight_path:
+            self.load_weights(weight_path)
+        self.set_device()
         self.model.eval()
 
     def features_size(self):

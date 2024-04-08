@@ -56,14 +56,22 @@ def rename_state_dict(orig_dict, pattern1, pattern2) -> dict:
 
 class DINOv2B14_CLS(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        model = VitWrapper(torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14"))
+        self.model = VitWrapper(
+            torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14")
+        )
         name = "dinov2b14_cls"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-            sd = torch.load(weight_path)["state_dict"]
-            sd = rename_state_dict(sd, "model.vit_model", "vit_model")
-            model.load_state_dict(sd)
-
-        super().__init__(model=model, preprocess=preprocess, name="dinov2b14_cls")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )

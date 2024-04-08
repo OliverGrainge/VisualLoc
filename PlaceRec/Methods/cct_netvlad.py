@@ -1610,18 +1610,14 @@ class CCT_NetVLAD(SingleStageBaseModelWrapper):
         if pretrained:
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
-            if torch.cuda.is_available():
-                state_dict = torch.load(weight_path)["model_state_dict"]
-            else:
-                state_dict = torch.load(
-                    weight_path,
-                    map_location="cpu",
-                )["model_state_dict"]
-
-            if list(state_dict.keys())[0].startswith("module"):
-                state_dict = OrderedDict(
-                    {k.replace("module.", ""): v for (k, v) in state_dict.items()}
-                )
-            self.model.load_state_dict(state_dict)
-
-        super().__init__(model=self.model, preprocess=preprocess, name=name)
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )

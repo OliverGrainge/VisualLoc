@@ -20,7 +20,7 @@ class EigenPlaces(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         original_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        model = model = torch.hub.load(
+        self.model = torch.hub.load(
             "gmberton/eigenplaces",
             "get_trained_model",
             backbone="ResNet50",
@@ -31,4 +31,9 @@ class EigenPlaces(SingleStageBaseModelWrapper):
         # if not pretrained:
         #    model.apply(utils.init_weights)
 
-        super().__init__(model=model, preprocess=preprocess, name="eigenplaces")
+        super().__init__(
+            model=self.model,
+            preprocess=preprocess,
+            name="eigenplaces",
+            weight_path=None,
+        )
