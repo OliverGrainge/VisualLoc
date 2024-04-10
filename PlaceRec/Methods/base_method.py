@@ -12,6 +12,7 @@ from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import torch.nn.utils.prune as prune
 
 from PlaceRec.utils import get_config, get_logger
 
@@ -162,6 +163,28 @@ class BaseTechnique(ABC):
         pass
 
 
+def make_pruning_permanent_on_model(state_dict):
+    keys = list(state_dict.keys())
+    for key in keys:
+        if "_orig" in key:
+            param_name = key.replace("_orig", "")
+            mask_key = f"{param_name}_mask"
+            pruned_param = state_dict[key] * state_dict[mask_key]
+            state_dict[param_name] = pruned_param
+            del state_dict[key]
+            del state_dict[mask_key]
+    return state_dict
+
+
+def check_state_dict_for_pattern(state_dict, pattern):
+    for idx, key in enumerate(state_dict.keys()):
+        if pattern in key:
+            return True
+        if idx > 20:
+            break
+    return False
+
+
 class BaseFunctionality(BaseTechnique):
     """
     This class provides the basic functionality for place recognition tasks.
@@ -190,6 +213,10 @@ class BaseFunctionality(BaseTechnique):
 
     def load_weights(self, weights_path):
         state_dict = torch.load(weights_path, map_location="cpu")
+        if isinstance(state_dict, nn.Module):
+            self.model = state_dict
+            return
+
         if "state_dict" in list(state_dict.keys()):
             state_dict = state_dict["state_dict"]
         elif "model_state_dict" in list(state_dict.keys()):
@@ -198,15 +225,25 @@ class BaseFunctionality(BaseTechnique):
         def adapt_state_dict(model, state_dict):
             model_keys = list(model.state_dict().keys())
             sd_keys = list(state_dict.keys())
-            prefix = sd_keys[0].replace(model_keys[0], "")
+            print(sd_keys[0], model_keys[0])
+            k1 = sd_keys[0].split(".")
+            k2 = model_keys[0].split(".")
+            if k1[0] == k2[0] and k1[1] == k2[1]:
+                return state_dict
+            else:
+                prefix = sd_keys[0].split(".")[0] + "."
+
             if len(prefix) == 0:
                 return state_dict
 
             new_sd = {}
             for key, value in state_dict.items():
-                new_sd[key[len(prefix) :]] = value
+                if value.dtype != torch.bool:
+                    new_sd[key[len(prefix) :]] = value
             return new_sd
 
+        if check_state_dict_for_pattern(state_dict, "_mask"):
+            state_dict = make_pruning_permanent_on_model(state_dict)
         state_dict = adapt_state_dict(self.model, state_dict)
         self.model.load_state_dict(state_dict)
 
@@ -388,7 +425,7 @@ class BaseFunctionality(BaseTechnique):
         Returns:
             None
         """
-        if device == None:
+        if device is None:
             if torch.cuda.is_available():
                 self.device = "cuda"
             elif torch.backends.mps.is_available():
@@ -397,7 +434,8 @@ class BaseFunctionality(BaseTechnique):
                 self.device = "cpu"
         else:
             self.device = device
-        self.model.to(device)
+
+        self.model = self.model.to(self.device)  # Make sure to use self.device
 
 
 class SingleStageBaseModelWrapper(BaseFunctionality):
@@ -467,10 +505,13 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
             (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
             dtype=np.float32,
         )
+        self.set_device(self.device)
         with torch.no_grad():
             for indicies, batch in tqdm(
                 dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar
             ):
+                batch = batch.to(self.device)
+
                 features = self.model(batch.to(self.device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
@@ -494,7 +535,7 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
         Returns:
             dict: A dictionary containing the computed map descriptors.
         """
-
+        self.set_device(self.device)
         all_desc = np.empty(
             (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
             dtype=np.float32,
