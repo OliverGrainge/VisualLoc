@@ -16,6 +16,7 @@ from PlaceRec.Evaluate import Eval
 from PlaceRec.utils import get_method, get_dataset
 from torchprofile import profile_macs
 from collections import defaultdict
+from PlaceRec.Deploy import deploy_onnx_cpu
 
 
 CheckpointDirectory = "/Users/olivergrainge/Downloads/Checkpoints"
@@ -68,14 +69,17 @@ def measure_latency_cpu(method, num_runs=100):
     img = img.to("cpu")
     if isinstance(method.model, nn.Module):
         method.set_device("cpu")
+        method.model.eval()
 
     for _ in range(10):
-        method.model(img[None, :])
-    st = time.time()
+        method.inference(img[None, :])
+    times = []
     for _ in tqdm(range(num_runs), desc=f"CPU Latency {method.name}"):
-        method.model(img[None, :])
-    et = time.time()
-    return (et - st) / (num_runs) * 1000
+        st = time.perf_counter()
+        method.inference(img[None, :])
+        et = time.perf_counter()
+        times.append((et - st) * 1000)
+    return np.mean(times)
 
 
 def measure_latency_gpu(method, num_runs=100):
@@ -98,14 +102,14 @@ def measure_latency_gpu(method, num_runs=100):
         method.model.eval()
     with torch.no_grad():
         for _ in range(10):
-            _ = method.model(img[None, :])
+            _ = method.inference(img[None, :])
     start_event = torch.cuda.Event(enable_timing=True)
     end_event = torch.cuda.Event(enable_timing=True)
     elapsed_time = 0.0
     with torch.no_grad():
         for _ in tqdm(range(num_runs), desc=f"GPU Latency {method.name}"):
             start_event.record()
-            _ = method.model(img[None, :])
+            _ = method.inference(img[None, :])
             end_event.record()
             torch.cuda.synchronize()
             elapsed_time += start_event.elapsed_time(end_event)
@@ -114,11 +118,14 @@ def measure_latency_gpu(method, num_runs=100):
 
 
 def measure_flops(method):
+    dev = method.device
+    method.set_device("cpu")
     img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
     img = Image.fromarray(img)
     img = method.preprocess(img)
 
     flops = profile_macs(method.model, (img[None, :],))
+    method.set_device(dev)
     return flops
 
 
@@ -175,16 +182,6 @@ for st in list(sparsity_type.keys()):
                         rec = eval.ratk(1)
                     results[st][method_name][dataset]["recall@1"].append(rec)
 
-                    # Computing Latency
-                    lat_cpu = measure_latency_cpu(method)
-                    results[st][method_name][dataset]["latency_cpu"].append(lat_cpu)
-
-                    # Computing Latency
-                    lat_gpu = None
-                    if torch.cuda.is_available():
-                        lat_gpu = measure_latency_gpu(method)
-                    results[st][method_name][dataset]["latency_gpu"].append(lat_gpu)
-
                     # computing non zero parameters
                     param_count = None
                     if isinstance(method.model, nn.Module):
@@ -198,6 +195,18 @@ for st in list(sparsity_type.keys()):
                     flops = None
                     flops = measure_flops(method)
                     results[st][method_name][dataset]["flops"].append(flops)
+
+                    # Computing Latency
+                    method = deploy_onnx_cpu(method)
+                    lat_cpu = measure_latency_cpu(method)
+                    results[st][method_name][dataset]["latency_cpu"].append(lat_cpu)
+
+                    # Computing Latency
+                    lat_gpu = None
+                    if torch.cuda.is_available():
+                        lat_gpu = measure_latency_gpu(method)
+                    results[st][method_name][dataset]["latency_gpu"].append(lat_gpu)
+
                     print(
                         "sparsity:",
                         sparsity,

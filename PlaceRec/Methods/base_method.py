@@ -211,6 +211,10 @@ class BaseFunctionality(BaseTechnique):
         self.name = None
         self.model = None
 
+    @torch.no_grad()
+    def inference(self, x):
+        return self.model(x)
+
     def load_weights(self, weights_path):
         state_dict = torch.load(weights_path, map_location="cpu")
         if isinstance(state_dict, nn.Module):
