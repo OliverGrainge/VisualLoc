@@ -8,11 +8,11 @@ import faiss
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.utils.prune as prune
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import torch.nn.utils.prune as prune
 
 from PlaceRec.utils import get_config, get_logger
 

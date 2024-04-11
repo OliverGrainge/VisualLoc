@@ -1,7 +1,7 @@
-import tensorrt as trt
-import pycuda.driver as cuda
-import pycuda.autoinit  # Automatically initializes CUDA
 import numpy as np
+import pycuda.autoinit  # Automatically initializes CUDA
+import pycuda.driver as cuda
+import tensorrt as trt
 import torch
 
 

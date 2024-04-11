@@ -1,23 +1,22 @@
 # from PlaceRec import Methods, Datasets
 import os
-import sys
-
 import pickle
 import re
+import sys
+import time
+from collections import defaultdict
 from os.path import join
 
 import numpy as np
-from PIL import Image
 import torch
 import torch.nn as nn
-import time
-from tqdm import tqdm
-from PlaceRec.Evaluate import Eval
-from PlaceRec.utils import get_method, get_dataset
+from PIL import Image
 from torchprofile import profile_macs
-from collections import defaultdict
-from PlaceRec.Deploy import deploy_onnx_cpu
+from tqdm import tqdm
 
+from PlaceRec.Deploy import deploy_onnx_cpu
+from PlaceRec.Evaluate import Eval
+from PlaceRec.utils import get_dataset, get_method
 
 CheckpointDirectory = "/Users/olivergrainge/Downloads/Checkpoints"
 METHODS = ["cct_cls", "vit_cls", "mixvpr", "convap"]

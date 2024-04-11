@@ -1,7 +1,7 @@
-import torch
 import numpy as np
 import onnx
 import onnxruntime as ort
+import torch
 
 
 def deploy_onnx_cpu(method):

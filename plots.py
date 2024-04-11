@@ -5,15 +5,17 @@ import sys
 sys.path.append(os.path.abspath("../"))
 import pickle
 import re
+import time
 from os.path import join
-from PlaceRec.Evaluate import Eval
+
+import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
 import torch
 import torch.nn as nn
-import time
-import matplotlib.pyplot as plt
-from PlaceRec.utils import get_method, get_dataset
+from PIL import Image
+
+from PlaceRec.Evaluate import Eval
+from PlaceRec.utils import get_dataset, get_method
 
 sparsity_type = {
     "unstructured": "gsv_cities_sparse_unstructured/",
