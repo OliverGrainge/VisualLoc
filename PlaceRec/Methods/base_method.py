@@ -229,7 +229,6 @@ class BaseFunctionality(BaseTechnique):
         def adapt_state_dict(model, state_dict):
             model_keys = list(model.state_dict().keys())
             sd_keys = list(state_dict.keys())
-            print(sd_keys[0], model_keys[0])
             k1 = sd_keys[0].split(".")
             k2 = model_keys[0].split(".")
             if k1[0] == k2[0] and k1[1] == k2[1]:
@@ -479,6 +478,12 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
         self.set_device()
         self.model.eval()
 
+    def example_input(self):
+        img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
+        img = Image.fromarray(img)
+        img = self.preprocess(img)
+        return img[None, :]
+
     def features_size(self):
         img = np.random.rand(224, 224, 3) * 255
         img = Image.fromarray(img.astype(np.uint8))
@@ -594,6 +599,12 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
             self.load_weights(weight_path)
         self.set_device()
         self.model.eval()
+
+    def example_input(self):
+        img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
+        img = Image.fromarray(img)
+        img = self.preprocess(img)
+        return img[None, :]
 
     def features_size(self):
         img = np.random.rand(224, 224, 3) * 255

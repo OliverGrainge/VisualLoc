@@ -19,13 +19,13 @@ from PlaceRec.utils import get_dataset, get_method
 
 sparsity_type = {
     "unstructured": "gsv_cities_sparse_unstructured/",
-    "semistructured": "gsv_cities_sparse_semistructured/",
-    "structured": "gsv_cities_sparse_structured/",
+    # "semistructured": "gsv_cities_sparse_semistructured/",
+    # "structured": "gsv_cities_sparse_structured/",
 }
 
 with open("data/results.pkl", "rb") as file:
     results = pickle.load(file)
-print(list(results["unstructured"]["cct_cls"]["pitts30k"].keys()))
+
 
 # ====================== Sparsity vs Recall@1 ======================
 for st in sparsity_type.keys():

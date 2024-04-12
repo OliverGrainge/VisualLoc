@@ -38,8 +38,8 @@ def deploy_onnx_cpu(method):
 
 def deploy_sparse_cpu(method):
     from deepsparse import compile_model
-    from deepsparse.utils import generate_random_inputs
 
+    method.set_device("cpu")
     model = method.model
     model.eval()
     img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
@@ -54,8 +54,8 @@ def deploy_sparse_cpu(method):
         dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
     )
 
-    engine = compile_model(".model.onnx", batch_size=1)
-    inputs = generate_random_inputs(engine.input_metadata)
+    engine = compile_model(".model.onnx", batch_size=1, scheduler="single_stream")
+    inputs = [img.numpy()]
     engine.run(inputs)
 
     def inference(x):
