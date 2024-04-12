@@ -20,8 +20,8 @@ from PlaceRec.Evaluate import Eval
 from PlaceRec.utils import get_dataset, get_method
 
 CheckpointDirectory = "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/Checkpoints"
-METHODS = ["vit_cls", "cct_cls", "mixvpr", "convap"]
-DATASETS = ["pitts30k", "spedtest", "gardenspointwalking", "sfu"]
+METHODS = ["vit_cls"]
+DATASETS = ["pitts30k"]
 
 sparsity_type = {
     "unstructured": "gsv_cities_sparse_unstructured/",
@@ -68,7 +68,7 @@ def extract_recall(path_name):
 
 
 @torch.no_grad()
-def measure_latency_cpu(method, num_runs=1000):
+def measure_latency_cpu(method, num_runs=100):
     img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
     img = Image.fromarray(img)
     img = method.preprocess(img)
@@ -88,7 +88,7 @@ def measure_latency_cpu(method, num_runs=1000):
     return np.mean(times)
 
 
-def measure_latency_gpu(method, num_runs=2000):
+def measure_latency_gpu(method, num_runs=100):
     """
     Measure the latency of a model's forward pass on GPU, in milliseconds.
 
@@ -197,16 +197,16 @@ for st in list(sparsity_type.keys()):
                     results[st][method_name][dataset]["flops"].append(flops)
 
                     # Computing Latency
-                    # method = deploy_onnx_cpu(method)
-                    # lat_cpu = measure_latency_cpu(method)
-                    # results[st][method_name][dataset]["latency_cpu"].append(lat_cpu)
+                    method = deploy_onnx_cpu(method)
+                    lat_cpu = measure_latency_cpu(method)
+                    results[st][method_name][dataset]["latency_cpu"].append(lat_cpu)
 
                     ## Computing Latency
-                    # lat_gpu = None
-                    # method = deploy_tensorrt_sparse(method)
-                    # if torch.cuda.is_available():
-                    #    lat_gpu = measure_latency_gpu(method)
-                    # results[st][method_name][dataset]["latency_gpu"].append(lat_gpu)
+                    lat_gpu = None
+                    method = deploy_tensorrt_sparse(method)
+                    if torch.cuda.is_available():
+                        lat_gpu = measure_latency_gpu(method)
+                    results[st][method_name][dataset]["latency_gpu"].append(lat_gpu)
 
                     print(
                         "sparsity:",

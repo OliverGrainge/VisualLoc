@@ -13,11 +13,14 @@ def deploy_tensorrt_sparse(method):
     method.model.eval()
     dummy_input = method.example_input().cuda()
     method.model(dummy_input)
+    method.model = torch.jit.trace(method.model, dummy_input)
     compiled_model = torch_tensorrt.compile(
         method.model,
         inputs=[torch_tensorrt.Input(dummy_input.shape)],
         enabled_precisions={torch.float},  # Specify precision
-        enable_sparsity=True,
+        sparse_weights=True,
+        truncate_long_and_double=True,
+        # require_full_compilation=True
     )  # Enable sparsity
 
     compiled_model(dummy_input)
@@ -38,11 +41,14 @@ def deploy_tensorrt(method):
     method.model.eval()
     dummy_input = method.example_input().cuda()
     method.model(dummy_input)
+    method.model = torch.jit.trace(method.model, dummy_input)
     compiled_model = torch_tensorrt.compile(
         method.model,
         inputs=[torch_tensorrt.Input(dummy_input.shape)],
         enabled_precisions={torch.float},  # Specify precision
-        enable_sparsity=False,
+        sparse_weights=False,
+        truncate_long_and_double=True,
+        # require_full_compilation=True
     )  # Enable sparsity
 
     compiled_model(dummy_input)
