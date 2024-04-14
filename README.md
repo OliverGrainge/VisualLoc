@@ -20,17 +20,29 @@ A workflow for using a method for place recognition can be shown below.
 
 ```python
 # Import the method
-from VisualLoc.Methods import SampleMethod
+from PlaceReck.Methods import DinoSalad
+from PlaceRec.Datasets import Pitts30k
 
 # Create an instance of the method
-method = SampleMethod()
+method = DinoSalad(pretrained=True)
 
-# Load dataset
-dataset = 'path_to_dataset'
+# Create and instance of the dataset
+dataset = Pitts30k()
 
-# Perform place recognition
-results = method.recognize_place(dataset)
+# Compute the map descriptors that will be queried 
+map_dataloader = dataset.map_images_loader(
+        preprocess=method.preprocess,
+        num_workers=16,
+        pin_memory=True,
+        batch_size=32,
+    )
 
-# Display results
-print(results)
+method.compute_map_desc(map_dataloader)
+
+
+# Run Place Matching 
+img = Image.open('sample_query.jpg')
+idx, dist = method.place_recognise(img)
+# idx is index of the matching image in the map dataset 
+# dist is the match embedding distance from the query to the retrieved match
 ```
