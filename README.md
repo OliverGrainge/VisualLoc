@@ -100,5 +100,10 @@ lat = eval.extraction_gpu_latency()
 ```
 
 
+## Implementations 
+Currently the following Methods are implemented in our framework. This is constantly updating and expanding as newer better methods are being released into the literature.
+
+1. 
+
 
 
