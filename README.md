@@ -46,3 +46,30 @@ idx, dist = method.place_recognise(img)
 # idx is index of the matching image in the map dataset 
 # dist is the match embedding distance from the query to the retrieved match
 ```
+
+To evaluate a method on a dataset using standard metrics. You can 
+perform as follows. 
+
+```python
+from PlaceReck.Methods import DinoSalad
+from PlaceRec.Datasets import Pitts30k
+from PlaceRec.Evaluate import Eval
+
+dataset = Pitts30k()
+method = DinoSalad(pretrained=True)
+eval = Eval(method, dataset)
+
+# first for efficiency compute all the matches 
+eval.compute_all_matches()
+
+# to get the recall@k metric where in this example k = 1
+rec = eval.ratk(1)
+
+# We can also get the efficiency metrics crucial for deployment 
+lat = eval.matching_latency()
+lat = eval.extraction_cpu_latency()
+lat = eval.extraction_gpu_latency()
+
+params = eval.count_params()
+flops = eval.count_flops()
+```
