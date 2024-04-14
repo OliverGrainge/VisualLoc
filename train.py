@@ -40,7 +40,3 @@ elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
 
     train_eigenplaces(args)
-
-
-elif args.training_method == "cosplace":
-    raise NotImplementedError
