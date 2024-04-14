@@ -93,11 +93,3 @@ def get_logger():
         format="%(name)s - %(levelname)s - %(message)s",
     )
     return logging
-
-
-def download():
-    pass
-
-
-def upload():
-    pass

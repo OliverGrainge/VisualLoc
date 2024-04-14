@@ -16,9 +16,37 @@ logger = get_logger()
 
 
 class Eval:
+    """
+    A class to evaluate various performance metrics for image recognition methods
+    on a specified dataset.
+
+    Attributes:
+        method (BaseTechnique): The recognition technique to be evaluated.
+        dataset (Union[BaseTechnique, None]): The dataset on which the technique is evaluated.
+        results (dict): A dictionary to store evaluation results.
+        gt (list): Ground truth data for the dataset, loaded if dataset is not None.
+
+    Methods:
+        eval(): Orchestrates the evaluation by running all metrics.
+        compute_all_matches(): Computes matches for recognition up to a specified rank.
+        ratk(k): Computes and returns the recall at rank k.
+        matching_latency(): Measures and returns the average time taken to match queries.
+        extraction_cpu_latency(): Measures and returns the CPU latency for feature extraction.
+        extraction_gpu_latency(): Measures and returns the GPU latency for feature extraction.
+        count_params(): Returns the number of parameters in the model.
+        count_flops(): Estimates and returns the FLOPS of the model.
+    """
+
     def __init__(
         self, method: BaseTechnique, dataset: Union[BaseTechnique, None] = None
     ):
+        """
+        Initializes the Eval class with a recognition method and a dataset.
+
+        Args:
+            method (BaseTechnique): The recognition technique to be evaluated.
+            dataset (Union[BaseTechnique, None], optional): The dataset to be used for evaluation. Defaults to None.
+        """
         self.dataset = dataset
         self.method = method
         if self.dataset is not None:
@@ -27,6 +55,12 @@ class Eval:
         self.results = {}
 
     def eval(self):
+        """
+        Executes all evaluation metrics and stores results in the results dictionary.
+
+        Returns:
+            Dict: A dictionary containing all computed evaluation metrics.
+        """
         if self.dataset is not None:
             self.compute_all_matches()
             self.ratk(1)
@@ -41,6 +75,15 @@ class Eval:
         return self.results
 
     def compute_all_matches(self, k=20):
+        """
+        Attempts to load descriptors and compute place recognition matches up to rank k.
+
+        Args:
+            k (int, optional): The rank limit for match computation. Defaults to 20.
+
+        Returns:
+            None: On failure, returns None and does not modify results.
+        """
         try:
             self.method.load_descriptors(self.dataset.name)
             self.matches, self.distances = self.method.place_recognise(
@@ -50,6 +93,15 @@ class Eval:
             return None
 
     def ratk(self, k: int) -> Dict:
+        """
+        Computes the recall at rank k for the loaded matches and updates the results dictionary.
+
+        Args:
+            k (int): The rank at which recall is calculated.
+
+        Returns:
+            float: The computed recall at rank k, or None if descriptors are not properly loaded.
+        """
         self.method.load_descriptors(self.dataset.name)
         if self.method.query_desc == None:
             return None
@@ -64,6 +116,15 @@ class Eval:
         return ratk
 
     def matching_latency(self, num_runs: int = 20) -> float:
+        """
+        Measures and returns the average latency of the place recognition method over a specified number of runs.
+
+        Args:
+            num_runs (int): The number of times to run the recognition process to average the latency.
+
+        Returns:
+            float: The average matching latency in milliseconds.
+        """
         self.method.load_descriptors(self.dataset.name)
         single_query_desc = {}
         for key, value in self.method.query_desc.items():
@@ -82,6 +143,15 @@ class Eval:
         return (et - st) / num_runs * 1000
 
     def extraction_cpu_latency(self, num_runs: int = 100) -> float:
+        """
+        Measures and returns the CPU latency of the feature extraction process for the model over a number of runs.
+
+        Args:
+            num_runs (int): The number of times the feature extraction is run to calculate the average latency.
+
+        Returns:
+            float: The average CPU extraction latency in milliseconds.
+        """
         model = self.method.model
         model.eval()
         model = model.cpu()
@@ -102,6 +172,15 @@ class Eval:
         return average_time
 
     def extraction_gpu_latency(self, num_runs: int = 100) -> float:
+        """
+        Measures and returns the GPU latency of the feature extraction process for the model over a number of runs.
+
+        Args:
+            num_runs (int): The number of times the feature extraction is run on the GPU to calculate the average latency.
+
+        Returns:
+            float: The average GPU extraction latency in milliseconds, or None if CUDA is not available.
+        """
         if not torch.cuda.is_available():
             warnings.warn("Cuda is not available: Cannot evaluate gpu latency")
             return None
@@ -110,13 +189,11 @@ class Eval:
         model.eval()
         img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         input_data = self.method.preprocess(img)[None, :].cuda()
-        # Warm up
         for _ in range(10):
             _ = model(input_data)
-        torch.cuda.synchronize()  # Ensure CUDA operations are synchronized
+        torch.cuda.synchronize()
         start_event = torch.cuda.Event(enable_timing=True)
         end_event = torch.cuda.Event(enable_timing=True)
-        # Measure inference time using CUDA events
         start_event.record()
         for _ in range(num_runs):
             _ = model(input_data)
@@ -127,6 +204,12 @@ class Eval:
         return average_time
 
     def count_params(self) -> int:
+        """
+        Counts and returns the total number of trainable parameters in the model.
+
+        Returns:
+            int: The total number of parameters, or None if the model is not an instance of nn.Module.
+        """
         if not isinstance(self.method.model, nn.Module):
             warnings.warn(
                 "Evaluator cannot compute nparams: method.model is not of type nn.Module"
@@ -137,6 +220,12 @@ class Eval:
         return int(total_params)
 
     def count_flops(self) -> int:
+        """
+        Estimates and returns the floating-point operations per second (FLOPS) of the model during inference.
+
+        Returns:
+            int: The number of FLOPS, or logs an informational message if computation fails.
+        """
         try:
             self.method.model.eval()
             img = Image.fromarray(
