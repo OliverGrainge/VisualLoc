@@ -1,11 +1,11 @@
-from PlaceRec.Methods import MixVPR, CCT_CLS, ViT_CLS, ConvAP
-from PlaceRec.Deploy import deploy_tensorrt
-from PlaceRec.Deploy import deploy_tensorrt_sparse
-import torch
-from tqdm import tqdm
 import numpy as np
-from PIL import Image
+import torch
 import torch.nn as nn
+from PIL import Image
+from tqdm import tqdm
+
+from PlaceRec.Deploy import deploy_tensorrt, deploy_tensorrt_sparse
+from PlaceRec.Methods import CCT_CLS, ConvAP, MixVPR, ViT_CLS
 
 
 def measure_latency_gpu(method, num_runs=100):

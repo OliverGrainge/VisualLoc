@@ -13,25 +13,6 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
-class ImageDataset(Dataset):
-    def __init__(self, img_paths, preprocess=None):
-        self.img_paths = img_paths
-        self.preprocess = preprocess
-
-    def __len__(self):
-        return len(self.img_paths)
-
-    def __getitem__(self, idx):
-        if self.preprocess is not None:
-            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
-            img = Image.fromarray(img)
-            img = self.preprocess(img)
-            return img
-
-        img = np.array(Image.open(self.img_paths[idx]).resize((320, 320)))[:, :, :3]
-        return img
-
-
 class ImageIdxDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
         self.img_paths = img_paths
@@ -51,147 +32,18 @@ class ImageIdxDataset(Dataset):
         return idx, img
 
 
-# ==========================================================================================================
-
-
 def get_dataset(name: str = None):
-    name = name.lower()
-    if name == "gardenspointwalking":
-        from PlaceRec.Datasets import GardensPointWalking
-
-        dataset = GardensPointWalking()
-    elif name == "pitts250k":
-        from PlaceRec.Datasets import Pitts250k
-
-        dataset = Pitts250k()
-    elif name == "mapillarysls":
-        from PlaceRec.Datasets import MapillarySLS
-
-        dataset = MapillarySLS()
-    elif name == "pitts30k":
-        from PlaceRec.Datasets import Pitts30k
-
-        dataset = Pitts30k()
-    elif name == "sfu":
-        from PlaceRec.Datasets import SFU
-
-        dataset = SFU()
-    elif name == "essex3in1":
-        from PlaceRec.Datasets import ESSEX3IN1
-
-        dataset = ESSEX3IN1()
-    elif name == "nordlands":
-        from PlaceRec.Datasets import Nordlands
-
-        dataset = Nordlands()
-    elif name == "crossseasons":
-        from PlaceRec.Datasets import CrossSeason
-
-        dataset = CrossSeason()
-    elif name == "spedtest":
-        from PlaceRec.Datasets import SpedTest
-
-        dataset = SpedTest()
-    elif name == "inriaholidays":
-        from PlaceRec.Datasets import InriaHolidays
-
-        dataset = InriaHolidays()
-    else:
-        raise Exception("Dataset '" + name + "' not implemented")
-    return dataset
+    module_name = "PlaceRec.Datasets"
+    method_module = __import__(module_name, fromlist=[name])
+    method_class = getattr(method_module, name)
+    return method_class()
 
 
 def get_method(name: str = None, pretrained: bool = True):
-    name = name.lower()
-    if name == "eigenplaces":
-        from PlaceRec.Methods import EigenPlaces
-
-        method = EigenPlaces(pretrained=pretrained)
-    elif name == "dino_salad":
-        from PlaceRec.Methods import DinoSalad
-
-        method = DinoSalad(pretrained=pretrained)
-    elif name == "selavpr":
-        from PlaceRec.Methods import SelaVPR
-
-        method = SelaVPR(pretrained=pretrained)
-    elif name == "cct_cls":
-        from PlaceRec.Methods import CCT_CLS
-
-        method = CCT_CLS(pretrained=pretrained)
-    elif name == "sfrs":
-        from PlaceRec.Methods import SFRS
-
-        method = SFRS(pretrained=pretrained)
-    elif name == "cct_seqpool":
-        from PlaceRec.Methods import CCT_SEQPOOL
-
-        method = CCT_SEQPOOL(pretrained=pretrained)
-    elif name == "dinov2b14_cls":
-        from PlaceRec.Methods import DINOv2B14_CLS
-
-        method = DINOv2B14_CLS(pretrained=pretrained)
-    elif name == "dinov2s14_cls":
-        from PlaceRec.Methods import DINOv2S14_CLS
-
-        method = DINOv2S14_CLS(pretrained=pretrained)
-    elif name == "vit_cls":
-        from PlaceRec.Methods import ViT_CLS
-
-        method = ViT_CLS(pretrained=pretrained)
-    elif name == "anyloc":
-        from PlaceRec.Methods import AnyLoc
-
-        method = AnyLoc(pretrained=pretrained)
-    elif name == "resnet18_netvlad":
-        from PlaceRec.Methods import ResNet18_NetVLAD
-
-        method = ResNet18_NetVLAD(pretrained=pretrained)
-    elif name == "cosplace":
-        from PlaceRec.Methods import CosPlace
-
-        method = CosPlace(pretrained=pretrained)
-    elif name == "hybridnet":
-        from PlaceRec.Methods import HybridNet
-
-        method = HybridNet(pretrained=pretrained)
-    elif name == "amosnet":
-        from PlaceRec.Methods import AmosNet
-
-        method = AmosNet(pretrained=pretrained)
-    elif name == "convap":
-        from PlaceRec.Methods import ConvAP
-
-        method = ConvAP(pretrained=pretrained)
-    elif name == "mixvpr":
-        from PlaceRec.Methods import MixVPR
-
-        method = MixVPR(pretrained=pretrained)
-    elif name == "resnet18_gem":
-        from PlaceRec.Methods import ResNet18_GeM
-
-        method = ResNet18_GeM(pretrained=pretrained)
-    elif name == "resnet50_gem":
-        from PlaceRec.Methods import ResNet50_GeM
-
-        method = ResNet50_GeM(pretrained=pretrained)
-    elif name == "cct384_netvlad":
-        from PlaceRec.Methods import CCT_NetVLAD
-
-        method = CCT_NetVLAD(pretrained=pretrained)
-    else:
-        raise Exception("Method not implemented")
-    return method
-
-
-def get_training_logger(config: dict, project_name: Union[str, None] = None):
-    if config["train"]["logger"].lower() == "wandb":
-        logger = WandbLogger(project=project_name)
-    elif config["train"]["logger"].lower() == "tensorboard":
-        logger = TensorBoardLogger("tb_logs", name=project_name)
-    else:
-        raise NotImplementedError()
-    return logger
+    module_name = "PlaceRec.Methods"
+    method_module = __import__(module_name, fromlist=[name])
+    method_class = getattr(method_module, name)
+    return method_class(pretrained=pretrained)
 
 
 def cosine_distance(x1, x2):
@@ -236,7 +88,7 @@ def get_logger():
 
     logging.basicConfig(
         level=logging.DEBUG,
-        filename="app.log",
+        filename="VisualLoc.log",
         filemode="w",
         format="%(name)s - %(levelname)s - %(message)s",
     )

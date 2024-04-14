@@ -112,6 +112,9 @@ class HybridNetModel(nn.Module):
         return feat
 
 
+############################# Custom Transforms #################################
+
+
 class SubtractMean:
     def __init__(self, mean_image=None):
         self.mean_image = mean_image
@@ -149,7 +152,7 @@ class ChannelSwap:
         return tensor[[2, 1, 0], :, :]
 
 
-################################ HybridNet #########################################################
+################################ HybridNet ###########################
 
 
 try:
@@ -200,7 +203,6 @@ class HybridNet(SingleStageBaseModelWrapper):
             super().__init__(
                 model=self.model, preprocess=preprocess, name=name, weight_path=None
             )
-        # hybridnet layers not implemented on metal
         # some layers not implemented on metal
         self.set_device(self.device)
 

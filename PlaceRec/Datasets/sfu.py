@@ -78,3 +78,7 @@ class SFU(BaseDataset):
         # Get the indices using the dictionary
         ground_truth = [np.array(map_dict.get(query, [])) for query in query_images]
         return ground_truth
+
+
+if __name__ == "__main__":
+    ds = SFU()

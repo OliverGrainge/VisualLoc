@@ -81,3 +81,7 @@ class ESSEX3IN1(BaseDataset):
 
     def ground_truth(self) -> list:
         return self.gt
+
+
+if __name__ == "__main__":
+    ds = ESSEX3IN1()

@@ -21,7 +21,7 @@ from PlaceRec.Training.EigenPlaces.datasets.eigenplaces_dataset import (
     EigenPlacesDataset,
 )
 from PlaceRec.Training.EigenPlaces.datasets.test_dataset import TestDataset
-from PlaceRec.utils import get_config
+from PlaceRec.utils import get_config, get_method
 
 config = get_config()
 train_args = train_arguments()
@@ -43,8 +43,11 @@ logging.info(f"The outputs are being saved in {output_folder}")
 
 #### Model
 # model = eigenplaces_network.GeoLocalizationNet_(args.backbone, args.fc_output_dim)
-def train_eigenplaces(model, features_dim):
-    args.fc_output_dim = features_dim
+def train_eigenplaces(args):
+    method = get_method(args.method, pretrained=False)
+    model = method.model
+    args.fc_output_dim = model.features_dim
+
     logging.info(
         f"There are {torch.cuda.device_count()} GPUs and {multiprocessing.cpu_count()} CPUs."
     )

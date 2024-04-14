@@ -39,10 +39,7 @@ elif args.training_method == "gsv_cities_structured_sparse":
 elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
 
-    method = get_method(args.method, args.pretrained)
-    model = method.model
-    model.train()
-    train_eigenplaces(model, features_dim=method.features_dim)
+    train_eigenplaces(args)
 
 
 elif args.training_method == "cosplace":

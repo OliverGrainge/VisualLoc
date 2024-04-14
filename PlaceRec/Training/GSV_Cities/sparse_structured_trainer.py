@@ -17,7 +17,6 @@ from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
 from PlaceRec.Training.GSV_Cities.sparse_utils import (
     GlobalL1PruningCallback,
     SaveFullModelCallback,
-    SaveLastModelCallback,
 )
 from PlaceRec.utils import get_method
 
