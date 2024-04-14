@@ -627,10 +627,7 @@ class AnyLoc(SingleStageBaseModelWrapper):
             )
 
         # mps backend does not work with anyloc
-        if torch.cuda.is_available():
-            self.set_device("cuda")
-        else:
-            self.set_device("cpu")
+        self.set_device(self.device)
 
     def set_device(self, device: str) -> None:
         self.device = device

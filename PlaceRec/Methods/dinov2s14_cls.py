@@ -51,6 +51,9 @@ class DINOv2S14_CLS(SingleStageBaseModelWrapper):
         )
         sys.stdout = original_stdout
 
+        if not pretrained:
+            self.model.apply(utils.init_weights)
+
         super().__init__(
             model=self.model,
             preprocess=preprocess,

@@ -627,14 +627,14 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
         pbar: bool = True,
     ) -> dict:
         """
-        Compute the query descriptors for the given data.
+        Compute the query descriptors (both global and local) for the given data.
 
         Args:
             dataloader (torch.utils.data.dataloader.DataLoader, optional): DataLoader providing the data.
             pbar (bool, optional): If True, display a progress bar. Defaults to True.
 
         Returns:
-            dict: A dictionary containing the computed query descriptors.
+            dict: A dictionary containing the computed global and local query descriptors.
         """
 
         global_desc = np.empty(
@@ -676,7 +676,7 @@ class TwoStageBaseModelWrapper(BaseFunctionality):
             pbar (bool, optional): If True, display a progress bar. Defaults to True.
 
         Returns:
-            dict: A dictionary containing the computed map descriptors.
+            dict: A dictionary containing the computed global and local map descriptors.
         """
 
         global_desc = np.empty(

@@ -22,6 +22,9 @@ class DinoSalad(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = torch.hub.load("serizba/salad", "dinov2_salad")
 
+        if not pretrained:
+            self.model.apply(utils.init_weights)
+
         super().__init__(
             model=self.model, preprocess=preprocess, name="dinosalad", weight_path=None
         )

@@ -28,8 +28,8 @@ class EigenPlaces(SingleStageBaseModelWrapper):
         )
         sys.stdout = original_stdout
 
-        # if not pretrained:
-        #    model.apply(utils.init_weights)
+        if not pretrained:
+            self.model.apply(utils.init_weights)
 
         super().__init__(
             model=self.model,

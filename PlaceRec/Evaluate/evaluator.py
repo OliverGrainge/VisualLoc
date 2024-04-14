@@ -36,7 +36,6 @@ class Eval:
         self.extraction_cpu_latency()
         self.extraction_gpu_latency()
         self.matching_latency()
-        # self.count_flops()
         self.count_params()
         print(self.results)
         return self.results

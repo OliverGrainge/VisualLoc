@@ -103,6 +103,7 @@ def eval_arguments():
     return args
 
 
+################################## TRAIN Mode Argument Parser ##################################
 def train_arguments():
     parser = argparse.ArgumentParser()
 
