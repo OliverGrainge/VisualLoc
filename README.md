@@ -73,3 +73,32 @@ lat = eval.extraction_gpu_latency()
 params = eval.count_params()
 flops = eval.count_flops()
 ```
+
+Whilst all these metrics are computed in native pytorch, which 
+though excellent for experimentation and development may not 
+be optimal for deployment. We can add some performance optimizations 
+using commercial deep learning compilers, including DeepSparse 
+and Nvidia's TensorRT. The usage has been made very simple and can 
+be performed as follows 
+
+
+```python
+from PlaceReck.Methods import DinoSalad
+from PlaceRec.Evaluate import Eval
+from PlaceRec.Datasets import Pitts30k
+from PlaceRec.Deploy import deploy_tensorrt_sparse, deploy_cpu_sparse
+
+method = deploy_tensorrt_sparse(method) # using Tensorrt backend
+# or 
+method = deploy_cpu_sparse(method) # using the DeepSparse backend
+
+dataset = Pitts30k()
+eval = Eval(method, dataset)
+lat = eval.matching_latency()
+lat = eval.extraction_cpu_latency()
+lat = eval.extraction_gpu_latency()
+```
+
+
+
+
