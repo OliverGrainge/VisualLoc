@@ -15,4 +15,5 @@ PlaceRec/Evaluate/results/*
 *cache
 *.onnx
 data/
-impopip install --upgrade torch_tensorrt
+*.trt
+*.pkl
