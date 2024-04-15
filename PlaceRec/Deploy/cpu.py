@@ -61,7 +61,7 @@ def deploy_sparse_cpu(method):
     def inference(x):
         if isinstance(x, torch.Tensor):
             x = x.detach().cpu().numpy()
-        x = list(x)
+        x = list(x[None, :])
         outputs = engine.run(x)
         return outputs
 
