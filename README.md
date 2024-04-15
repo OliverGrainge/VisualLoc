@@ -114,6 +114,8 @@ Currently the following Methods are implemented in our framework. This is consta
 8. SelaVPR
 9. SFRS
 10. ConvAP
+
+
 ... We additionaly offer a number of different architectures
 that can be trained with our trainers based on the excellent work 
 of GSV-Cities, EigenPlaces and CosPlace
