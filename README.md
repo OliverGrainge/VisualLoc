@@ -88,9 +88,9 @@ from PlaceRec.Evaluate import Eval
 from PlaceRec.Datasets import Pitts30k
 from PlaceRec.Deploy import deploy_tensorrt_sparse, deploy_cpu_sparse
 
-method = deploy_tensorrt_sparse(method) # using Tensorrt backend
+method = deploy_gpu(method, batch_size=1, sparse=True) # using Tensorrt backend
 # or 
-method = deploy_cpu_sparse(method) # using the DeepSparse backend
+method = deploy_cpu(method, batch_size=1, sparse=True) # using the DeepSparse backend
 
 dataset = Pitts30k()
 eval = Eval(method, dataset)
