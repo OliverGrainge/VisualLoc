@@ -103,7 +103,35 @@ lat = eval.extraction_gpu_latency()
 ## Implementations 
 Currently the following Methods are implemented in our framework. This is constantly updating and expanding as newer better methods are being released into the literature.
 
-1. 
+### Visual Place Recognition Techniques
+1. HybridNet
+2. AmosNet
+3. CosPlace
+4. EigenPlaces
+5. MixVPR
+6. AnyLoc
+7. DinoSALAD
+8. SelaVPR
+9. SFRS
+10. ConvAP
+... We additionaly offer a number of different architectures
+that can be trained with our trainers based on the excellent work 
+of GSV-Cities, EigenPlaces and CosPlace
+
+### Visual Place Recognition Datasets 
+1. CrossSeasons
+2. Essex3in1 
+3. Gardens Point Walking 
+4. Inria Holidays 
+5. MapillarySLS (val)
+6. Nordlands 
+7. Pitts30k
+8. Pitts250k
+9. SFU 
+10. SpedTest
+
+
+
 
 
 
