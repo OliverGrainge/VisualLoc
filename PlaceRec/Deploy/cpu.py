@@ -5,11 +5,11 @@ import torch
 from deepsparse import compile_model
 
 
-def deploy_cpu(method, sparse=False):
+def deploy_cpu(method, batch_size=1, sparse=False):
     method.set_device("cpu")
     model = method.model
     model.eval()
-    img = method.example_input()
+    img = method.example_input().repeat(batch_size, 1, 1, 1)
 
     torch.onnx.export(
         model,
@@ -18,7 +18,6 @@ def deploy_cpu(method, sparse=False):
         verbose=False,
         input_names=["input"],
         output_names=["output"],
-        # dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
     )
 
     onnx_model = onnx.load(".model.onnx")

@@ -1,14 +1,16 @@
+import time
+
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
 from tqdm import tqdm
-import time
+
 from PlaceRec.Deploy import (
-    deploy_tensorrt,
-    deploy_tensorrt_sparse,
     deploy_cpu,
     deploy_gpu,
+    deploy_tensorrt,
+    deploy_tensorrt_sparse,
 )
 from PlaceRec.Methods import CCT_CLS, ConvAP, MixVPR, ViT_CLS
 

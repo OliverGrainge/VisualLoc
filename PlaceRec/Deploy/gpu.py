@@ -62,28 +62,19 @@ def deploy_gpu(method, batch_size=1, precision: List = ["fp16", "fp32"], sparse=
         output_names=["output"],
     )
 
-    TRT_LOGGER = trt.Logger(trt.Logger.INFO)
+    TRT_LOGGER = trt.Logger(trt.Logger.Warning)
     with trt.Builder(TRT_LOGGER) as builder, builder.create_network(
         1 << (int)(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
     ) as network, trt.OnnxParser(network, TRT_LOGGER) as parser:
-
         builder.max_batch_size = batch_size
-        # builder.int8_mode = True
-
         config = builder.create_builder_config()
-        # config.max_workspace_size = 2 << 30
 
         if sparse:
             config.set_flag(trt.BuilderFlag.SPARSE_WEIGHTS)
             config.set_flag(trt.BuilderFlag.FP16)
-            # config.set_flag(trt.BuilderFlag.INT8)
-
         else:
             if "fp16" in precision:
                 config.set_flag(trt.BuilderFlag.FP16)
-            if "int8" in precision:
-                config.set_flag(trt.BuilderFlag.INT8)
-        # config.int8_calibrator = calibrator
 
         with open(".model.onnx", "rb") as onnx_model:
             if not parser.parse(onnx_model.read()):
@@ -107,67 +98,7 @@ def deploy_gpu(method, batch_size=1, precision: List = ["fp16", "fp32"], sparse=
 
         trt_runtime = trt.Runtime(TRT_LOGGER)
         engine = load_engine(trt_runtime, engine_path)
-        print(
-            "================================================================",
-            method.features_dim["global_feature_shape"],
-        )
         method.inference = get_infer(
             engine, method.features_dim["global_feature_shape"]
         )
         return method
-
-
-def deploy_tensorrt_sparse(method):
-    if not torch.cuda.is_available():
-        raise Exception("GPU is not visible. Cannot compile to tensorrt backend")
-
-    method.set_device("cuda")
-    method.model.eval()
-    dummy_input = method.example_input().cuda()
-    method.model(dummy_input)
-    method.model = torch.jit.trace(method.model, dummy_input)
-    compiled_model = torch_tensorrt.compile(
-        method.model,
-        inputs=[torch_tensorrt.Input(dummy_input.shape)],
-        enabled_precisions={torch.float},  # Specify precision
-        sparse_weights=True,
-        truncate_long_and_double=True,
-        # require_full_compilation=True
-    )  # Enable sparsity
-
-    compiled_model(dummy_input)
-
-    def inference(x):
-        out = compiled_model(x)
-        return out[0]
-
-    method.inference = inference
-    return method
-
-
-def deploy_tensorrt(method):
-    if not torch.cuda.is_available():
-        raise Exception("GPU is not visible. Cannot compile to tensorrt backend")
-
-    method.set_device("cuda")
-    method.model.eval()
-    dummy_input = method.example_input().cuda()
-    method.model(dummy_input)
-    method.model = torch.jit.trace(method.model, dummy_input)
-    compiled_model = torch_tensorrt.compile(
-        method.model,
-        inputs=[torch_tensorrt.Input(dummy_input.shape)],
-        enabled_precisions={torch.float},  # Specify precision
-        sparse_weights=False,
-        truncate_long_and_double=True,
-        # require_full_compilation=True
-    )  # Enable sparsity
-
-    compiled_model(dummy_input)
-
-    def inference(x):
-        out = compiled_model(x)
-        return out[0]
-
-    method.inference = inference
-    return method
