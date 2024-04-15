@@ -84,9 +84,7 @@ def deploy_gpu(method, batch_size=1, precision: List = ["fp16", "fp32"], sparse=
         # Build the TensorRT engine
         with builder.build_engine(network, config) as engine:
             if engine is None:
-                print(
-                    "Failed to build TensorRT engine. Please check your model and calibration data."
-                )
+                print("Failed to build TensorRT engine. Please check your model")
                 return None
 
             # Serialize the TensorRT engine
