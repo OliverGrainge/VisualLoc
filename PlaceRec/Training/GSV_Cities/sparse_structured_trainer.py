@@ -39,6 +39,7 @@ class VPRModel(pl.LightningModule):
     ):
         super().__init__()
         self.name = method.name
+        self.method = method
 
         self.lr = lr
         self.optimizer = optimizer
@@ -217,14 +218,14 @@ class VPRModel(pl.LightningModule):
         print("\n\n")
         self.val_R1 = recalls_dict[1]
         macs, nparams = tp.utils.count_ops_and_params(
-            self.model, self.example_img.cuda()
+            self.model, self.method.example_input().to(self.method.device)
         )
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
 
 
 def setup_pruner(method, args):
-    example_img = method.example_input()
+    example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
     print(
         "===============> macs: ",
@@ -244,16 +245,18 @@ def setup_pruner(method, args):
         ):
             dont_prune.append(layer)
 
-    if args.pruning_method is None:
+    if args.pruning_type is None:
         raise Exception(" For unstructured pruning, Must choose pruning method.")
-    elif args.pruning_method == "magnitude":
+    elif args.pruning_type == "magnitude":
         importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
-    elif args.pruning_method == "first-order":
+    elif args.pruning_type == "first-order":
+        print("taaaaaaylors")
         importance = tp.importance.GroupTaylorImportance()
-    elif args.pruning_method == "second-order":
+    elif args.pruning_type == "second-order":
+        print("oooooooooobd")
         importance = tp.importance.GroupHessianImportance()
     else:
-        raise Exception(f"Pruning method {args.pruning_method} is not found")
+        raise Exception(f"Pruning method {args.pruning_type} is not found")
 
     pruner = tp.pruner.MagnitudePruner(
         method.model,
@@ -269,8 +272,8 @@ def setup_pruner(method, args):
 
 
 def sparsity(method, orig_nparams):
-    example_img = method.example_input()
-    macs, nparams = tp.utils.count_ops_and_params(method.model, example_img)
+    example_img = method.example_input().to(method.device)
+    _, nparams = tp.utils.count_ops_and_params(method.model, example_img)
     return 1 - (nparams / orig_nparams)
 
 
@@ -288,12 +291,12 @@ def sparse_structured_trainer(args):
         shuffle_all=False,
         random_sample_from_each_place=True,
         image_size=args.image_resolution,
-        num_workers=16,
+        num_workers=args.num_workers,
         show_data_stats=False,
         val_set_names=["pitts30k_val"],
     )
 
-    method, pruner, orig_nparams = setup_pruner(method)
+    method, pruner, orig_nparams = setup_pruner(method, args)
 
     for training_round in range(21):
         print(
@@ -321,11 +324,9 @@ def sparse_structured_trainer(args):
         sparse_count = sparsity(method, orig_nparams)
 
         checkpoint_cb = ModelCheckpoint(
-            dirpath=f"Checkpoints/gsv_cities_sparse_unstructured/{method.name}/",
+            dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
             filename=f"{method.name}"
-            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity["
-            + sparse_count
-            + "]",
+            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity[{sparse_count}:.1f]",
             auto_insert_metric_name=False,
             save_weights_only=True,
             save_top_k=1,
@@ -356,7 +357,6 @@ def sparse_structured_trainer(args):
         )
 
         trainer = pl.Trainer(
-            enable_progress_bar=False,
             devices="auto",
             accelerator="auto",
             strategy="auto",
@@ -370,6 +370,7 @@ def sparse_structured_trainer(args):
             ],
             enable_checkpointing=True,
             reload_dataloaders_every_n_epochs=1,
+            limit_train_batches=1,
         )
 
         trainer.fit(model=module, datamodule=datamodule)

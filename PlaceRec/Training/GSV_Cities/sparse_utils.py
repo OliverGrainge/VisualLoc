@@ -5,70 +5,192 @@ import torch
 import torch.nn.utils.prune as prune
 import torch_pruning as tp
 from pytorch_lightning.callbacks import Callback
+import torch.nn as nn
+from tqdm import tqdm
 
 
-class GlobalL1PruningCallback(Callback):
-    def __init__(self, prune_amount=0.1):
-        super().__init__()
-        self.prune_amount = prune_amount
+class L1UnstructuredPruner:
+    def __init__(self, model, prune_step=0.1):
+        self.model = model
+        self.N = 0
+        self.pruner_step = prune_step
+        self.current_amount = None
 
-    def on_train_start(self, trainer, pl_module):
-        parameters_to_prune = []
-        for module in pl_module.modules():
-            if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d)):
-                parameters_to_prune.append((module, "weight"))
+    def step(self):
+        self.N += 1
+        if self.current_amount is None:
+            self.current_amount = self.pruner_step
+        else:
+            self.current_amount = self.current_amount / (1 - self.current_amount)
 
-        prune.global_unstructured(
-            parameters_to_prune,
-            pruning_method=prune.L1Unstructured,
-            amount=self.prune_amount,
-        )
+        if self.current_amount > 1.0:
+            self.current_amount = 1.0
 
-    def on_train_end(self, trainer, pl_module):
-        for module in pl_module.modules():
-            if isinstance(module, (torch.nn.Linear, torch.nn.Conv2d)):
-                prune.remove(module, "weight")
-
-
-class SaveLastModelCallback(Callback):
-    def __init__(self, dirpath, filename="last-model.ckpt"):
-        self.dirpath = dirpath
-        self.filename = filename
-
-    def on_train_end(self, trainer, pl_module):
-        file_path = f"{self.dirpath}/{self.filename}"
-        trainer.save_checkpoint(file_path)
-        print(f"Model saved to {file_path}")
+        for module in self.model.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                prune.l1_unstructured(module, name="weight", amount=self.current_amount)
 
 
-class SaveFullModelCallback(pl.Callback):
-    def __init__(self, save_path):
-        super().__init__()
-        self.save_path = save_path
+def sparsity(method):
+    model = method.model
+    total_zeros = 0
+    total_elements = 0
 
-    def on_validation_end(self, trainer, pl_module):
-        _, nparams = tp.utils.count_ops_and_params(
-            pl_module.model, pl_module.example_img.cuda()
-        )
-        sparsity = nparams / pl_module.orig_nparams
-        filepath = f"{self.save_path}/{pl_module.name}/{pl_module.name}_R1[{pl_module.val_R1:.03f}]_SPARSITY[{sparsity:.03f}].ckpt"
-
-        if not os.path.exists(f"{self.save_path}/{pl_module.name}"):
-            os.makedirs(f"{self.save_path}/{pl_module.name}")
-        torch.save(pl_module.model, filepath)
-        print(f"Full model saved to {filepath}")
+    for module in model.modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+            weight_mask = getattr(module, "weight_mask", None)
+            if weight_mask is not None:
+                total_zeros += torch.sum(weight_mask == 0)
+                total_elements += weight_mask.numel()
+    overall_sparsity = total_zeros / total_elements if total_elements > 0 else 0
+    return overall_sparsity
 
 
-def calculate_sparsity(model):
-    total_weights = 0
-    zero_weights = 0
+class TaylorUnstructuredPruner:
+    def __init__(self, model, prune_step=0.1):
+        self.model = model
+        for module in self.model.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                prune.custom_from_mask(
+                    module, name="weight", mask=torch.ones(module.weight.shape)
+                )
+        self.prune_step = prune_step
+        self.current_amount = None  # Start with no pruning
+        self.active_weights = {
+            name: module.weight.numel()
+            for name, module in model.named_modules()
+            if hasattr(module, "weight")
+        }
 
-    for param in model.parameters():
-        param_copy = param.clone().detach().cpu()
-        param_data = param_copy.data.view(-1).numpy()
+    def compute_validation_gradients(self, val_loader, loss_function):
+        # Ensure model is in evaluation mode to maintain correctness of things like dropout, batchnorm, etc.
+        self.model.eval()
+        self.model.zero_grad()
+        with torch.set_grad_enabled(True):
+            for batch in tqdm(self.val_loader, desc="Taylor Importance Gradients"):
+                places, labels = batch
+                BS, N, ch, h, w = places.shape
+                images = places.view(BS * N, ch, h, w)
+                labels = labels.view(-1)
+                descriptors = self.model(images)
+                loss = loss_function(descriptors, labels)
+                loss.backward()
 
-        total_weights += param_data.size
-        zero_weights += (param_data == 0).sum()
+    def compute_taylor_importance(self):
+        # Compute the product of gradients and weights for each parameter
+        importance_scores = {}
+        for name, module in self.model.named_modules():
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
 
-    sparsity = zero_weights / total_weights
-    return sparsity
+                # Ensure gradients are not None
+                if module.weight_orig.grad is not None:
+                    # Importance score based on Taylor expansion
+                    importance = module.weight_orig.data * module.weight_orig.grad.data
+                    # Store the importance score flattened (since unstructured)
+                    importance_scores[name] = importance.view(-1).abs()
+        return importance_scores
+
+    def prune_by_taylor_scores(self, importance_scores):
+        for name, module in self.model.named_modules():
+            if name in importance_scores:
+                # Calculate the number of weights to prune at this step
+                total_active_weights = self.active_weights[name]
+                num_weights_to_prune = int(self.current_amount * total_active_weights)
+                # Get indices of the least important weights
+                _, weights_to_prune = torch.topk(
+                    importance_scores[name], num_weights_to_prune, largest=False
+                )
+                # Pruning mask creation and application
+                # print(importance_scores[name].shape, module.weight.numel(), module.weight_orig.numel())
+                mask = torch.ones(
+                    module.weight_orig.data.numel(),
+                    dtype=torch.bool,
+                    device=module.weight_orig.device,
+                )
+                mask[weights_to_prune] = False
+                prune.custom_from_mask(
+                    module, name="weight", mask=mask.reshape(module.weight.shape)
+                )
+                # module.weight_orig.retain_grad()
+                self.active_weights[name] -= num_weights_to_prune
+
+    def step(self, val_loader=None, loss_function=None):
+        # Increase the pruning threshold
+        if self.current_amount is None:
+            self.current_amount = self.prune_step
+        else:
+            self.current_amount = self.current_amount / (1 - self.current_amount)
+
+        if self.current_amount > 1.0:
+            self.current_amount = 1.0
+        # Compute the Taylor importance scores
+        if val_loader is not None and loss_function is not None:
+            self.compute_validation_gradients(val_loader, loss_function)
+        importance_scores = self.compute_taylor_importance()
+        self.prune_by_taylor_scores(importance_scores)
+        self.model.zero_grad()
+
+
+class HessianUnstructuredPruner:
+    def __init__(self, model, val_loader, prune_step=0.1):
+        self.model = model
+        self.prune_step = prune_step
+        self.current_amount = 0.0  # Start with no pruning
+        self.val_loader = val_loader
+
+    def compute_validation_gradients(self, val_loader, loss_function):
+        # Ensure model is in evaluation mode
+        self.model.eval()
+        self.model.zero_grad()
+        with torch.set_grad_enabled(True):
+            for batch in tqdm(val_loader, desc="Hessian Importance Gradients"):
+                places, labels = batch
+                BS, N, ch, h, w = places.shape
+                images = places.view(BS * N, ch, h, w)
+                labels = labels.view(-1)
+                descriptors = self.model(images)
+                loss = loss_function(descriptors, labels)
+                loss.backward(
+                    create_graph=True
+                )  # Enable computation graph for second derivatives
+
+    def compute_hessian_importance(self):
+        importance_scores = {}
+        for name, module in self.model.named_modules():
+            if isinstance(module, (nn.Conv2d, nn.Linear)):
+                if module.weight.grad is not None:
+                    # Compute Hessian by taking the gradient of gradients
+                    grad2 = torch.autograd.grad(
+                        module.weight.grad.flatten().sum(),
+                        module.weight,
+                        retain_graph=True,
+                    )[0]
+                    # Use the diagonal of the Hessian as importance scores
+                    importance = grad2.pow(2)  # Squaring to focus on magnitude
+                    importance_scores[name] = importance.view(-1).abs()
+        return importance_scores
+
+    def prune_by_importance_scores(self, importance_scores):
+        for name, module in self.model.named_modules():
+            if name in importance_scores:
+                total_weights = importance_scores[name].numel()
+                num_weights_to_prune = int(self.current_amount * total_weights)
+                _, weights_to_prune = torch.topk(
+                    importance_scores[name], num_weights_to_prune, largest=False
+                )
+                mask = torch.ones(
+                    total_weights, dtype=torch.bool, device=module.weight.device
+                )
+                mask[weights_to_prune] = False
+                prune.custom_from_mask(
+                    module, name="weight", mask=mask.reshape(module.weight.shape)
+                )
+
+    def step(self, val_loader, loss_function):
+        self.current_amount += self.prune_step
+        if self.current_amount > 1.0:
+            self.current_amount = 1.0
+        self.compute_validation_gradients(val_loader, loss_function)
+        importance_scores = self.compute_hessian_importance()
+        self.prune_by_importance_scores(importance_scores)
+        self.model.zero_grad()

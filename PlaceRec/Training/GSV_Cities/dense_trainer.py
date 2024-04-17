@@ -224,7 +224,7 @@ def dense_trainer(args):
         shuffle_all=False,
         random_sample_from_each_place=True,
         image_size=args.image_resolution,
-        num_workers=8,
+        num_workers=args.num_workers,
         show_data_stats=False,
         val_set_names=["pitts30k_val"],
     )

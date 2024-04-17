@@ -11,6 +11,7 @@ from PIL import Image
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import importlib
 
 
 class ImageIdxDataset(Dataset):
@@ -34,9 +35,9 @@ class ImageIdxDataset(Dataset):
 
 def get_dataset(name: str = None):
     module_name = "PlaceRec.Datasets"
-    method_module = __import__(module_name, fromlist=[name])
-    method_class = getattr(method_module, name)
-    return method_class()
+    dataset_module = __import__(module_name, fromlist=[name])
+    dataset_class = getattr(dataset_module, name)
+    return dataset_class()
 
 
 def get_method(name: str = None, pretrained: bool = True):
@@ -76,11 +77,17 @@ class L2Norm(nn.Module):
 
 
 def init_weights(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        # Example: Kaiming Initialization for Conv2D and Linear layers
-        nn.init.kaiming_uniform_(m.weight, mode="fan_in", nonlinearity="relu")
+    if isinstance(m, nn.Conv2d):
+        nn.init.kaiming_uniform_(m.weight.data, mode="fan_in", nonlinearity="relu")
         if m.bias is not None:
-            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.BatchNorm2d):
+        nn.init.constant_(m.weight.data, 1)
+        nn.init.constant_(m.bias.data, 0)
+    elif isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight.data)
+        if m.bias is not None:
+            nn.init.constant_(m.bias.data, 0)
 
 
 def get_logger():

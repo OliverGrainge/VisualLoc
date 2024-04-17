@@ -111,6 +111,14 @@ def train_arguments():
         "--training_method", type=str, default=config["train"]["training_method"]
     )
 
+    parser.add_argument(
+        "--num_workers", type=int, default=config["train"]["num_workers"]
+    )
+
+    parser.add_argument(
+        "--pruning_type", type=str, default=config["train"]["pruning_type"]
+    )
+
     parser.add_argument("--method", type=str, default=config["train"]["method"])
 
     parser.add_argument(
