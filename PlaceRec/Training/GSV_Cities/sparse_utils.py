@@ -57,11 +57,6 @@ class TaylorUnstructuredPruner:
 
         self.prune_step = prune_step
         self.current_amount = None  # Start with no pruning
-        self.active_weights = {
-            name: module.weight.numel()
-            for name, module in model.named_modules()
-            if hasattr(module, "weight")
-        }
 
     def compute_validation_gradients(self, val_loader, loss_function):
         # Ensure model is in evaluation mode to maintain correctness of things like dropout, batchnorm, etc.
@@ -95,8 +90,9 @@ class TaylorUnstructuredPruner:
         for name, module in self.model.named_modules():
             if name in importance_scores:
                 # Calculate the number of weights to prune at this step
-                total_active_weights = self.active_weights[name]
-                num_weights_to_prune = int(self.current_amount * total_active_weights)
+                num_weights_to_prune = int(
+                    self.current_amount * module.weight.data.numel()
+                )
                 # Get indices of the least important weights
                 _, weights_to_prune = torch.topk(
                     importance_scores[name], num_weights_to_prune, largest=False
@@ -113,16 +109,13 @@ class TaylorUnstructuredPruner:
                     module, name="weight", mask=mask.reshape(module.weight.shape)
                 )
                 # module.weight_orig.retain_grad()
-                self.active_weights[name] -= num_weights_to_prune
 
     def step(self, val_loader=None, loss_function=None):
         # Increase the pruning threshold
         if self.current_amount is None:
             self.current_amount = self.prune_step
         else:
-            self.current_amount = (
-                self.current_amount / (1 - self.current_amount)
-            ) + self.prune_step
+            self.current_amount += self.prune_step
         # print(self.current_amount, self.prune_step)
 
         if self.current_amount > 1.0:
