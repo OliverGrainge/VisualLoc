@@ -108,7 +108,6 @@ class VPRModel(pl.LightningModule):
             loss = self.loss_fn(descriptors, labels)
             batch_acc = 0.0
             if type(loss) == tuple:
-
                 loss, batch_acc = loss
 
         self.batch_acc.append(batch_acc)

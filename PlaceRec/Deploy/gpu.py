@@ -1,11 +1,12 @@
+from typing import List
+
 import numpy as np
+import onnx
+import pycuda.autoinit
+import pycuda.driver as cuda
+import tensorrt as trt
 import torch
 import torch_tensorrt
-import tensorrt as trt
-from typing import List
-import pycuda.driver as cuda
-import pycuda.autoinit
-import onnx
 from onnx import numpy_helper
 
 
