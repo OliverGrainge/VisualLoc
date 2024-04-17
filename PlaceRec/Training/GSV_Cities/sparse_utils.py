@@ -54,6 +54,7 @@ class TaylorUnstructuredPruner:
                 prune.custom_from_mask(
                     module, name="weight", mask=torch.ones(module.weight.shape)
                 )
+
         self.prune_step = prune_step
         self.current_amount = None  # Start with no pruning
         self.active_weights = {
@@ -119,16 +120,26 @@ class TaylorUnstructuredPruner:
         if self.current_amount is None:
             self.current_amount = self.prune_step
         else:
-            self.current_amount = self.current_amount / (1 - self.current_amount)
+            self.current_amount = (
+                self.current_amount / (1 - self.current_amount)
+            ) + self.prune_step
+        # print(self.current_amount, self.prune_step)
 
         if self.current_amount > 1.0:
             self.current_amount = 1.0
         # Compute the Taylor importance scores
+        grad_enables = []
+        for param in self.model.parameters():
+            grad_enables.append(param.requires_grad)
+            param.requires_grad = False
+
         if val_loader is not None and loss_function is not None:
             self.compute_validation_gradients(val_loader, loss_function)
         importance_scores = self.compute_taylor_importance()
         self.prune_by_taylor_scores(importance_scores)
         self.model.zero_grad()
+        for i, param in enumerate(self.model.parameters()):
+            param.requires_grad = grad_enables[i]
 
 
 class HessianUnstructuredPruner:
