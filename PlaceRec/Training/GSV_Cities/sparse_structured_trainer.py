@@ -223,7 +223,7 @@ class VPRModel(pl.LightningModule):
         self.log("nparams", nparams)
 
 
-def setup_pruner(method):
+def setup_pruner(method, args):
     example_img = method.example_input()
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
     print(
@@ -233,7 +233,6 @@ def setup_pruner(method):
         orig_nparams,
     )
 
-    imp = tp.importance.MagnitudeImportance(p=2)
     dont_prune = []
     for name, layer in method.model.named_modules():
         if (
@@ -245,13 +244,25 @@ def setup_pruner(method):
         ):
             dont_prune.append(layer)
 
+    if args.pruning_method is None:
+        raise Exception(" For unstructured pruning, Must choose pruning method.")
+    elif args.pruning_method == "magnitude":
+        importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
+    elif args.pruning_method == "first-order":
+        importance = tp.importance.GroupTaylorImportance()
+    elif args.pruning_method == "second-order":
+        importance = tp.importance.GroupHessianImportance()
+    else:
+        raise Exception(f"Pruning method {args.pruning_method} is not found")
+
     pruner = tp.pruner.MagnitudePruner(
         method.model,
         example_img,
-        imp,
+        importance,
         iterative_steps=20,
         pruning_ratio=0.99,
         ignored_layers=dont_prune,
+        global_pruning=False,
     )
 
     return method, pruner, orig_nparams
