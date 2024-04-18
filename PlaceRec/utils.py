@@ -1,3 +1,4 @@
+import importlib
 import os
 import pathlib
 from argparse import Namespace
@@ -11,7 +12,6 @@ from PIL import Image
 from pytorch_lightning.loggers import TensorBoardLogger, WandbLogger
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import importlib
 
 
 class ImageIdxDataset(Dataset):

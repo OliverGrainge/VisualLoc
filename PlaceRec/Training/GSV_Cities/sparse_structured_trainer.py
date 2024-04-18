@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import torch
 import torch_pruning as tp
 from PIL import Image
-from pytorch_lightning.callbacks import ModelCheckpoint, ModelPruning, EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, ModelPruning
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer

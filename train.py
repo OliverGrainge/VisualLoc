@@ -1,7 +1,9 @@
+import multiprocessing as mp
+
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
-import multiprocessing as mp
+
 from parsers import train_arguments
 from PlaceRec.utils import get_config, get_method
 

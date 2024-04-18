@@ -2,20 +2,21 @@ from typing import List, Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
+import torch.nn as nn
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
-import torch.nn as nn
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
+from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
+    GSVCitiesDataModule,
+)
 from PlaceRec.Training.GSV_Cities.sparse_utils import (
     L1UnstructuredPruner,
     TaylorUnstructuredPruner,
-)
-from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
-    GSVCitiesDataModule,
+    HessianUnstructuredPruner,
 )
 from PlaceRec.utils import get_method
 
@@ -231,15 +232,21 @@ def sparsity(method):
     return overall_sparsity
 
 
-def setup_pruner(method, args):
+def setup_pruner(method, datamodule, args, prune_step=0.05, n_batch_acc=3):
     if args.pruning_type == None:
         raise Exception("Must choose a pruning type for unstructured sparse trainer")
     elif args.pruning_type == "magnitude":
-        return L1UnstructuredPruner(method.model, prune_step=0.1)
+        return L1UnstructuredPruner(method.model, prune_step=prune_step)
     elif args.pruning_type == "first-order":
-        return TaylorUnstructuredPruner(method.model, prune_step=0.05)
+        datamodule.setup("fit")
+        return TaylorUnstructuredPruner(
+            method.model, datamodule, prune_step=prune_step, n_batch_acc=n_batch_acc
+        )
     elif args.pruning_type == "second-order":
-        raise NotImplementedError()
+        datamodule.setup("fit")
+        return HessianUnstructuredPruner(
+            method.model, datamodule, prune_step=prune_step, n_batch_acc=n_batch_acc
+        )
     else:
         raise Exception(f"Pruning method {args.pruning_type} Not implemented")
 
@@ -250,7 +257,6 @@ def sparse_unstructured_trainer(args):
 
     method = get_method(args.method, False)
     for pruning_round in range(20):
-
         datamodule = GSVCitiesDataModule(
             batch_size=int(args.batch_size / 4),
             img_per_place=4,
