@@ -267,7 +267,7 @@ def sparse_unstructured_trainer(args):
         val_set_names=["pitts30k_val"],
     )
 
-    method = get_method(args.method, False)
+    method = get_method(args.method, True)
     pruner = setup_pruner(method, datamodule, args, prune_step=0.05)
 
     for training_round in range(20):

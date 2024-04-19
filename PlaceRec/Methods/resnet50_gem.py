@@ -149,7 +149,6 @@ class Resnet50gemModel(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
-        print(x.shape)
         x = self.aggregation(x)
         x = self.proj(x)
         return x

@@ -172,7 +172,11 @@ class HessianUnstructuredPruner:
         for module in self.model.modules():
             if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
                 prune.custom_from_mask(
-                    module, name="weight", mask=torch.ones(module.weight.shape)
+                    module,
+                    name="weight",
+                    mask=torch.ones(module.weight.shape).to(
+                        next(self.model.parameters()).device
+                    ),
                 )
 
         for param in self.model.parameters():
@@ -278,8 +282,8 @@ class HessianUnstructuredPruner:
             self.current_amount += self.prune_step
         if self.current_amount > 1.0 - self.prune_step:
             self.current_amount = 1.0 - self.prune_step
-        val_loader = self.datamodule.train_dataloader()
-        gradients_squared = self.compute_validation_gradients(val_loader)
+        loader = self.datamodule.train_dataloader()
+        gradients_squared = self.compute_validation_gradients(loader)
         importance_scores = self.compute_taylor_importance(gradients_squared)
         self.prune_by_taylor_scores(importance_scores)
         self.model.zero_grad()

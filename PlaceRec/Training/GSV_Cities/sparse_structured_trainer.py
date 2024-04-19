@@ -239,9 +239,9 @@ def setup_pruner(method, args):
         if (
             "attention" in name
             or "attn" in name
-            or "channel_proj" in name
-            or "mix" in name
             or "aggregator" in name
+            or "aggregation" in name
+            or "proj" in name
         ):
             dont_prune.append(layer)
 
@@ -277,7 +277,7 @@ def sparsity(method, orig_nparams):
 
 # =================================== Training Loop ================================
 def sparse_structured_trainer(args):
-    method = get_method(args.method, True)
+    method = get_method(args.method, False)
 
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
