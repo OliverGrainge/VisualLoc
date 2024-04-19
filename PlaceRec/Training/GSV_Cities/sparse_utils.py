@@ -54,7 +54,11 @@ class TaylorUnstructuredPruner:
         for module in self.model.modules():
             if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
                 prune.custom_from_mask(
-                    module, name="weight", mask=torch.ones(module.weight.shape)
+                    module,
+                    name="weight",
+                    mask=torch.ones(module.weight.shape).to(
+                        next(model.parameters()).device
+                    ),
                 )
 
         for param in self.model.parameters():
@@ -135,7 +139,7 @@ class TaylorUnstructuredPruner:
                     module.weight_orig.data.numel(),
                     dtype=torch.bool,
                     device=module.weight_orig.device,
-                ).to(next(self.model.parameters()).device)
+                )
 
                 mask[weights_to_prune] = False
                 prune.custom_from_mask(

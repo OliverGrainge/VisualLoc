@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -255,20 +255,43 @@ def sparse_unstructured_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    method = get_method(args.method, False)
-    for pruning_round in range(20):
-        datamodule = GSVCitiesDataModule(
-            batch_size=int(args.batch_size / 4),
-            img_per_place=4,
-            min_img_per_place=4,
-            shuffle_all=False,
-            random_sample_from_each_place=True,
-            image_size=args.image_resolution,
-            num_workers=args.num_workers,
-            show_data_stats=False,
-            val_set_names=["pitts30k_val"],
-        )
+    datamodule = GSVCitiesDataModule(
+        batch_size=int(args.batch_size / 4),
+        img_per_place=4,
+        min_img_per_place=4,
+        shuffle_all=False,
+        random_sample_from_each_place=True,
+        image_size=args.image_resolution,
+        num_workers=args.num_workers,
+        show_data_stats=False,
+        val_set_names=["pitts30k_val"],
+    )
 
+    method = get_method(args.method, False)
+    pruner = setup_pruner(method, datamodule, args, prune_step=0.05)
+
+    for training_round in range(20):
+        print(
+            "==============================================================================="
+        )
+        print(
+            "==============================================================================="
+        )
+        print(
+            "==============================================================================="
+        )
+        print(
+            f"=================    Training Round: {training_round}: Sparsity {sparsity(method)} ========================="
+        )
+        print(
+            "==============================================================================="
+        )
+        print(
+            "==============================================================================="
+        )
+        print(
+            "==============================================================================="
+        )
         model = VPRModel(
             method=method,
             lr=0.0001,
@@ -287,14 +310,22 @@ def sparse_unstructured_trainer(args):
         sparse_count = sparsity(method)
 
         checkpoint_cb = ModelCheckpoint(
-            dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_method}/",
+            dirpath=f"Checkpoints/gsv_cities_sparse_unstructured/{method.name}/{args.pruning_type}/",
             filename=f"{method.name}"
             + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity["
-            + sparse_count
+            + f"{sparse_count:.2f}"
             + "]",
             auto_insert_metric_name=False,
             save_weights_only=True,
             save_top_k=1,
+            mode="max",
+        )
+
+        earlystopping_cb = EarlyStopping(
+            monitor="pitts30k_val/R1",
+            min_delta=0.00,
+            patience=3,
+            verbose=False,
             mode="max",
         )
 
@@ -305,10 +336,12 @@ def sparse_unstructured_trainer(args):
             default_root_dir=f"./LOGS/{method.name}",
             num_sanity_val_steps=0,
             precision="16-mixed",
-            max_epochs=30,
+            max_epochs=1,
             check_val_every_n_epoch=1,
-            callbacks=[checkpoint_cb],
+            callbacks=[checkpoint_cb, earlystopping_cb],
             reload_dataloaders_every_n_epochs=1,
         )
 
         trainer.fit(model=model, datamodule=datamodule)
+
+        pruner.step()

@@ -250,10 +250,8 @@ def setup_pruner(method, args):
     elif args.pruning_type == "magnitude":
         importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
     elif args.pruning_type == "first-order":
-        print("taaaaaaylors")
         importance = tp.importance.GroupTaylorImportance()
     elif args.pruning_type == "second-order":
-        print("oooooooooobd")
         importance = tp.importance.GroupHessianImportance()
     else:
         raise Exception(f"Pruning method {args.pruning_type} is not found")
@@ -298,7 +296,7 @@ def sparse_structured_trainer(args):
 
     method, pruner, orig_nparams = setup_pruner(method, args)
 
-    for training_round in range(21):
+    for training_round in range(20):
         print(
             "==============================================================================="
         )
@@ -326,7 +324,8 @@ def sparse_structured_trainer(args):
         checkpoint_cb = ModelCheckpoint(
             dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
             filename=f"{method.name}"
-            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity[{sparse_count}:.1f]",
+            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity["
+            + f"{sparse_count}:.2f]",
             auto_insert_metric_name=False,
             save_weights_only=True,
             save_top_k=1,
@@ -348,7 +347,7 @@ def sparse_structured_trainer(args):
             weight_decay=0,
             momentum=0.9,
             warmup_steps=600,
-            milestones=[5, 10, 15],
+            milestones=[5, 10, 15, 25],
             lr_mult=0.3,
             loss_name="MultiSimilarityLoss",
             miner_name="MultiSimilarityMiner",
@@ -368,13 +367,10 @@ def sparse_structured_trainer(args):
                 checkpoint_cb,
                 earlystopping_cb,
             ],
-            enable_checkpointing=True,
             reload_dataloaders_every_n_epochs=1,
             limit_train_batches=1,
         )
 
         trainer.fit(model=module, datamodule=datamodule)
-
-        method = module.method
 
         pruner.step()
