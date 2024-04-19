@@ -29,9 +29,7 @@ class GeM(nn.Module):
             .pow(1.0 / self.p)
             .view(x.shape[0], -1)
         )
-        print(type(x))
-        print(x.shape)
-        x = F.normalize(x.flatten(1), p=2, dim=-1)
+        return F.normalize(x.flatten(1), p=2, dim=-1)
 
 
 class ResNet(nn.Module):
@@ -137,7 +135,7 @@ class ResNet(nn.Module):
 
 
 class Resnet50gemModel(nn.Module):
-    def __init__(self):
+    def __init__(self, fc_output_dim=2048):
         super().__init__()
         self.backbone = ResNet(
             model_name="resnet50",
@@ -145,18 +143,22 @@ class Resnet50gemModel(nn.Module):
             layers_to_freeze=1,
             layers_to_crop=[4],
         )
-        self.aggregation = nn.Sequential(L2Norm(), GeM(), nn.Flatten())
+
+        self.aggregation = nn.Sequential(L2Norm(), GeM())
+        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
+        print(x.shape)
         x = self.aggregation(x)
+        x = self.proj(x)
         return x
 
 
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
-        transforms.Resize((480, 640), antialias=True),
+        transforms.Resize((320, 320), antialias=True),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ]
 )

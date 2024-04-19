@@ -16,3 +16,4 @@ from .resnet50_gem import ResNet50_GeM
 from .selavpr import SelaVPR
 from .sfrs import SFRS
 from .vit_cls import ViT_CLS
+from .netvlad import NetVLAD
