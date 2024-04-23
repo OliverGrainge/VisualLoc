@@ -89,7 +89,11 @@ class TaylorUnstructuredPruner:
 
         gradients_accumulated = {}
         count = 0
-        for batch in tqdm(val_loader, desc="Computing Gradients for Taylor Importance"):
+        for batch in tqdm(
+            val_loader,
+            total=self.n_batch_acc,
+            desc="Computing Gradients for Taylor Importance",
+        ):
             count += 1
             places, labels = batch
             BS, N, ch, h, w = places.shape
@@ -125,12 +129,33 @@ class TaylorUnstructuredPruner:
         importance_scores = {}
         for name, module in self.model.named_modules():
             if isinstance(module, (nn.Conv2d, nn.Linear)):
-                if module.weight_orig.grad is not None:
-                    importance = (
-                        module.weight_orig.data.abs() * gradients_accumulated[name]
-                    )
+                if name in gradients_accumulated.keys():
+                    importance = module.weight_orig.data.abs() * gradients_accumulated[
+                        name
+                    ].to(module.weight_orig.data.device)
                     importance_scores[name] = importance.view(-1).abs()
         return importance_scores
+
+    def prune_by_taylor_scores(self, importance_scores):
+        for name, module in self.model.named_modules():
+            if name in importance_scores:
+                num_weights_to_prune = int(
+                    self.current_amount * module.weight_orig.data.numel()
+                )
+                _, weights_to_prune = torch.topk(
+                    importance_scores[name], num_weights_to_prune, largest=False
+                )
+
+                mask = torch.ones(
+                    module.weight_orig.data.numel(),
+                    dtype=torch.bool,
+                    device=module.weight_orig.device,
+                )
+                mask[weights_to_prune] = False
+                prune.custom_from_mask(
+                    module, name="weight", mask=mask.reshape(module.weight.shape)
+                )
+                module.weight.data[~mask.reshape(module.weight.shape)] = 0.0
 
     def step(self, val_loader=None):
         # Increase pruning threshold, compute gradients, compute importance, prune
@@ -206,6 +231,7 @@ class HessianUnstructuredPruner:
             loss.backward(retain_graph=True)
 
             # Accumulate squared gradients
+
             for name, module in self.model.named_modules():
                 if (
                     isinstance(module, (nn.Conv2d, nn.Linear))
@@ -230,12 +256,12 @@ class HessianUnstructuredPruner:
         importance_scores = {}
         for name, module in self.model.named_modules():
             if isinstance(module, (nn.Conv2d, nn.Linear)):
-                if module.weight_orig.grad is not None:
+                if name in gradients_squared.keys():
                     # Second-order importance approximation (Taylor series expansion)
                     importance = (
                         module.weight_orig.data.abs()
                         * module.weight_orig.grad.data.abs()
-                        * gradients_squared[name]
+                        * gradients_squared[name].to(module.weight_orig.data.device)
                     )
                     importance_scores[name] = importance.view(-1).abs()
         return importance_scores

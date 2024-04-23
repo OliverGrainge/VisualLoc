@@ -232,7 +232,7 @@ def sparsity(method):
     return overall_sparsity
 
 
-def setup_pruner(method, datamodule, args, prune_step=0.05, n_batch_acc=3):
+def setup_pruner(method, datamodule, args, prune_step=0.05, n_batch_acc=100):
     if args.pruning_type == None:
         raise Exception("Must choose a pruning type for unstructured sparse trainer")
     elif args.pruning_type == "magnitude":
@@ -256,7 +256,7 @@ def sparse_unstructured_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     datamodule = GSVCitiesDataModule(
-        batch_size=int(args.batch_size / 4),
+        batch_size=int(args.batch_size / 16),
         img_per_place=4,
         min_img_per_place=4,
         shuffle_all=False,
@@ -330,6 +330,7 @@ def sparse_unstructured_trainer(args):
         )
 
         trainer = pl.Trainer(
+            enable_progress_bar=False,
             devices="auto",
             accelerator="auto",
             strategy="auto",
@@ -340,6 +341,7 @@ def sparse_unstructured_trainer(args):
             check_val_every_n_epoch=1,
             callbacks=[checkpoint_cb, earlystopping_cb],
             reload_dataloaders_every_n_epochs=1,
+            # limit_train_batches=10,
         )
 
         trainer.fit(model=model, datamodule=datamodule)
