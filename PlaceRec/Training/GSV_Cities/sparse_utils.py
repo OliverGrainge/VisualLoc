@@ -82,19 +82,14 @@ class TaylorUnstructuredPruner:
         return loss
 
     def compute_validation_gradients(self, val_loader):
-        # Ensure model is in evaluation mode to maintain correctness of things like dropout, batchnorm, etc.
         self.model.eval()
         self.model.zero_grad()
-        if torch.cuda.is_available():
-            dev = "cuda"
-        else:
-            dev = "cpu"
-
+        dev = "cuda" if torch.cuda.is_available() else "cpu"
         self.model.to(dev)
+
+        gradients_accumulated = {}
         count = 0
-        for batch in tqdm(
-            val_loader, total=self.n_batch_acc, desc="Taylor Importance Gradients"
-        ):
+        for batch in tqdm(val_loader, desc="Computing Gradients for Taylor Importance"):
             count += 1
             places, labels = batch
             BS, N, ch, h, w = places.shape
@@ -102,53 +97,43 @@ class TaylorUnstructuredPruner:
             labels = labels.view(-1)
             descriptors = self.model(images.to(dev))
             loss = self.loss_function(descriptors, labels)
-            loss.backward()
-            if count > self.n_batch_acc:
-                break
-        self.model.to("cpu")
+            loss.backward(retain_graph=True)
 
-    def compute_taylor_importance(self):
-        # Compute the product of gradients and weights for each parameter
+            for name, module in self.model.named_modules():
+                if isinstance(module, (nn.Conv2d, nn.Linear)):
+                    if module.weight_orig.grad is not None:
+                        grad = module.weight_orig.grad.data**2
+                        if name in gradients_accumulated:
+                            gradients_accumulated[name] += grad
+                        else:
+                            gradients_accumulated[name] = grad.clone()
+
+            self.model.zero_grad()  # Clear gradients after processing each batch
+
+            if count >= self.n_batch_acc:
+                break
+
+        # Averaging the accumulated gradients
+        for name in gradients_accumulated:
+            gradients_accumulated[name] /= self.n_batch_acc
+
+        self.model.to("cpu")
+        return gradients_accumulated
+
+    def compute_taylor_importance(self, gradients_accumulated):
+        # Compute importance scores based on the averaged gradients
         importance_scores = {}
         for name, module in self.model.named_modules():
             if isinstance(module, (nn.Conv2d, nn.Linear)):
-                # Ensure gradients are not None
                 if module.weight_orig.grad is not None:
-                    # Importance score based on Taylor expansion: only consider active weights as already pruned
-                    # weights are not important
                     importance = (
-                        module.weight_orig.data * module.weight_mask.data
-                    ) * module.weight_orig.grad.data
-                    # Store the importance score flattened (since unstructured)
+                        module.weight_orig.data.abs() * gradients_accumulated[name]
+                    )
                     importance_scores[name] = importance.view(-1).abs()
         return importance_scores
 
-    def prune_by_taylor_scores(self, importance_scores):
-        for name, module in self.model.named_modules():
-            if name in importance_scores:
-                # Calculate the number of weights to prune at this step
-                num_weights_to_prune = int(
-                    self.current_amount * module.weight_orig.data.numel()
-                )
-                # Get indices of the least important weights
-                _, weights_to_prune = torch.topk(
-                    importance_scores[name], num_weights_to_prune, largest=False
-                )
-                # Pruning mask creation and application
-                mask = torch.ones(
-                    module.weight_orig.data.numel(),
-                    dtype=torch.bool,
-                    device=module.weight_orig.device,
-                )
-
-                mask[weights_to_prune] = False
-                prune.custom_from_mask(
-                    module, name="weight", mask=mask.reshape(module.weight.shape)
-                )
-                module.weight.data[~mask.reshape(module.weight.shape)] = 0.0
-
     def step(self, val_loader=None):
-        # Increase the pruning threshold
+        # Increase pruning threshold, compute gradients, compute importance, prune
         if self.current_amount is None:
             self.current_amount = self.prune_step
         else:
@@ -157,11 +142,9 @@ class TaylorUnstructuredPruner:
         if self.current_amount > 1.0 - self.prune_step:
             self.current_amount = 1.0 - self.prune_step
 
-        # Compute the Taylor importance scores
-        # need gradients for all layers to prune all layers
         val_loader = self.datamodule.train_dataloader()
-        self.compute_validation_gradients(val_loader)
-        importance_scores = self.compute_taylor_importance()
+        gradients_accumulated = self.compute_validation_gradients(val_loader)
+        importance_scores = self.compute_taylor_importance(gradients_accumulated)
         self.prune_by_taylor_scores(importance_scores)
         self.model.zero_grad()
 
@@ -213,13 +196,14 @@ class HessianUnstructuredPruner:
             desc="Computing Gradients for Hessian Approximation",
         ):
             count += 1
+            self.model.zero_grad()
             places, labels = batch
             BS, N, ch, h, w = places.shape
             images = places.view(BS * N, ch, h, w)
             labels = labels.view(-1)
             descriptors = self.model(images.to(dev))
             loss = self.loss_function(descriptors, labels)
-            loss.backward()
+            loss.backward(retain_graph=True)
 
             # Accumulate squared gradients
             for name, module in self.model.named_modules():
@@ -229,9 +213,10 @@ class HessianUnstructuredPruner:
                 ):
                     grad = module.weight_orig.grad.data
                     if name in gradients_squared:
-                        gradients_squared[name] += grad**2
+                        gradients_squared[name] += (grad**2).cpu()
                     else:
-                        gradients_squared[name] = grad**2
+                        gradients_squared[name] = (grad**2).cpu()
+
             if count > self.n_batch_acc:
                 break
 

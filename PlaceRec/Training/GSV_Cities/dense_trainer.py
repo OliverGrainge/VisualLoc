@@ -251,11 +251,12 @@ def dense_trainer(args):
         + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
         auto_insert_metric_name=False,
         save_weights_only=True,
-        save_top_k=3,
+        save_top_k=1,
         mode="max",
     )
 
     trainer = pl.Trainer(
+        # enable_progress_bar=False,
         devices="auto",
         accelerator="auto",
         strategy="auto",
