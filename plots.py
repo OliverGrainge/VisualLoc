@@ -4,52 +4,49 @@ import sys
 
 sys.path.append(os.path.abspath("../"))
 import pickle
-import re
-import time
-from os.path import join
-
 import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.nn as nn
-from PIL import Image
 
-from PlaceRec.Evaluate import Eval
-from PlaceRec.utils import get_dataset, get_method
 
-sparsity_type = {
+sparsity_types = {
     "unstructured": "gsv_cities_sparse_unstructured/",
     # "semistructured": "gsv_cities_sparse_semistructured/",
     # "structured": "gsv_cities_sparse_structured/",
 }
+
+
+pruning_types = [
+    "magnitude",
+    "first-order",
+    "second-order",
+]
 
 with open("data/results.pkl", "rb") as file:
     results = pickle.load(file)
 
 
 # ====================== Sparsity vs Recall@1 ======================
-for st in sparsity_type.keys():
-    if st == "semistructured":
-        continue
+for st in sparsity_types.keys():
     m = list(results[st].keys())[0]
-    for ds in results[st][m].keys():
-        for method in results[st].keys():
-            sparsity = results[st][method][ds]["sparsity"]
-            recall = results[st][method][ds]["recall@1"]
-            sorted_pairs = sorted(zip(sparsity, recall), key=lambda x: x[0])
-            sorted_sparsity, sorted_recall = zip(*sorted_pairs)
-            sorted_sparsity = list(sorted_sparsity)
-            sorted_latency = list(sorted_recall)
-            plt.plot(sorted_sparsity, sorted_recall, label=method)
-        plt.legend()
-        plt.title(st + f" sparsity vs {ds} R@1")
-        plt.xlabel("sparsity (%)")
-        plt.ylabel("recall@1 (%)")
-        plt.show()
+    for pt in pruning_types:
+        for ds in results[st][m][pt].keys():
+            for method in results[st].keys():
+                sparsity = results[st][method][pt][ds]["sparsity"]
+                recall = results[st][method][pt][ds]["recall@1"]
+                sorted_pairs = sorted(zip(sparsity, recall), key=lambda x: x[0])
+                sorted_sparsity, sorted_recall = zip(*sorted_pairs)
+                sorted_sparsity = list(sorted_sparsity)
+                sorted_latency = list(sorted_recall)
+                plt.plot(sorted_sparsity, sorted_recall, label=method)
+            plt.legend()
+            plt.title(st + f" {pt} sparsity vs {ds} R@1")
+            plt.xlabel("sparsity (%)")
+            plt.ylabel("recall@1 (%)")
+            plt.show()
 
+"""
 
 # ===================== CPU latency vs Recall@1 =======================
-for st in sparsity_type.keys():
+for st in sparsity_types.keys():
     if st == "semistructured":
         continue
     m = list(results[st].keys())[0]
@@ -121,3 +118,4 @@ for st in sparsity_type.keys():
         plt.xlabel("non zero parameter count")
         plt.ylabel("recall@1 (%)")
         plt.show()
+"""

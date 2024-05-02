@@ -15,19 +15,30 @@ from PIL import Image
 from torchprofile import profile_macs
 from tqdm import tqdm
 
-from PlaceRec.Deploy import deploy_onnx_cpu, deploy_tensorrt_sparse
+# from PlaceRec.Deploy import deploy_onnx_cpu, deploy_tensorrt_sparse
 from PlaceRec.Evaluate import Eval
 from PlaceRec.utils import get_dataset, get_method
 
-CheckpointDirectory = "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/Checkpoints"
-METHODS = ["vit_cls"]
+CheckpointDirectory = "/Users/olivergrainge/Downloads/Checkpoints"
+METHODS = ["vit_cls", "mixvpr", "cct_cls", "netvlad"]
 DATASETS = ["pitts30k"]
+
+method_names = {
+    "mixvpr": "MixVPR",
+    "cct_cls": "CCT_CLS",
+    "netvlad": "NetVLAD",
+    "vit_cls": "ViT_CLS",
+}
 
 sparsity_type = {
     "unstructured": "gsv_cities_sparse_unstructured/",
-    # "semistructured": "gsv_cities_sparse_semistructured/",
-    # "structured": "gsv_cities_sparse_structured/",
 }
+
+pruning_type = [
+    "magnitude",
+    "first-order",
+    "second-order",
+]
 
 
 def extract_sparsity(path_name):
@@ -129,7 +140,6 @@ def measure_flops(method):
     img = np.random.randint(0, 255, (224, 224, 3)).astype(np.uint8)
     img = Image.fromarray(img)
     img = method.preprocess(img)
-
     flops = profile_macs(method.model, (img[None, :],))
     method.set_device(dev)
     return flops
@@ -140,82 +150,123 @@ for st in list(sparsity_type.keys()):
     directory = join(CheckpointDirectory, sparsity_type[st])
     methods_list = os.listdir(directory)
     results[st] = {}
-    for method_name in methods_list:
+    for method_name in method_names.keys():
+        results[st][method_name] = {}
         if method_name in METHODS:
-            results[st][method_name] = {}
-            method = get_method(method_name, pretrained=False)
-            weight_dir = join(directory, method_name + "/")
-            weight_names = os.listdir(weight_dir)
+            for pt in pruning_type:
+                results[st][method_name][pt] = {}
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                print(
+                    "==============================================>",
+                    method_names[method_name],
+                )
+                method = get_method(method_names[method_name], pretrained=False)
+                weight_dir = join(directory, method_name, pt + "/")
+                weight_names = os.listdir(weight_dir)
 
-            for dataset in DATASETS:
-                results[st][method_name][dataset] = defaultdict(list)
-
-                for weight in weight_names:
-                    weight_path = join(weight_dir, weight)
-                    # Computing sparsity
-                    if "unstructured" in weight_path:
-                        sparsity = extract_sparsity(weight_path)
-                        print(weight_path, sparsity)
-                    else:
-                        sparsity = extract_density(weight_path)
-                        print(weight_path, sparsity)
-                    results[st][method_name][dataset]["sparsity"].append(sparsity)
-
-                    # Computing Recall
-                    if dataset == "pitts30k":
-                        method.load_weights(weight_path)
-                        rec = extract_recall(weight)
-                    else:
-                        method.load_weights(weight_path)
-                        ds = get_dataset(dataset)
-                        q_dl = ds.query_images_loader(
-                            batch_size=32, preprocess=method.preprocess
+                for dataset in DATASETS:
+                    results[st][method_name][pt][dataset] = defaultdict(list)
+                    for weight in weight_names:
+                        weight_path = join(weight_dir, weight)
+                        # Computing sparsity
+                        if "unstructured" in weight_path:
+                            sparsity = extract_sparsity(weight_path)
+                            print(weight_path, sparsity)
+                        else:
+                            sparsity = extract_density(weight_path)
+                            print(weight_path, sparsity)
+                        results[st][method_name][pt][dataset]["sparsity"].append(
+                            sparsity
                         )
-                        method.compute_query_desc(q_dl)
-                        m_dl = ds.map_images_loader(
-                            batch_size=32, preprocess=method.preprocess
+
+                        # Computing Recall
+                        if dataset == "pitts30k":
+                            method.load_weights(weight_path)
+                            rec = extract_recall(weight)
+                            print(pt, rec)
+                        else:
+                            method.load_weights(weight_path)
+                            ds = get_dataset(dataset)
+                            q_dl = ds.query_images_loader(
+                                batch_size=32, preprocess=method.preprocess
+                            )
+                            method.compute_query_desc(q_dl)
+                            m_dl = ds.map_images_loader(
+                                batch_size=32, preprocess=method.preprocess
+                            )
+                            method.compute_map_desc(m_dl)
+                            method.save_descriptors(ds.name)
+                            eval = Eval(method, ds)
+                            eval.compute_all_matches(1)
+                            rec = eval.ratk(1)
+                        results[st][method_name][pt][dataset]["recall@1"].append(rec)
+
+                        # computing non zero parameters
+                        param_count = None
+                        if isinstance(method.model, nn.Module):
+                            param_count = sum(
+                                torch.count_nonzero(param).item()
+                                for param in method.model.parameters()
+                            )
+                        results[st][method_name][pt][dataset]["param_count"].append(
+                            param_count
                         )
-                        method.compute_map_desc(m_dl)
-                        method.save_descriptors(ds.name)
-                        eval = Eval(method, ds)
-                        eval.compute_all_matches(1)
-                        rec = eval.ratk(1)
-                    results[st][method_name][dataset]["recall@1"].append(rec)
 
-                    # computing non zero parameters
-                    param_count = None
-                    if isinstance(method.model, nn.Module):
-                        param_count = sum(
-                            torch.count_nonzero(param).item()
-                            for param in method.model.parameters()
+                        # computing flops
+                        flops = None
+                        flops = measure_flops(method)
+                        results[st][method_name][pt][dataset]["flops"].append(flops)
+
+                        # Computing Latency
+                        # method = deploy_onnx_cpu(method)
+                        # lat_cpu = measure_latency_cpu(method)
+                        # results[st][method_name][pt][dataset]["latency_cpu"].append(lat_cpu)
+
+                        ## Computing Latency
+                        lat_gpu = None
+
+                        if torch.cuda.is_available():
+                            # method = deploy_tensorrt_sparse(method)
+                            lat_gpu = measure_latency_gpu(method)
+                        results[st][method_name][pt][dataset]["latency_gpu"].append(
+                            lat_gpu
                         )
-                    results[st][method_name][dataset]["param_count"].append(param_count)
 
-                    # computing flops
-                    flops = None
-                    flops = measure_flops(method)
-                    results[st][method_name][dataset]["flops"].append(flops)
-
-                    # Computing Latency
-                    method = deploy_onnx_cpu(method)
-                    lat_cpu = measure_latency_cpu(method)
-                    results[st][method_name][dataset]["latency_cpu"].append(lat_cpu)
-
-                    ## Computing Latency
-                    lat_gpu = None
-                    method = deploy_tensorrt_sparse(method)
-                    if torch.cuda.is_available():
-                        lat_gpu = measure_latency_gpu(method)
-                    results[st][method_name][dataset]["latency_gpu"].append(lat_gpu)
-
-                    print(
-                        "sparsity:",
-                        sparsity,
-                        "parameters: ",
-                        param_count,
-                        "latency: ",
-                        #    lat_cpu,
-                    )
+                        print(
+                            "sparsity:",
+                            sparsity,
+                            "parameters: ",
+                            param_count,
+                            "latency: ",
+                            #    lat_cpu,
+                        )
 
 
 with open("data/results.pkl", "wb") as file:
