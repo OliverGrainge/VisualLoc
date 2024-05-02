@@ -17,3 +17,4 @@ PlaceRec/Evaluate/results/*
 data/
 *.trt
 *.pkl
+*.idea/

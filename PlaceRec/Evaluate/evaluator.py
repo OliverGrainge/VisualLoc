@@ -11,6 +11,7 @@ from ptflops import get_model_complexity_info
 
 from PlaceRec.Methods.base_method import BaseTechnique
 from PlaceRec.utils import get_logger
+from tabulate import tabulate
 
 logger = get_logger()
 
@@ -71,7 +72,8 @@ class Eval:
         self.extraction_gpu_latency()
         self.matching_latency()
         self.count_params()
-        print(self.results)
+        table_data = [(k, v) for k, v in self.results.items()]
+        print(tabulate(table_data, headers=["Metric", "Value"]))
         return self.results
 
     def compute_all_matches(self, k=20):
@@ -182,7 +184,6 @@ class Eval:
             float: The average GPU extraction latency in milliseconds, or None if CUDA is not available.
         """
         if not torch.cuda.is_available():
-            warnings.warn("Cuda is not available: Cannot evaluate gpu latency")
             return None
         model = self.method.model
         model.cuda()

@@ -1,10 +1,5 @@
-import argparse
 import os
 import pickle
-from os.path import join
-
-import pandas as pd
-import yaml
 
 from parsers import eval_arguments
 from PlaceRec.Evaluate import Eval
