@@ -4,6 +4,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
+import torchvision.transforms as T
+from torchvision.transforms.functional import to_pil_image, to_tensor
 
 from PlaceRec.utils import get_config
 

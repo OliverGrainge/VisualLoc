@@ -112,6 +112,17 @@ def train_arguments():
     )
 
     parser.add_argument(
+        "--teacher_method", type=str, default=config["train"]["teacher_method"]
+    )
+
+    parser.add_argument(
+        "--teacher_resolution",
+        type=int,
+        default=config["train"]["teacher_resolution"],
+        nargs="+",
+    )
+
+    parser.add_argument(
         "--num_workers", type=int, default=config["train"]["num_workers"]
     )
 

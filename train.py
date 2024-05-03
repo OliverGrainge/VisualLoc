@@ -15,7 +15,6 @@ if args.training_method == "gsv_cities_dense":
     from PlaceRec.Training.GSV_Cities.dense_trainer import dense_trainer
 
     trainer = dense_trainer
-    # dense_trainer(args)
 
 elif args.training_method == "gsv_cities_unstructured_sparse":
     from PlaceRec.Training.GSV_Cities.sparse_unstructured_trainer import (
@@ -23,7 +22,7 @@ elif args.training_method == "gsv_cities_unstructured_sparse":
     )
 
     trainer = sparse_unstructured_trainer
-    # sparse_unstructured_trainer(args)
+
 
 elif args.training_method == "gsv_cities_semistructured_sparse":
     from PlaceRec.Training.GSV_Cities.sparse_semistructured_trainer import (
@@ -31,7 +30,7 @@ elif args.training_method == "gsv_cities_semistructured_sparse":
     )
 
     trainer = sparse_semistructured_trainer
-    # sparse_semistructured_trainer(args)
+
 
 elif args.training_method == "gsv_cities_structured_sparse":
     from PlaceRec.Training.GSV_Cities.sparse_structured_trainer import (
@@ -39,15 +38,18 @@ elif args.training_method == "gsv_cities_structured_sparse":
     )
 
     trainer = sparse_structured_trainer
-    # sparse_structured_trainer(args)
 
+
+elif args.training_method == "gsv_cities_rkd":
+    from PlaceRec.Training.GSV_Cities.rkd_trainer import rkd_trainer
+
+    trainer = rkd_trainer
 
 # ================================ Eigenplace Training ==================================
 elif args.training_method == "eigenplaces":
     from PlaceRec.Training.EigenPlaces import train_eigenplaces
 
     trainer = train_eigenplaces
-    # rain_eigenplaces(args)
 
 
 if __name__ == "__main__":

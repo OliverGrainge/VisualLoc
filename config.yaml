@@ -33,8 +33,10 @@ eval:
 train: 
   training_method: "gsv_cities"
   method: "resnet50_mixvpr"
+  teacher_method: "DinoSalad"
   pretrained: False
   image_resolution: [320, 320]
+  teacher_resolution: [224, 224]
   batch_size: 120
   device: "cpu"
   optimizer: "adam"
