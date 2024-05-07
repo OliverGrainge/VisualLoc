@@ -20,6 +20,51 @@ from PlaceRec.utils import get_config, get_method
 config = get_config()
 
 
+def setup_pruner(method, args):
+    example_img = method.example_input().to(method.device)
+    orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
+    print(
+        "===============> macs: ",
+        orig_macs / 1e6,
+        "    nparams",
+        orig_nparams,
+    )
+
+    dont_prune = []
+    for name, layer in method.model.named_modules():
+        if (
+            "attention" in name
+            or "attn" in name
+            or "aggregator" in name
+            or "aggregation" in name
+            or "proj" in name
+        ):
+            dont_prune.append(layer)
+
+    if config["train"]["pruning_type"] is None:
+        raise Exception(" For unstructured pruning, Must choose pruning method.")
+    elif config["train"]["pruning_type"] == "magnitude":
+        importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
+    elif config["train"]["pruning_type"] == "first-order":
+        importance = tp.importance.GroupTaylorImportance()
+    elif config["train"]["pruning_type"] == "second-order":
+        importance = tp.importance.GroupHessianImportance()
+    else:
+        raise Exception(f"Pruning method {args.pruning_type} is not found")
+
+    pruner = tp.pruner.MagnitudePruner(
+        method.model,
+        example_img,
+        importance,
+        iterative_steps=20,
+        pruning_ratio=0.99,
+        ignored_layers=dont_prune,
+        global_pruning=False,
+    )
+
+    return method, pruner, orig_nparams
+
+
 class VPRModel(pl.LightningModule):
     """This is the main model for Visual Place Recognition
     we use Pytorch Lightning for modularity purposes.
@@ -62,6 +107,7 @@ class VPRModel(pl.LightningModule):
 
         self.faiss_gpu = faiss_gpu
 
+        self.method, self.pruner, self.orig_nparams = setup_pruner(method, args)
         self.model = method.model
         self.preprocess = method.preprocess
         self.model.train()
@@ -225,51 +271,6 @@ class VPRModel(pl.LightningModule):
         )
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
-
-
-def setup_pruner(method, args):
-    example_img = method.example_input().to(method.device)
-    orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
-    print(
-        "===============> macs: ",
-        orig_macs / 1e6,
-        "    nparams",
-        orig_nparams,
-    )
-
-    dont_prune = []
-    for name, layer in method.model.named_modules():
-        if (
-            "attention" in name
-            or "attn" in name
-            or "aggregator" in name
-            or "aggregation" in name
-            or "proj" in name
-        ):
-            dont_prune.append(layer)
-
-    if args.pruning_type is None:
-        raise Exception(" For unstructured pruning, Must choose pruning method.")
-    elif args.pruning_type == "magnitude":
-        importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
-    elif args.pruning_type == "first-order":
-        importance = tp.importance.GroupTaylorImportance()
-    elif args.pruning_type == "second-order":
-        importance = tp.importance.GroupHessianImportance()
-    else:
-        raise Exception(f"Pruning method {args.pruning_type} is not found")
-
-    pruner = tp.pruner.MagnitudePruner(
-        method.model,
-        example_img,
-        importance,
-        iterative_steps=20,
-        pruning_ratio=0.99,
-        ignored_layers=dont_prune,
-        global_pruning=False,
-    )
-
-    return method, pruner, orig_nparams
 
 
 def sparsity(method, orig_nparams):
