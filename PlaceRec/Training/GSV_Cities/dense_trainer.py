@@ -267,7 +267,7 @@ def dense_trainer(args):
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=30,
+        max_epochs=config["train"]["max_epochs"],
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,

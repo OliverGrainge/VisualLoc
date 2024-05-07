@@ -345,17 +345,17 @@ def sparse_structured_trainer(args):
 
         module = VPRModel(
             method=method,
-            lr=0.0001,
-            optimizer=args.optimizer,
-            weight_decay=0,
-            momentum=0.9,
-            warmup_steps=600,
-            milestones=[5, 10, 15, 25],
-            lr_mult=0.3,
-            loss_name="MultiSimilarityLoss",
-            miner_name="MultiSimilarityMiner",
-            miner_margin=0.1,
+            lr=config["train"]["lr"],
+            weight_decay=config["train"]["weight_decay"],
+            momentum=config["train"]["momentum"],
+            warmup_steps=config["train"]["warmup_steps"],
+            milestones=config["train"]["milestones"],
+            lr_mult=config["train"]["lr_mult"],
+            loss_name=config["train"]["loss_name"],
+            miner_name=config["train"]["miner_name"],
+            miner_margin=config["train"]["miner_margin"],
             faiss_gpu=False,
+            optimizer=config["train"]["optimizer"],
         )
 
         trainer = pl.Trainer(
