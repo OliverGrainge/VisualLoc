@@ -38,12 +38,24 @@ train:
   image_resolution: [320, 320]
   teacher_resolution: [224, 224]
   batch_size: 120
-  device: "cpu"
-  optimizer: "adam"
+
   num_workers: 0
   pruning_type: "magnitude"
 
+  # optimization
+  optimizer: "adam"
+  lr: 0.0002
+  weight_decay: 0
+  momentum: 0.9
+  warmup_steps: 600
+  milestones: 5 10 15 25
+  lr_mult: 0.3
+  loss_name: "MultiSimilarityLoss"
+  miner_name: "MultiSimilarityMiner"
+  miner_margin: 0.1
+
   finetune: True
+  max_epochs: 10
 
   
 

@@ -7,9 +7,9 @@ import torch.nn.utils.prune as prune
 import torch_pruning as tp
 from pytorch_lightning.callbacks import Callback
 from tqdm import tqdm
-from PlaceRec.utils import get_config
-from PlaceRec.Training.GSV_Cities.utils import get_loss, get_miner
 
+from PlaceRec.Training.GSV_Cities.utils import get_loss, get_miner
+from PlaceRec.utils import get_config
 
 config = get_config()
 

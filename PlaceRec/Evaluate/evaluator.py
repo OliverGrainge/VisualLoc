@@ -8,10 +8,10 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
+from tabulate import tabulate
 
 from PlaceRec.Methods.base_method import BaseTechnique
 from PlaceRec.utils import get_logger
-from tabulate import tabulate
 
 logger = get_logger()
 

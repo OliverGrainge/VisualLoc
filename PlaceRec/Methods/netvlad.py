@@ -1,20 +1,20 @@
-import torch.nn as nn
-import torch
-from PlaceRec.utils import L2Norm
-from tqdm import tqdm
-import numpy as np
-import torchvision
-import torch.nn.functional as F
 import math
-import faiss
 import os
 from os.path import join
 
-from PlaceRec.utils import get_config
-from PlaceRec.Methods import SingleStageBaseModelWrapper
+import faiss
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
 from torch.utils.data import DataLoader, SubsetRandomSampler
-from PlaceRec.Datasets import Pitts30k
 from torchvision import transforms
+from tqdm import tqdm
+
+from PlaceRec.Datasets import Pitts30k
+from PlaceRec.Methods import SingleStageBaseModelWrapper
+from PlaceRec.utils import L2Norm, get_config
 
 config = get_config()
 

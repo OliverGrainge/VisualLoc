@@ -4,8 +4,8 @@ import sys
 
 sys.path.append(os.path.abspath("../"))
 import pickle
-import matplotlib.pyplot as plt
 
+import matplotlib.pyplot as plt
 
 sparsity_types = {
     "unstructured": "gsv_cities_sparse_unstructured/",

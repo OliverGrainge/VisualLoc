@@ -3,7 +3,6 @@ from prettytable import PrettyTable
 from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
 
-
 from PlaceRec.Training.GSV_Cities.dataloaders.train.GSVCitiesDataset import (
     GSVCitiesDataset,
     GSVCitiesDistillationDataset,

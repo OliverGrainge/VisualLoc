@@ -2,9 +2,9 @@ from os.path import join
 from pathlib import Path
 
 import numpy as np
+import torchvision.transforms as T
 from PIL import Image
 from torch.utils.data import Dataset
-import torchvision.transforms as T
 from torchvision.transforms.functional import to_pil_image, to_tensor
 
 from PlaceRec.utils import get_config

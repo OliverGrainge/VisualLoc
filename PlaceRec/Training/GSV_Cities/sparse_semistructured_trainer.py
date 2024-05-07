@@ -15,7 +15,9 @@ from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )
 from PlaceRec.Training.GSV_Cities.sparse_utils import calculate_sparsity, get_cities
-from PlaceRec.utils import get_method
+from PlaceRec.utils import get_config, get_method
+
+config = get_config()
 
 
 class VPRModel(pl.LightningModule):
@@ -274,7 +276,7 @@ def sparse_semistructured_trainer(args):
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=20,
+        max_epochs=config["train"]["max_epochs"],
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
