@@ -56,9 +56,10 @@ train:
 
   # Pruning
   pruning_type: "magnitude"
-  initial_sparsity: 0.3
-  final_sparsity: 0.9999
-  pruning_schedule: "exp"
+  initial_sparsity: 0.0
+  final_sparsity: 0.95
+  pruning_schedule: "cosine"
+  pruning_freq: 1
 
   finetune: True
   max_epochs: 20
