@@ -7,8 +7,11 @@ import torch.nn.utils.prune as prune
 import torch_pruning as tp
 from pytorch_lightning.callbacks import Callback
 from tqdm import tqdm
-
+from PlaceRec.utils import get_config
 from PlaceRec.Training.GSV_Cities.utils import get_loss, get_miner
+
+
+config = get_config()
 
 
 class L1UnstructuredPruner:
@@ -298,3 +301,35 @@ class HessianUnstructuredPruner:
         importance_scores = self.compute_taylor_importance(gradients_squared)
         self.prune_by_taylor_scores(importance_scores)
         self.model.zero_grad()
+
+
+def get_cities():
+    if config["train"]["finetune"] == True:
+        cities = ["London", "Boston", "Barcelona"]
+    else:
+        cities = [
+            "Bangkok",
+            "BuenosAires",
+            "LosAngeles",
+            "MexicoCity",
+            "OSL",  # refers to Oslo
+            "Rome",
+            "Barcelona",
+            "Chicago",
+            "Madrid",
+            "Miami",
+            "Phoenix",
+            "TRT",  # refers to Toronto
+            "Boston",
+            "Lisbon",
+            "Medellin",
+            "Minneapolis",
+            "PRG",  # refers to Prague
+            "WashingtonDC",
+            "Brussels",
+            "London",
+            "Melbourne",
+            "Osaka",
+            "PRS",  # refers to Paris
+        ]
+    return cities

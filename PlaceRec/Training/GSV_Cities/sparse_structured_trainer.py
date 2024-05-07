@@ -14,6 +14,7 @@ import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )
+from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities
 from PlaceRec.utils import get_method
 
 
@@ -283,6 +284,7 @@ def sparse_structured_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     datamodule = GSVCitiesDataModule(
+        cities=get_cities(),
         batch_size=int(args.batch_size / 4),
         img_per_place=4,
         min_img_per_place=4,

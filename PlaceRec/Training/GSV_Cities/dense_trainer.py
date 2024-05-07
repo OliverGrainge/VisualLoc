@@ -8,6 +8,7 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 import PlaceRec.Training.GSV_Cities.utils as utils
+from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities
 from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
@@ -218,6 +219,7 @@ def dense_trainer(args):
     method = get_method(args.method, False)
 
     datamodule = GSVCitiesDataModule(
+        cities=get_cities(),
         batch_size=int(args.batch_size / 4),
         img_per_place=4,
         min_img_per_place=4,

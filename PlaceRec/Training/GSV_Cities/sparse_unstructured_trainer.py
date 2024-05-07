@@ -17,6 +17,7 @@ from PlaceRec.Training.GSV_Cities.sparse_utils import (
     L1UnstructuredPruner,
     TaylorUnstructuredPruner,
     HessianUnstructuredPruner,
+    get_cities,
 )
 from PlaceRec.utils import get_method
 
@@ -256,6 +257,7 @@ def sparse_unstructured_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     datamodule = GSVCitiesDataModule(
+        cities=get_cities(),
         batch_size=int(args.batch_size / 16),
         img_per_place=4,
         min_img_per_place=4,

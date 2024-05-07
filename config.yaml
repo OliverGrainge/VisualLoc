@@ -42,6 +42,9 @@ train:
   optimizer: "adam"
   num_workers: 0
   pruning_type: "magnitude"
+
+  finetune: True
+
   
 
 
