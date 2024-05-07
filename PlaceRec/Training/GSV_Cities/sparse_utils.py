@@ -4,9 +4,8 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
-import torch_pruning as tp
-from pytorch_lightning.callbacks import Callback
 from tqdm import tqdm
+import numpy as np
 
 from PlaceRec.Training.GSV_Cities.utils import get_loss, get_miner
 from PlaceRec.utils import get_config
@@ -333,3 +332,53 @@ def get_cities():
             "PRS",  # refers to Paris
         ]
     return cities
+
+
+def pruning_schedule(epoch: int, cumulative=False):
+    start = config["train"]["initial_sparsity"]
+    end = config["train"]["final_sparsity"]
+    max_epochs = config["train"]["max_epochs"]
+
+    if cumulative:
+        if epoch == 0:
+            return start
+        elif epoch >= max_epochs:
+            return end
+    else:
+        if epoch == 0:
+            return 0  # No pruning at the very start if not cumulative
+        elif epoch >= max_epochs:
+            return end
+
+    # Calculate the current epoch's sparsity based on the pruning schedule
+    if not cumulative:
+        if config["train"]["pruning_schedule"] == "linear":
+            # Linear increase in sparsity from start to end
+            return start + (end - start) * (epoch / max_epochs)
+        elif config["train"]["pruning_schedule"] == "cosine":
+            # Cosine annealing schedule
+            cosine_decay = 0.5 * (1 + np.cos(np.pi * epoch / max_epochs))
+            return end + (start - end) * cosine_decay
+        elif config["train"]["pruning_schedule"] == "exp":
+            # Ensure the decay_rate is negative to have a true decay
+            k = -np.log(1 - end) / max_epochs
+            curr = 1 - np.exp(-k * epoch)
+            return curr
+    else:
+        if config["train"]["pruning_schedule"] == "linear":
+            # Linear increase in sparsity from start to end
+            curr = start + (end - start) * (epoch / max_epochs)
+            prev = start + (end - start) * ((epoch - 1) / max_epochs)
+            return curr - prev
+        elif config["train"]["pruning_schedule"] == "cosine":
+            # Cosine annealing schedule
+            curr = 0.5 * (1 + np.cos(np.pi * epoch / max_epochs))
+            prev = 0.5 * (1 + np.cos(np.pi * (epoch - 1) / max_epochs))
+            curr = end + (start - end) * curr
+            prev = end + (start - end) * prev
+            return curr - prev
+        elif config["train"]["pruning_schedule"] == "exp":
+            k = -np.log(1 - end) / max_epochs
+            curr = 1 - np.exp(-k * epoch)
+            prev = 1 - np.exp(-k * (epoch - 1))
+            return curr - prev

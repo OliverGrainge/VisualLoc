@@ -54,9 +54,14 @@ train:
   miner_name: "MultiSimilarityMiner"
   miner_margin: 0.1
 
+  # Pruning
+  pruning_type: "magnitude"
+  initial_sparsity: 0.3
+  final_sparsity: 0.9999
+  pruning_schedule: "exp"
 
   finetune: True
-  max_epochs: 10
+  max_epochs: 20
 
   
 
