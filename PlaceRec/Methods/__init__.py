@@ -13,7 +13,7 @@ from .eigenplaces import EigenPlaces
 from .hybridnet import HybridNet
 from .mixvpr import MixVPR
 from .netvlad import NetVLAD
-from .resnet50_gem import ResNet50_GeM
+from .resnet50_gem import ResNet50_GeM, ResNet34_GeM, ResNet18_GeM
 from .selavpr import SelaVPR
 from .sfrs import SFRS
 from .vit_cls import ViT_CLS

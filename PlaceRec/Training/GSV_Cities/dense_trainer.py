@@ -6,6 +6,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
+from pytorch_lightning.loggers import WandbLogger
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
@@ -219,6 +220,7 @@ def dense_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     method = get_method(args.method, False)
+    wandb_logger = WandbLogger(project="GSVCities", config=config)
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(),
@@ -272,6 +274,7 @@ def dense_trainer(args):
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
         log_every_n_steps=20,
+        logger=wandb_logger,
     )
 
     trainer.fit(model=model, datamodule=datamodule)

@@ -31,8 +31,8 @@ eval:
 
 
 train: 
-  training_method: "gsv_cities_dense"
-  method: "resnet50_mixvpr"
+  training_method: "gsv_cities_rkd"
+  method: "ResNet50_GeM"
   teacher_method: "DinoSalad"
   pretrained: False
   image_resolution: [320, 320]

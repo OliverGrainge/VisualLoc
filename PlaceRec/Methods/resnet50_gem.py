@@ -154,6 +154,46 @@ class Resnet50gemModel(nn.Module):
         return x
 
 
+class Resnet34gemModel(nn.Module):
+    def __init__(self, fc_output_dim=2048):
+        super().__init__()
+        self.backbone = ResNet(
+            model_name="resnet34",
+            pretrained=True,
+            layers_to_freeze=1,
+            layers_to_crop=[4],
+        )
+
+        self.aggregation = nn.Sequential(L2Norm(), GeM())
+        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.backbone(x)
+        x = self.aggregation(x)
+        x = self.proj(x)
+        return x
+
+
+class Resnet18gemModel(nn.Module):
+    def __init__(self, fc_output_dim=2048):
+        super().__init__()
+        self.backbone = ResNet(
+            model_name="resnet18",
+            pretrained=True,
+            layers_to_freeze=1,
+            layers_to_crop=[4],
+        )
+
+        self.aggregation = nn.Sequential(L2Norm(), GeM())
+        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.backbone(x)
+        x = self.aggregation(x)
+        x = self.proj(x)
+        return x
+
+
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -167,6 +207,48 @@ class ResNet50_GeM(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = Resnet50gemModel()
         name = "resnet50_gem"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class ResNet34_GeM(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        self.model = Resnet34gemModel()
+        name = "resnet50_gem"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class ResNet18_GeM(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        self.model = Resnet18gemModel()
+        name = "resnet18_gem"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(weight_path):

@@ -8,6 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
+from pytorch_lightning.loggers import WandbLogger
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
@@ -15,6 +16,7 @@ from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
     GSVCitiesDataModuleDistillation,
 )
+from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities
 from PlaceRec.utils import get_config, get_method
 
 config = get_config()
@@ -44,7 +46,7 @@ class RkdDistance(nn.Module):
         mean_d = d[d > 0].mean()
         d = d / mean_d
 
-        loss = F.smooth_l1_loss(d, t_d, reduction="elementwise_mean")
+        loss = F.smooth_l1_loss(d, t_d, reduction="mean")
         return loss
 
 
@@ -142,6 +144,7 @@ class VPRModel(pl.LightningModule):
         return [optimizer], [warmup_scheduler, scheduler]
 
     def loss_function(self, descriptors, labels):
+        print(descriptors.shape)
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -157,13 +160,14 @@ class VPRModel(pl.LightningModule):
                 loss, batch_acc = loss
 
         self.batch_acc.append(batch_acc)
-        self.log(
-            "b_acc",
-            sum(self.batch_acc) / len(self.batch_acc),
-            prog_bar=True,
-            logger=True,
-        )
-        return loss
+
+        # self.log(
+        #    "b_acc",
+        #    sum(self.batch_acc) / len(self.batch_acc),
+        #    prog_bar=True,
+        #    logger=True,
+        # )
+        return sum(self.batch_acc) / len(self.batch_acc)
 
     def training_step(self, batch, batch_idx):
         teacher_places, student_places, labels = batch
@@ -171,11 +175,13 @@ class VPRModel(pl.LightningModule):
         teacher_images = teacher_places.view(BS * N, ch, h, w)
         BS, N, ch, h, w = student_places.shape
         student_images = student_places.view(BS * N, ch, h, w)
-        # labels = labels.view(-1)
+        labels = labels.view(-1)
         teacher_descriptors = self.teacher_model(teacher_images)
         student_descriptors = self.student_model(student_images)
         student_descriptors = self.feature_adapter(student_descriptors)
         loss = self.rkd_loss(teacher_descriptors, student_descriptors)
+        b_acc = self.loss_fn(student_descriptors, labels)
+        self.log("b_acc", b_acc)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
 
@@ -266,7 +272,10 @@ def rkd_trainer(args):
     student_method = get_method(args.method, False)
     teacher_method = get_method(args.teacher_method, True)
 
+    wandb_logger = WandbLogger(project="GSVCities", config=config)
+
     datamodule = GSVCitiesDataModuleDistillation(
+        cities=get_cities(),
         batch_size=int(args.batch_size / 4),
         img_per_place=4,
         min_img_per_place=4,
@@ -323,6 +332,7 @@ def rkd_trainer(args):
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
         log_every_n_steps=20,
+        logger=wandb_logger,
     )
 
     trainer.fit(model=model, datamodule=datamodule)
