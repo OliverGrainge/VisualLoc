@@ -41,9 +41,9 @@ elif args.training_method == "gsv_cities_structured_sparse":
 
 
 elif args.training_method == "gsv_cities_rkd":
-    from PlaceRec.Training.GSV_Cities.rkd_trainer import rkd_trainer
+    from PlaceRec.Training.GSV_Cities.rkd_trainer import distillation_trainer
 
-    trainer = rkd_trainer
+    trainer = distillation_trainer
 
 # ================================ Eigenplace Training ==================================
 elif args.training_method == "eigenplaces":

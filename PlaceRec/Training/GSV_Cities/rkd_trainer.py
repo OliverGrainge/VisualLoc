@@ -33,6 +33,54 @@ def pdist(e, squared=False, eps=1e-12):
     return res
 
 
+class HardDarkRank(nn.Module):
+    def __init__(self, alpha=3, beta=3, permute_len=4):
+        super().__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.permute_len = permute_len
+
+    def forward(self, student, teacher):
+        score_teacher = -1 * self.alpha * pdist(teacher, squared=False).pow(self.beta)
+        score_student = -1 * self.alpha * pdist(student, squared=False).pow(self.beta)
+
+        permute_idx = score_teacher.sort(dim=1, descending=True)[1][
+            :, 1 : (self.permute_len + 1)
+        ]
+        ordered_student = torch.gather(score_student, 1, permute_idx)
+
+        log_prob = (
+            ordered_student
+            - torch.stack(
+                [
+                    torch.logsumexp(ordered_student[:, i:], dim=1)
+                    for i in range(permute_idx.size(1))
+                ],
+                dim=1,
+            )
+        ).sum(dim=1)
+        loss = (-1 * log_prob).mean()
+
+        return loss
+
+
+class FitNet(nn.Module):
+    def __init__(self, in_feature, out_feature):
+        super().__init__()
+        self.in_feature = in_feature
+        self.out_feature = out_feature
+
+        self.transform = nn.Conv2d(in_feature, out_feature, 1, bias=False)
+        self.transform.weight.data.uniform_(-0.005, 0.005)
+
+    def forward(self, student, teacher):
+        if student.dim() == 2:
+            student = student.unsqueeze(2).unsqueeze(3)
+            teacher = teacher.unsqueeze(2).unsqueeze(3)
+
+        return (self.transform(student) - teacher).pow(2).mean()
+
+
 class RkdDistance(nn.Module):
     def forward(self, student, teacher):
         with torch.no_grad():
@@ -45,6 +93,21 @@ class RkdDistance(nn.Module):
         d = d / mean_d
 
         loss = F.smooth_l1_loss(d, t_d, reduction="mean")
+        return loss
+
+
+class RKdAngle(nn.Module):
+    def forward(self, student, teacher):
+        with torch.no_grad():
+            td = teacher.unsqueeze(0) - teacher.unsqueeze(1)
+            norm_td = F.normalize(td, p=2, dim=2)
+            t_angle = torch.bmm(norm_td, norm_td.transpose(1, 2)).view(-1)
+
+        sd = student.unsqueeze(0) - student.unsqueeze(1)
+        norm_sd = F.normalize(sd, p=2, dim=2)
+        s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
+
+        loss = F.smooth_l1_loss(s_angle, t_angle, reduction="elementwise_mean")
         return loss
 
 
@@ -92,7 +155,13 @@ class VPRModel(pl.LightningModule):
         self.teacher_model = teacher_method.model
         self.student_model.train()
         self.teacher_model.eval()
-        self.rkd_loss = RkdDistance()
+        self.rkd_distance_loss_fn = RkdDistance()
+        self.rkd_angle_loss_fn = RKdAngle()
+        self.rkd_darkrank_loss_fn = HardDarkRank()
+        self.rdk_fitnet_loss_fn = FitNet(
+            student_method.features_dim["global_feature_shape"][0],
+            teacher_method.features_dim["global_feature_shape"][0],
+        )
 
         self.feature_adapter = nn.Linear(
             student_method.features_dim["global_feature_shape"][0],
@@ -159,12 +228,12 @@ class VPRModel(pl.LightningModule):
 
         self.batch_acc.append(batch_acc)
 
-        # self.log(
-        #    "b_acc",
-        #    sum(self.batch_acc) / len(self.batch_acc),
-        #    prog_bar=True,
-        #    logger=True,
-        # )
+        self.log(
+            "b_acc",
+            sum(self.batch_acc) / len(self.batch_acc),
+            prog_bar=True,
+            logger=True,
+        )
         return sum(self.batch_acc) / len(self.batch_acc)
 
     def training_step(self, batch, batch_idx):
@@ -177,9 +246,32 @@ class VPRModel(pl.LightningModule):
         teacher_descriptors = self.teacher_model(teacher_images)
         student_descriptors = self.student_model(student_images)
         student_descriptors = self.feature_adapter(student_descriptors)
-        loss = self.rkd_loss(teacher_descriptors, student_descriptors)
-        b_acc = self.loss_fn(student_descriptors, labels)
-        self.log("b_acc", b_acc)
+        rkd_distance_loss = self.rkd_distance_loss_fn(
+            student_descriptors, teacher_descriptors
+        )
+        rkd_angle_loss = self.rkd_angle_loss_fn(
+            student_descriptors, teacher_descriptors
+        )
+        darkrank_loss = self.rkd_darkrank_loss_fn(
+            student_descriptors, teacher_descriptors
+        )
+        fitnet_loss = self.rkd_fitnet_loss_fn(student_descriptors, teacher_descriptors)
+
+        cont_loss = self.loss_function(student_descriptors, labels)
+
+        loss = (
+            config["train"]["contrastive_factor"] * cont_loss
+            + config["train"]["rkd_distance_factor"] * rkd_distance_loss
+            + config["train"]["rkd_angle_factor"] * rkd_angle_loss
+            + config["train"]["darkrank_factor"] * darkrank_loss
+            + config["train"]["fitnet_factor"] * fitnet_loss
+        )
+
+        self.log("rkd_distance_loss", rkd_distance_loss)
+        self.log("rkd_angle_loss", rkd_angle_loss)
+        self.log("darkrank_loss", darkrank_loss)
+        self.log("fitnet_loss", fitnet_loss)
+        self.log("contrastive_loss", cont_loss)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
 
@@ -263,7 +355,7 @@ class VPRModel(pl.LightningModule):
         print("\n\n")
 
 
-def rkd_trainer(args):
+def distillation_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
