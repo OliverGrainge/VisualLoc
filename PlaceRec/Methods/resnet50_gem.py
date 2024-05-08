@@ -194,6 +194,20 @@ class Resnet18gemModel(nn.Module):
         return x
 
 
+class MobilenetV2gemModel(nn.Module):
+    def __init__(self, fc_output_dim=2048):
+        super().__init__()
+        self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features
+        self.aggregation = nn.Sequential(L2Norm(), GeM())
+        self.proj = nn.Sequential(nn.Linear(1280, fc_output_dim), L2Norm())
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.backbone(x)
+        x = self.aggregation(x)
+        x = self.proj(x)
+        return x
+
+
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -228,6 +242,27 @@ class ResNet34_GeM(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = Resnet34gemModel()
         name = "resnet50_gem"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class MobileNetV2_GeM(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        self.model = MobilenetV2gemModel()
+        name = "mobilenetv2_gem"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(weight_path):
