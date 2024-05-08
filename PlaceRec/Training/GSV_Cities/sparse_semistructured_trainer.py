@@ -9,7 +9,7 @@ from torch.nn.utils import prune
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
-
+from pytorch_lightning.loggers import WandbLogger
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
@@ -229,6 +229,8 @@ def sparse_semistructured_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
+    wandb_logger = WandbLogger(project="GSVCities", config=config)
+
     datamodule = GSVCitiesDataModule(
         cities=get_cities(),
         batch_size=int(args.batch_size / 4),
@@ -280,6 +282,7 @@ def sparse_semistructured_trainer(args):
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
+        logger=wandb_logger,
     )
 
     trainer.fit(model=model, datamodule=datamodule)

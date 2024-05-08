@@ -1,26 +1,33 @@
 from typing import List, Optional, Tuple
 
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch_pruning as tp
-from PIL import Image
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, ModelPruning
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
+from pytorch_lightning.loggers import WandbLogger
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )
-from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities
+from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities, pruning_schedule
 from PlaceRec.utils import get_config, get_method
 
 config = get_config()
 
 
-def setup_pruner(method, args):
+def scheduler(pruning_ratio_dict, steps):
+    return [
+        pruning_schedule(i * config["train"]["pruning_freq"], cumulative=False)
+        * pruning_ratio_dict
+        for i in range(steps + 1)
+    ]
+
+
+def setup_pruner(method):
     example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
     print(
@@ -42,7 +49,7 @@ def setup_pruner(method, args):
             dont_prune.append(layer)
 
     if config["train"]["pruning_type"] is None:
-        raise Exception(" For unstructured pruning, Must choose pruning method.")
+        raise Exception(" For structured pruning, Must choose pruning method.")
     elif config["train"]["pruning_type"] == "magnitude":
         importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
     elif config["train"]["pruning_type"] == "first-order":
@@ -50,14 +57,18 @@ def setup_pruner(method, args):
     elif config["train"]["pruning_type"] == "second-order":
         importance = tp.importance.GroupHessianImportance()
     else:
-        raise Exception(f"Pruning method {args.pruning_type} is not found")
+        raise Exception(
+            f"Pruning method {config['train']['pruning_type'].pruning_type} is not found"
+        )
 
     pruner = tp.pruner.MagnitudePruner(
         method.model,
         example_img,
         importance,
-        iterative_steps=20,
-        pruning_ratio=0.99,
+        iterative_steps=config["train"]["max_epochs"]
+        // config["train"]["pruning_freq"],
+        iterative_pruning_ratio_scheduler=scheduler,
+        pruning_ratio=config["train"]["final_sparsity"],
         ignored_layers=dont_prune,
         global_pruning=False,
     )
@@ -107,10 +118,11 @@ class VPRModel(pl.LightningModule):
 
         self.faiss_gpu = faiss_gpu
 
-        self.method, self.pruner, self.orig_nparams = setup_pruner(method, args)
+        self.method, self.pruner, self.orig_nparams = setup_pruner(method)
         self.model = method.model
         self.preprocess = method.preprocess
         self.model.train()
+        self.epoch = 0
         assert isinstance(self.model, torch.nn.Module)
 
     def forward(self, x):
@@ -184,7 +196,12 @@ class VPRModel(pl.LightningModule):
         return {"loss": loss}
 
     def on_train_epoch_start(self):
-        pass
+        """
+        Completes the pruning step if required
+        """
+        if self.epoch % config["train"]["pruning_freq"] == 0 and self.epoch != 0:
+            self.pruner.step()
+        self.epoch += 1
 
     def on_train_epoch_end(self) -> None:
         """
@@ -267,24 +284,22 @@ class VPRModel(pl.LightningModule):
         print("\n\n")
         self.val_R1 = recalls_dict[1]
         macs, nparams = tp.utils.count_ops_and_params(
-            self.model, self.method.example_input().to(self.method.device)
+            self.model,
+            self.method.example_input().to(next(self.model.parameters()).device),
         )
+
+        self.log("sparsity", 1 - (nparams / self.orig_nparams))
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
-
-
-def sparsity(method, orig_nparams):
-    example_img = method.example_input().to(method.device)
-    _, nparams = tp.utils.count_ops_and_params(method.model, example_img)
-    return 1 - (nparams / orig_nparams)
 
 
 # =================================== Training Loop ================================
 def sparse_structured_trainer(args):
     method = get_method(args.method, False)
-
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
+
+    wandb_logger = WandbLogger(project="GSVCities", config=config)
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(),
@@ -299,82 +314,50 @@ def sparse_structured_trainer(args):
         val_set_names=["pitts30k_val"],
     )
 
-    method, pruner, orig_nparams = setup_pruner(method, args)
-
-    for training_round in range(20):
-        sparse_count = sparsity(method, orig_nparams)
-        print(
-            "==============================================================================="
-        )
-        print(
-            "==============================================================================="
-        )
-        print(
-            "==============================================================================="
-        )
-        print(
-            f"=================    Training Round: {training_round} Sparsity: {sparse_count} ========================="
-        )
-        print(
-            "==============================================================================="
-        )
-        print(
-            "==============================================================================="
-        )
-        print(
-            "==============================================================================="
-        )
-
+    if config["train"]["checkpoint"]:
         checkpoint_cb = ModelCheckpoint(
             dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
             filename=f"{method.name}"
-            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_sparsity["
-            + f"{sparse_count}:.2f]",
+            + "_epoch_{epoch:02d}_step_{step:04d}_R1_{pitts30k_val/R1:.4f}_sparsity_"
+            + f"_{sparsity:.2f}",
             auto_insert_metric_name=False,
             save_weights_only=True,
-            save_top_k=1,
-            mode="max",
+            every_n_epochs=config["train"]["pruning_freq"],
         )
 
-        earlystopping_cb = EarlyStopping(
-            monitor="pitts30k_val/R1",
-            min_delta=0.00,
-            patience=3,
-            verbose=False,
-            mode="max",
-        )
+    module = VPRModel(
+        method=method,
+        lr=config["train"]["lr"],
+        weight_decay=config["train"]["weight_decay"],
+        momentum=config["train"]["momentum"],
+        warmup_steps=config["train"]["warmup_steps"],
+        milestones=config["train"]["milestones"],
+        lr_mult=config["train"]["lr_mult"],
+        loss_name=config["train"]["loss_name"],
+        miner_name=config["train"]["miner_name"],
+        miner_margin=config["train"]["miner_margin"],
+        faiss_gpu=False,
+        optimizer=config["train"]["optimizer"],
+    )
 
-        module = VPRModel(
-            method=method,
-            lr=config["train"]["lr"],
-            weight_decay=config["train"]["weight_decay"],
-            momentum=config["train"]["momentum"],
-            warmup_steps=config["train"]["warmup_steps"],
-            milestones=config["train"]["milestones"],
-            lr_mult=config["train"]["lr_mult"],
-            loss_name=config["train"]["loss_name"],
-            miner_name=config["train"]["miner_name"],
-            miner_margin=config["train"]["miner_margin"],
-            faiss_gpu=False,
-            optimizer=config["train"]["optimizer"],
-        )
+    trainer = pl.Trainer(
+        devices="auto",
+        accelerator="auto",
+        strategy="auto",
+        default_root_dir=f"./LOGS/{method.name}",
+        num_sanity_val_steps=0,
+        precision="16-mixed",
+        max_epochs=config["train"]["max_epochs"],
+        callbacks=[
+            checkpoint_cb,
+        ]
+        if config["train"]["checkpoint"]
+        else [],
+        reload_dataloaders_every_n_epochs=1,
+        logger=wandb_logger,
+        log_every_n_steps=1,
+        # limit_train_batches=2,
+        # check_val_every_n_epoch=20,
+    )
 
-        trainer = pl.Trainer(
-            devices="auto",
-            accelerator="auto",
-            strategy="auto",
-            default_root_dir=f"./LOGS/{method.name}",
-            num_sanity_val_steps=0,
-            precision="16-mixed",
-            max_epochs=config["train"]["max_epochs"],
-            callbacks=[
-                checkpoint_cb,
-                earlystopping_cb,
-            ],
-            reload_dataloaders_every_n_epochs=1,
-            limit_train_batches=1,
-        )
-
-        trainer.fit(model=module, datamodule=datamodule)
-
-        pruner.step()
+    trainer.fit(model=module, datamodule=datamodule)

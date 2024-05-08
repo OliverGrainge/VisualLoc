@@ -338,11 +338,6 @@ def pruning_schedule(epoch: int, cumulative=False):
     start = config["train"]["initial_sparsity"]
     end = config["train"]["final_sparsity"]
     max_epochs = config["train"]["max_epochs"]
-    freq = config["train"]["pruning_freq"]
-    if not epoch % freq == 0 and not cumulative:
-        epoch = epoch - (epoch % freq)
-    elif not epoch % freq == 0 and cumulative:
-        return 0.0
 
     if cumulative:
         if epoch == 0:
