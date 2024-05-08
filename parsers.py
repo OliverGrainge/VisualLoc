@@ -133,10 +133,6 @@ def train_arguments():
     parser.add_argument("--method", type=str, default=config["train"]["method"])
 
     parser.add_argument(
-        "--pretrained", type=bool, default=config["train"]["pretrained"]
-    )
-
-    parser.add_argument(
         "--image_resolution",
         type=int,
         default=config["train"]["image_resolution"],

@@ -11,8 +11,8 @@ from .dinov2b14_cls import DINOv2B14_CLS
 from .dinov2s14_cls import DINOv2S14_CLS
 from .eigenplaces import EigenPlaces
 from .hybridnet import HybridNet
-from .mixvpr import MixVPR
-from .netvlad import NetVLAD
+from .mixvpr import MixVPR, ResNet34_MixVPR, ResNet18_MixVPR
+from .netvlad import NetVLAD, ResNet34_NetVLAD, ResNet18_NetVLAD
 from .resnet50_gem import ResNet50_GeM, ResNet34_GeM, ResNet18_GeM
 from .selavpr import SelaVPR
 from .sfrs import SFRS
