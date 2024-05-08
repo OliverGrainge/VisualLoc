@@ -256,15 +256,20 @@ class VPRModel(pl.LightningModule):
 
         # ----------------------------------
         # get the backbone and the aggregator
-        self.backbone = get_backbone(
-            backbone_arch, pretrained, layers_to_freeze, layers_to_crop
-        )
-        self.aggregator = get_aggregator(agg_arch, agg_config)
+        if "mobilenetv2" in backbone_arch.lower():
+            self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features[
+                :-1
+            ]
+            self.aggregator = get_aggregator(agg_arch, agg_config)
+        else:
+            self.backbone = get_backbone(
+                backbone_arch, pretrained, layers_to_freeze, layers_to_crop
+            )
+            self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
     def forward(self, x):
         x = self.backbone(x)
-        print(x.shape)
         x = self.aggregator(x)
         return x
 
@@ -347,6 +352,37 @@ class ResNet34_ConvAP(SingleStageBaseModelWrapper):
             )
 
 
+class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "mobilenetv2_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="mobilenetv2",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 512,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
 class ResNet18_ConvAP(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         name = "resnet18_convap"
@@ -357,6 +393,37 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 512,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "mobilenetv2_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="mobilenetv2",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 320,
                 "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,

@@ -32,7 +32,7 @@ eval:
 
 train: 
   training_method: "gsv_cities_dense"
-  method: "ResNet18_ConvAP"
+  method: "MobileNetV2_ConvAP"
   image_resolution: [320, 320]
 
   finetune: True
@@ -42,7 +42,7 @@ train:
   # optimization
   optimizer: "adam"
   max_epochs: 20
-  batch_size: 120
+  batch_size: 12
   lr: 0.0002
   weight_decay: 0
   momentum: 0.9
