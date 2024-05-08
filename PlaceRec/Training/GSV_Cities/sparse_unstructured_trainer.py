@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 
 import PlaceRec.Training.GSV_Cities.utils as utils
-from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
+from PlaceRec.Methods.gem import Resnet50gemModel
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )

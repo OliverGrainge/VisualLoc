@@ -264,6 +264,7 @@ class VPRModel(pl.LightningModule):
     # the forward pass of the lightning model
     def forward(self, x):
         x = self.backbone(x)
+        print(x.shape)
         x = self.aggregator(x)
         return x
 
@@ -271,12 +272,11 @@ class VPRModel(pl.LightningModule):
 ######################################### CONVAP MODEL ########################################################
 
 
-# Note that images must be resized to 320x320
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.Resize(
-            (480, 640),
+            (320, 320),
             interpolation=transforms.InterpolationMode.BILINEAR,
             antialias=True,
         ),
@@ -287,7 +287,7 @@ preprocess = transforms.Compose(
 
 class ConvAP(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        name = "convap"
+        name = "resnet50_convap"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         self.model = VPRModel(
             backbone_arch="resnet50",
@@ -295,6 +295,68 @@ class ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 2048,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class ResNet34_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "resnet34_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="resnet34",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 512,
+                "out_channels": 1024,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class ResNet18_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "resnet18_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="resnet18",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 512,
                 "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,

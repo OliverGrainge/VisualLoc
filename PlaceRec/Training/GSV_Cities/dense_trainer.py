@@ -9,7 +9,7 @@ from torch.optim.optimizer import Optimizer
 from pytorch_lightning.loggers import WandbLogger
 
 import PlaceRec.Training.GSV_Cities.utils as utils
-from PlaceRec.Methods.resnet50_gem import Resnet50gemModel
+from PlaceRec.Methods.gem import Resnet50gemModel
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
     GSVCitiesDataModule,
 )
