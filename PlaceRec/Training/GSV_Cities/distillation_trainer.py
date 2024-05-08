@@ -64,23 +64,6 @@ class HardDarkRank(nn.Module):
         return loss
 
 
-class FitNet(nn.Module):
-    def __init__(self, in_feature, out_feature):
-        super().__init__()
-        self.in_feature = in_feature
-        self.out_feature = out_feature
-
-        self.transform = nn.Conv2d(in_feature, out_feature, 1, bias=False)
-        self.transform.weight.data.uniform_(-0.005, 0.005)
-
-    def forward(self, student, teacher):
-        if student.dim() == 2:
-            student = student.unsqueeze(2).unsqueeze(3)
-            teacher = teacher.unsqueeze(2).unsqueeze(3)
-
-        return (self.transform(student) - teacher).pow(2).mean()
-
-
 class RkdDistance(nn.Module):
     def forward(self, student, teacher):
         with torch.no_grad():
@@ -157,11 +140,7 @@ class VPRModel(pl.LightningModule):
         self.teacher_model.eval()
         self.rkd_distance_loss_fn = RkdDistance()
         self.rkd_angle_loss_fn = RKdAngle()
-        self.rkd_darkrank_loss_fn = HardDarkRank()
-        self.rdk_fitnet_loss_fn = FitNet(
-            student_method.features_dim["global_feature_shape"][0],
-            teacher_method.features_dim["global_feature_shape"][0],
-        )
+        self.darkrank_loss_fn = HardDarkRank()
 
         self.feature_adapter = nn.Linear(
             student_method.features_dim["global_feature_shape"][0],
@@ -211,7 +190,6 @@ class VPRModel(pl.LightningModule):
         return [optimizer], [warmup_scheduler, scheduler]
 
     def loss_function(self, descriptors, labels):
-        print(descriptors.shape)
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
@@ -243,7 +221,8 @@ class VPRModel(pl.LightningModule):
         BS, N, ch, h, w = student_places.shape
         student_images = student_places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
-        teacher_descriptors = self.teacher_model(teacher_images)
+        with torch.no_grad():
+            teacher_descriptors = self.teacher_model(teacher_images)
         student_descriptors = self.student_model(student_images)
         student_descriptors = self.feature_adapter(student_descriptors)
         rkd_distance_loss = self.rkd_distance_loss_fn(
@@ -252,10 +231,7 @@ class VPRModel(pl.LightningModule):
         rkd_angle_loss = self.rkd_angle_loss_fn(
             student_descriptors, teacher_descriptors
         )
-        darkrank_loss = self.rkd_darkrank_loss_fn(
-            student_descriptors, teacher_descriptors
-        )
-        fitnet_loss = self.rkd_fitnet_loss_fn(student_descriptors, teacher_descriptors)
+        darkrank_loss = self.darkrank_loss_fn(student_descriptors, teacher_descriptors)
 
         cont_loss = self.loss_function(student_descriptors, labels)
 
@@ -264,13 +240,11 @@ class VPRModel(pl.LightningModule):
             + config["train"]["rkd_distance_factor"] * rkd_distance_loss
             + config["train"]["rkd_angle_factor"] * rkd_angle_loss
             + config["train"]["darkrank_factor"] * darkrank_loss
-            + config["train"]["fitnet_factor"] * fitnet_loss
         )
 
         self.log("rkd_distance_loss", rkd_distance_loss)
         self.log("rkd_angle_loss", rkd_angle_loss)
         self.log("darkrank_loss", darkrank_loss)
-        self.log("fitnet_loss", fitnet_loss)
         self.log("contrastive_loss", cont_loss)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}

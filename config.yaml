@@ -31,7 +31,7 @@ eval:
 
 
 train: 
-  training_method: "gsv_cities_distillation"
+  training_method: "gsv_cities_sparse_structured_distillation"
   method: "MobileNetV2_ConvAP"
   image_resolution: [320, 320]
 
@@ -67,7 +67,6 @@ train:
   rkd_distance_factor: 1.0
   rkd_angle_factor: 0.0
   darkrank_factor: 0.0
-  fitnet_factor: 0.0
 
   
 
