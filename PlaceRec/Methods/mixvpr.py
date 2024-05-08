@@ -216,6 +216,9 @@ def get_backbone(
     if "resnet" in backbone_arch.lower():
         return ResNet(backbone_arch, pretrained, layers_to_freeze, layers_to_crop)
 
+    elif "mobilenetv2" in backbone_arch.lower():
+        return torchvision.models.mobilenet_v2(pretrained=True).features[:-1]
+
     elif "efficient" in backbone_arch.lower():
         raise NotImplementedError
 
@@ -357,6 +360,42 @@ class MixVPR(SingleStageBaseModelWrapper):
                 "in_channels": 1024,
                 "in_h": 20,
                 "in_w": 20,
+                "out_channels": 256,
+                "mix_depth": 4,
+                "mlp_ratio": 1,
+                "out_rows": 2,
+            },
+        )
+
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class MobileNetV2_MixVPR(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "resnet34_mixvpr"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+
+        self.model = VPRModel(
+            backbone_arch="mobilenetv2",
+            layers_to_crop=[4],
+            agg_arch="mixvpr",
+            agg_config={
+                "in_channels": 320,
+                "in_h": 10,
+                "in_w": 10,
                 "out_channels": 256,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
