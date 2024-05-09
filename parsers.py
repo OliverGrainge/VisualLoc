@@ -1,10 +1,4 @@
 import argparse
-import os
-from os.path import join
-
-import torch
-import yaml
-
 from PlaceRec.utils import get_config
 
 config = get_config()
@@ -111,6 +105,77 @@ def train_arguments():
         "--training_method", type=str, default=config["train"]["training_method"]
     )
 
+    parser.add_argument("--method", type=str, default=config["train"]["method"])
+
+    parser.add_argument(
+        "--image_resolution",
+        type=int,
+        default=config["train"]["image_resolution"],
+        nargs="+",
+    )
+
+    parser.add_argument("--finetune", type=bool, default=config["train"]["finetune"])
+
+    parser.add_argument(
+        "--checkpoint", type=bool, default=config["train"]["checkpoint"]
+    )
+
+    parser.add_argument(
+        "--num_workers", type=int, default=config["train"]["num_workers"]
+    )
+
+    parser.add_argument("--optimizer", type=str, default=config["train"]["optimizer"])
+
+    parser.add_argument("--max_epochs", type=int, default=config["train"]["max_epochs"])
+
+    parser.add_argument("--batch_size", type=int, default=config["train"]["batch_size"])
+
+    parser.add_argument("--lr", type=float, default=config["train"]["lr"])
+
+    parser.add_argument(
+        "--weight_decay", type=float, default=config["train"]["weight_decay"]
+    )
+
+    parser.add_argument("--momentum", type=float, default=config["train"]["momentum"])
+
+    parser.add_argument(
+        "--warmup_steps", type=int, default=config["train"]["warmup_steps"]
+    )
+
+    parser.add_argument(
+        "--milestones", type=int, nargs="+", default=config["train"]["milestones"]
+    )
+
+    parser.add_argument("--lr_mult", type=float, default=config["train"]["lr_mult"])
+
+    parser.add_argument("--loss_name", type=str, default=config["train"]["loss_name"])
+
+    parser.add_argument("--miner_name", type=str, default=config["train"]["miner_name"])
+
+    parser.add_argument(
+        "--miner_margin", type=float, default=config["train"]["miner_margin"]
+    )
+
+    parser.add_argument(
+        "--pruning_type", type=str, default=config["train"]["pruning_type"]
+    )
+
+    parser.add_argument(
+        "--final_sparsity", type=float, default=config["train"]["final_sparsity"]
+    )
+
+    parser.add_argument(
+        "--initial_sparsity", type=float, default=config["train"]["initial_sparsity"]
+    )
+
+    parser.add_argument(
+        "--pruning_schedule", type=str, default=config["train"]["pruning_schedule"]
+    )
+
+    parser.add_argument(
+        "--pruning_freq", type=int, default=config["train"]["pruning_freq"]
+    )
+
     parser.add_argument(
         "--teacher_method", type=str, default=config["train"]["teacher_method"]
     )
@@ -123,24 +188,24 @@ def train_arguments():
     )
 
     parser.add_argument(
-        "--num_workers", type=int, default=config["train"]["num_workers"]
+        "--contrastive_factor",
+        type=float,
+        default=config["train"]["contrastive_factor"],
     )
 
     parser.add_argument(
-        "--pruning_type", type=str, default=config["train"]["pruning_type"]
+        "--rkd_distance_factor",
+        type=float,
+        default=config["train"]["rkd_distance_factor"],
     )
-
-    parser.add_argument("--method", type=str, default=config["train"]["method"])
 
     parser.add_argument(
-        "--image_resolution",
-        type=int,
-        default=config["train"]["image_resolution"],
-        nargs="+",
+        "--rkd_angle_factor", type=float, default=config["train"]["rkd_angle_factor"]
     )
 
-    parser.add_argument("--batch_size", type=int, default=config["train"]["batch_size"])
+    parser.add_argument(
+        "--darkrank_factor", type=float, default=config["train"]["darkrank_factor"]
+    )
 
-    parser.add_argument("--optimizer", type=str, default=config["train"]["optimizer"])
     args = parser.parse_args()
     return args

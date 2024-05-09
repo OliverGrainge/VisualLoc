@@ -114,6 +114,10 @@ class VPRModel(pl.LightningModule):
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
+        contrastive_factor=1.0,
+        rkd_angle_factor=1.0,
+        rkd_distance_factor=0.0,
+        darkrank_factor=0.0,
     ):
         super().__init__()
 
@@ -124,6 +128,10 @@ class VPRModel(pl.LightningModule):
         self.warmup_steps = warmup_steps
         self.milestones = milestones
         self.lr_mult = lr_mult
+        self.contrastive_factor = contrastive_factor
+        self.rkd_angle_factor = rkd_angle_factor
+        self.rkd_distance_factor = rkd_distance_factor
+        self.darkrank_factor = darkrank_factor
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -236,10 +244,10 @@ class VPRModel(pl.LightningModule):
         cont_loss = self.loss_function(student_descriptors, labels)
 
         loss = (
-            config["train"]["contrastive_factor"] * cont_loss
-            + config["train"]["rkd_distance_factor"] * rkd_distance_loss
-            + config["train"]["rkd_angle_factor"] * rkd_angle_loss
-            + config["train"]["darkrank_factor"] * darkrank_loss
+            self.contrastive_factor * cont_loss
+            + self.rkd_distance_factor * rkd_distance_loss
+            + self.rkd * rkd_angle_loss
+            + self.darkrank_factor * darkrank_loss
         )
 
         self.log("rkd_distance_loss", rkd_distance_loss)
@@ -355,17 +363,21 @@ def distillation_trainer(args):
     model = VPRModel(
         student_method=student_method,
         teacher_method=teacher_method,
-        lr=config["train"]["lr"],
-        weight_decay=config["train"]["weight_decay"],
-        momentum=config["train"]["momentum"],
-        warmup_steps=config["train"]["warmup_steps"],
-        milestones=config["train"]["milestones"],
-        lr_mult=config["train"]["lr_mult"],
-        loss_name=config["train"]["loss_name"],
-        miner_name=config["train"]["miner_name"],
-        miner_margin=config["train"]["miner_margin"],
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        momentum=args.momentum,
+        warmup_steps=args.warmup_steps,
+        milestones=args.milestones,
+        lr_mult=args.lr_mult,
+        loss_name=args.loss_name,
+        miner_name=args.miner_name,
+        miner_margin=args.miner_margin,
         faiss_gpu=False,
-        optimizer=config["train"]["optimizer"],
+        optimizer=args.optimizer,
+        contrastive_factor=args.contrastive_factor,
+        rkd_angle_factor=args.rkd_angle_factor,
+        rkd_distance_factor=args.rkd_distance_factor,
+        darkrank_factor=args.darkrank_factor,
     )
 
     checkpoint_cb = ModelCheckpoint(
@@ -391,7 +403,7 @@ def distillation_trainer(args):
         default_root_dir=f"./LOGS/{student_method.name}_{teacher_method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=config["train"]["max_epochs"],
+        max_epochs=args.max_epochs,
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,

@@ -95,15 +95,19 @@ class RKdAngle(nn.Module):
         return loss
 
 
-def scheduler(pruning_ratio_dict, steps):
-    return [
-        pruning_schedule(i * config["train"]["pruning_freq"], cumulative=False)
-        * pruning_ratio_dict
-        for i in range(steps + 1)
-    ]
+def get_scheduler(args):
+    pruning_freq = args.pruning_freq
+
+    def schd(pruning_ratio_dict, steps):
+        return [
+            pruning_schedule(i * pruning_freq, cumulative=False) * pruning_ratio_dict
+            for i in range(steps + 1)
+        ]
+
+    return schd
 
 
-def setup_pruner(method):
+def setup_pruner(method, args):
     example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
     print(
@@ -124,27 +128,24 @@ def setup_pruner(method):
         ):
             dont_prune.append(layer)
 
-    if config["train"]["pruning_type"] is None:
+    if args.pruning_type is None:
         raise Exception(" For structured pruning, Must choose pruning method.")
-    elif config["train"]["pruning_type"] == "magnitude":
+    elif args.pruning_type == "magnitude":
         importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
-    elif config["train"]["pruning_type"] == "first-order":
+    elif args.pruning_type == "first-order":
         importance = tp.importance.GroupTaylorImportance()
-    elif config["train"]["pruning_type"] == "second-order":
+    elif args.pruning_type == "second-order":
         importance = tp.importance.GroupHessianImportance()
     else:
-        raise Exception(
-            f"Pruning method {config['train']['pruning_type'].pruning_type} is not found"
-        )
+        raise Exception(f"Pruning method {args.pruning_type} is not found")
 
     pruner = tp.pruner.MagnitudePruner(
         method.model,
         example_img,
         importance,
-        iterative_steps=config["train"]["max_epochs"]
-        // config["train"]["pruning_freq"],
-        iterative_pruning_ratio_scheduler=scheduler,
-        pruning_ratio=config["train"]["final_sparsity"],
+        iterative_steps=args.max_epochs // args.pruning_freq,
+        iterative_pruning_ratio_scheduler=get_scheduler(args),
+        pruning_ratio=args.final_sparsity,
         ignored_layers=dont_prune,
         global_pruning=False,
     )
@@ -172,6 +173,11 @@ class VPRModel(pl.LightningModule):
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
+        contrastive_factor=1.0,
+        rkd_distance_factor=1.0,
+        rkd_angle_factor=0.0,
+        darkrank_factor=0.0,
+        pruning_freq=5,
     ):
         super().__init__()
 
@@ -182,6 +188,11 @@ class VPRModel(pl.LightningModule):
         self.warmup_steps = warmup_steps
         self.milestones = milestones
         self.lr_mult = lr_mult
+        self.contrastive_factor = contrastive_factor
+        self.rkd_distance_factor = rkd_distance_factor
+        self.rkd_angle_factor = rkd_angle_factor
+        self.darkrank_factor = darkrank_factor
+        self.pruning_freq = pruning_freq
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -293,10 +304,10 @@ class VPRModel(pl.LightningModule):
         cont_loss = self.loss_function(student_descriptors, labels)
 
         loss = (
-            config["train"]["contrastive_factor"] * cont_loss
-            + config["train"]["rkd_distance_factor"] * rkd_distance_loss
-            + config["train"]["rkd_angle_factor"] * rkd_angle_loss
-            + config["train"]["darkrank_factor"] * darkrank_loss
+            self.contrastive_factor * cont_loss
+            + self.rkd_distance_factor * rkd_distance_loss
+            + self.rkd_angle_factor * rkd_angle_loss
+            + self.darkrank_factor * darkrank_loss
         )
 
         self.log("rkd_distance_loss", rkd_distance_loss)
@@ -310,7 +321,7 @@ class VPRModel(pl.LightningModule):
         """
         Completes the pruning step if required
         """
-        if self.epoch % config["train"]["pruning_freq"] == 0 and self.epoch != 0:
+        if self.epoch % self.pruning_freq == 0 and self.epoch != 0:
             self.pruner.step()
         macs, nparams = tp.utils.count_ops_and_params(
             self.student_model,
@@ -439,7 +450,7 @@ def sparse_structured_distillation_trainer(args):
         val_set_names=["pitts30k_val"],
     )
 
-    if config["train"]["checkpoint"]:
+    if args.checkpoint:
         checkpoint_cb = ModelCheckpoint(
             dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
             filename=f"{student_method.name}"
@@ -447,23 +458,27 @@ def sparse_structured_distillation_trainer(args):
             + f"_{sparsity:.2f}",
             auto_insert_metric_name=False,
             save_weights_only=True,
-            every_n_epochs=config["train"]["pruning_freq"],
+            every_n_epochs=args.pruning_freq,
         )
 
     module = VPRModel(
         student_method=student_method,
         teacher_method=teacher_method,
-        lr=config["train"]["lr"],
-        weight_decay=config["train"]["weight_decay"],
-        momentum=config["train"]["momentum"],
-        warmup_steps=config["train"]["warmup_steps"],
-        milestones=config["train"]["milestones"],
-        lr_mult=config["train"]["lr_mult"],
-        loss_name=config["train"]["loss_name"],
-        miner_name=config["train"]["miner_name"],
-        miner_margin=config["train"]["miner_margin"],
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        momentum=args.momentum,
+        warmup_steps=args.warmup_steps,
+        milestones=args.milestones,
+        lr_mult=args.lr_mult,
+        loss_name=args.loss_name,
+        miner_name=args.miner_name,
+        miner_margin=args.miner_margin,
         faiss_gpu=False,
-        optimizer=config["train"]["optimizer"],
+        optimizer=args.optimizer,
+        rkd_angle_factor=args.rkd_angle_factor,
+        rkd_distance_factor=args.rkd_distance_factor,
+        darkrank_factor=args.darkrank_factor,
+        pruning_freq=args.pruning_freq,
     )
 
     trainer = pl.Trainer(
@@ -473,11 +488,11 @@ def sparse_structured_distillation_trainer(args):
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=config["train"]["max_epochs"],
+        max_epochs=args.max_epochs,
         callbacks=[
             checkpoint_cb,
         ]
-        if config["train"]["checkpoint"]
+        if args.checkpoint
         else [],
         reload_dataloaders_every_n_epochs=1,
         logger=wandb_logger,

@@ -15,7 +15,7 @@ datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
   
 run: 
   datasets: ["pitts30k"]
-  methods: ["resnet50_cosplace", "resnet50_eigenplaces"]
+  methods: ["MixVPR"]
   num_workers: 0
   pin_memory: False
   batchsize: 1
@@ -23,7 +23,7 @@ run:
 
 eval: 
   datasets: ["pitts30k"]
-  methods: ["resnet50_cosplace", "resnet50_eigenplaces"]
+  methods: ["MixVPR"]
   partition: "test"
   device: "cpu"
   metrics: ["recall@1", "recall@5"]

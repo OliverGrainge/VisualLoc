@@ -237,17 +237,17 @@ def dense_trainer(args):
 
     model = VPRModel(
         method=method,
-        lr=config["train"]["lr"],
-        weight_decay=config["train"]["weight_decay"],
-        momentum=config["train"]["momentum"],
-        warmup_steps=config["train"]["warmup_steps"],
-        milestones=config["train"]["milestones"],
-        lr_mult=config["train"]["lr_mult"],
-        loss_name=config["train"]["loss_name"],
-        miner_name=config["train"]["miner_name"],
-        miner_margin=config["train"]["miner_margin"],
+        lr=args.lr,
+        weight_decay=args.weight_decay,
+        momentum=args.momentum,
+        warmup_steps=args.warmup_steps,
+        milestones=args.milestones,
+        lr_mult=args.lr_mult,
+        loss_name=args.loss_name,
+        miner_name=args.miner_name,
+        miner_margin=args.miner_margin,
         faiss_gpu=False,
-        optimizer=config["train"]["optimizer"],
+        optimizer=args.optimizer,
     )
 
     checkpoint_cb = ModelCheckpoint(
@@ -269,7 +269,7 @@ def dense_trainer(args):
         default_root_dir=f"./LOGS/{method.name}",
         num_sanity_val_steps=0,
         precision="16-mixed",
-        max_epochs=config["train"]["max_epochs"],
+        max_epochs=args.max_epochs,
         check_val_every_n_epoch=1,
         callbacks=[checkpoint_cb],
         reload_dataloaders_every_n_epochs=1,
