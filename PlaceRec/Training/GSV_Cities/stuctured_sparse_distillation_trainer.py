@@ -483,24 +483,44 @@ def sparse_structured_distillation_trainer(args):
         pruning_freq=args.pruning_freq,
     )
 
-    trainer = pl.Trainer(
-        devices="auto",
-        accelerator="auto",
-        strategy="auto",
-        default_root_dir=f"./LOGS/{method.name}",
-        num_sanity_val_steps=0,
-        precision="16-mixed",
-        max_epochs=args.max_epochs,
-        callbacks=[
-            checkpoint_cb,
-        ]
-        if args.checkpoint
-        else [],
-        reload_dataloaders_every_n_epochs=1,
-        logger=wandb_logger,
-        log_every_n_steps=1,
-        limit_train_batches=2,
-        check_val_every_n_epoch=20,
-    )
+    if args.debug:
+        trainer = pl.Trainer(
+            enable_progress_bar=args.enable_progress_bar,
+            devices="auto",
+            accelerator="auto",
+            strategy="auto",
+            default_root_dir=f"./LOGS/{method.name}",
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+            max_epochs=args.max_epochs,
+            callbacks=[
+                checkpoint_cb,
+            ]
+            if args.checkpoint
+            else [],
+            reload_dataloaders_every_n_epochs=1,
+            logger=wandb_logger,
+            log_every_n_steps=1,
+            limit_train_batches=2,
+            check_val_every_n_epoch=20,
+        )
+    else:
+        trainer = pl.Trainer(
+            enable_progress_bar=args.enable_progress_bar,
+            devices="auto",
+            accelerator="auto",
+            strategy="auto",
+            default_root_dir=f"./LOGS/{method.name}",
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+            max_epochs=args.max_epochs,
+            callbacks=[
+                checkpoint_cb,
+            ]
+            if args.checkpoint
+            else [],
+            reload_dataloaders_every_n_epochs=1,
+            logger=wandb_logger,
+        )
 
     trainer.fit(model=module, datamodule=datamodule)

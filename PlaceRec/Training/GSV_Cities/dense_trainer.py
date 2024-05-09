@@ -262,20 +262,36 @@ def dense_trainer(args):
             mode="max",
         )
 
-    trainer = pl.Trainer(
-        # enable_progress_bar=False,
-        devices="auto",
-        accelerator="auto",
-        strategy="auto",
-        default_root_dir=f"./LOGS/{method.name}",
-        num_sanity_val_steps=0,
-        precision="16-mixed",
-        max_epochs=args.max_epochs,
-        check_val_every_n_epoch=1,
-        callbacks=[checkpoint_cb] if args.checkpoint else [],
-        reload_dataloaders_every_n_epochs=1,
-        log_every_n_steps=20,
-        logger=wandb_logger,
-    )
+    if args.debug:
+        trainer = pl.Trainer(
+            enable_progress_bar=args.enable_progress_bar,
+            devices="auto",
+            accelerator="auto",
+            strategy="auto",
+            default_root_dir=f"./LOGS/{method.name}",
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+            max_epochs=args.max_epochs,
+            callbacks=[checkpoint_cb] if args.checkpoint else [],
+            reload_dataloaders_every_n_epochs=1,
+            logger=wandb_logger,
+            log_every_n_steps=1,
+            limit_train_batches=2,
+            check_val_every_n_epoch=20,
+        )
+    else:
+        trainer = pl.Trainer(
+            enable_progress_bar=args.enable_progress_bar,
+            devices="auto",
+            accelerator="auto",
+            strategy="auto",
+            default_root_dir=f"./LOGS/{method.name}",
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+            max_epochs=args.max_epochs,
+            callbacks=[checkpoint_cb] if args.checkpoint else [],
+            reload_dataloaders_every_n_epochs=1,
+            logger=wandb_logger,
+        )
 
     trainer.fit(model=model, datamodule=datamodule)

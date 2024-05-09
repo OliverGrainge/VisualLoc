@@ -102,6 +102,14 @@ def train_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "--enable_progress_bar",
+        type=bool,
+        default=config["train"]["enable_progress_bar"],
+    )
+
+    parser.add_argument("--debug", type=bool, default=config["train"]["debug"])
+
+    parser.add_argument(
         "--training_method", type=str, default=config["train"]["training_method"]
     )
 
