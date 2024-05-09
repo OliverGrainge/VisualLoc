@@ -5,8 +5,8 @@
 weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
 datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
-#datasets_directory: "/ssdfs/users/oeg1n18/datasets"
-#weights_directory: "/ssdfs/users/oeg1n18/VisualLoc_Weights"
+#datasets_directory: "/scratch/oeg1n18/datasets"
+#weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
 
 
 #####################################################################################################################################################

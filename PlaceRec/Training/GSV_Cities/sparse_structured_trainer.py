@@ -306,7 +306,7 @@ def sparse_structured_trainer(args):
     wandb_logger = WandbLogger(project="GSVCities", config=config)
 
     datamodule = GSVCitiesDataModule(
-        cities=get_cities(),
+        cities=get_cities(args),
         batch_size=int(args.batch_size / 4),
         img_per_place=4,
         min_img_per_place=4,

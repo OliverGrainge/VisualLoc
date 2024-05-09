@@ -302,8 +302,8 @@ class HessianUnstructuredPruner:
         self.model.zero_grad()
 
 
-def get_cities():
-    if config["train"]["finetune"] == True:
+def get_cities(args):
+    if args.finetune == True:
         cities = ["London", "Boston", "Barcelona"]
     else:
         cities = [
