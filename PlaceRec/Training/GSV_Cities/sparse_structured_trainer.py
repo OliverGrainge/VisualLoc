@@ -84,6 +84,7 @@ class VPRModel(pl.LightningModule):
 
     def __init__(
         self,
+        args,
         method,
         lr=0.05,
         optimizer="sgd",
@@ -329,6 +330,7 @@ def sparse_structured_trainer(args):
         )
 
     module = VPRModel(
+        args=args,
         method=method,
         lr=args.lr,
         weight_decay=args.weight_decay,

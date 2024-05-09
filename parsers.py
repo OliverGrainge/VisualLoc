@@ -142,9 +142,7 @@ def train_arguments():
         "--warmup_steps", type=int, default=config["train"]["warmup_steps"]
     )
 
-    parser.add_argument(
-        "--milestones", type=int, nargs="+", default=config["train"]["milestones"]
-    )
+    parser.add_argument("--milestones", type=int, nargs="+", default=[5, 10, 15, 25])
 
     parser.add_argument("--lr_mult", type=float, default=config["train"]["lr_mult"])
 

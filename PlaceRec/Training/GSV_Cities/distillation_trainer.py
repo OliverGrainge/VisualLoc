@@ -380,20 +380,21 @@ def distillation_trainer(args):
         darkrank_factor=args.darkrank_factor,
     )
 
-    checkpoint_cb = ModelCheckpoint(
-        dirpath="Checkpoints/gsv_cities_rdk/"
-        + student_method.name
-        + "_"
-        + teacher_method.name
-        + "/",
-        monitor="pitts30k_val/R1",
-        filename=f"{student_method.name}"
-        + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
-        auto_insert_metric_name=False,
-        save_weights_only=True,
-        save_top_k=1,
-        mode="max",
-    )
+    if args.checkpoint:
+        checkpoint_cb = ModelCheckpoint(
+            dirpath="Checkpoints/gsv_cities_rdk/"
+            + student_method.name
+            + "_"
+            + teacher_method.name
+            + "/",
+            monitor="pitts30k_val/R1",
+            filename=f"{student_method.name}"
+            + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
+            auto_insert_metric_name=False,
+            save_weights_only=True,
+            save_top_k=1,
+            mode="max",
+        )
 
     trainer = pl.Trainer(
         # enable_progress_bar=False,
@@ -405,7 +406,7 @@ def distillation_trainer(args):
         precision="16-mixed",
         max_epochs=args.max_epochs,
         check_val_every_n_epoch=1,
-        callbacks=[checkpoint_cb],
+        callbacks=[checkpoint_cb] if args.checkpoint else [],
         reload_dataloaders_every_n_epochs=1,
         log_every_n_steps=20,
         logger=wandb_logger,
