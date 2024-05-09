@@ -442,7 +442,7 @@ def sparse_structured_distillation_trainer(args):
     if config["train"]["checkpoint"]:
         checkpoint_cb = ModelCheckpoint(
             dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
-            filename=f"{method.name}"
+            filename=f"{student_method.name}"
             + "_epoch_{epoch:02d}_step_{step:04d}_R1_{pitts30k_val/R1:.4f}_sparsity_"
             + f"_{sparsity:.2f}",
             auto_insert_metric_name=False,

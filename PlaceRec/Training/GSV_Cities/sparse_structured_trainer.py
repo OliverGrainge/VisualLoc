@@ -201,6 +201,17 @@ class VPRModel(pl.LightningModule):
         """
         if self.epoch % config["train"]["pruning_freq"] == 0 and self.epoch != 0:
             self.pruner.step()
+
+        macs, nparams = tp.utils.count_ops_and_params(
+            self.model,
+            self.method.example_input().to(next(self.model.parameters()).device),
+        )
+        desc = self.model(
+            self.method.example_input().to(next(self.model.parameters()).device)
+        )
+        print("===========================")
+        print(desc.shape)
+        print("===========================")
         self.epoch += 1
 
     def on_train_epoch_end(self) -> None:
@@ -356,8 +367,8 @@ def sparse_structured_trainer(args):
         reload_dataloaders_every_n_epochs=1,
         logger=wandb_logger,
         log_every_n_steps=1,
-        # limit_train_batches=2,
-        # check_val_every_n_epoch=20,
+        limit_train_batches=2,
+        check_val_every_n_epoch=20,
     )
 
     trainer.fit(model=module, datamodule=datamodule)

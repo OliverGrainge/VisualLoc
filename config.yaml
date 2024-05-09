@@ -31,8 +31,8 @@ eval:
 
 
 train: 
-  training_method: "gsv_cities_sparse_structured_distillation"
-  method: "MobileNetV2_ConvAP"
+  training_method: "gsv_cities_structured_sparse"
+  method: "ResNet50_GeM"
   image_resolution: [320, 320]
 
   finetune: True
