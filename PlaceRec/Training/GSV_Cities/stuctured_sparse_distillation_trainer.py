@@ -160,6 +160,7 @@ class VPRModel(pl.LightningModule):
 
     def __init__(
         self,
+        args,
         student_method,
         teacher_method,
         lr=0.05,
@@ -205,7 +206,7 @@ class VPRModel(pl.LightningModule):
         self.faiss_gpu = faiss_gpu
 
         self.student_method, self.pruner, self.orig_nparams = setup_pruner(
-            student_method
+            student_method, args
         )
         self.student_model = student_method.model
         self.teacher_model = teacher_method.model
@@ -462,6 +463,7 @@ def sparse_structured_distillation_trainer(args):
         )
 
     module = VPRModel(
+        args=args,
         student_method=student_method,
         teacher_method=teacher_method,
         lr=args.lr,
