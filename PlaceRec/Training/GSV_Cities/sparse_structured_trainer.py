@@ -303,7 +303,7 @@ def sparse_structured_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    wandb_logger = WandbLogger(project="GSVCities", config=config)
+    wandb_logger = WandbLogger(project="GSVCities", config=config["train"])
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),

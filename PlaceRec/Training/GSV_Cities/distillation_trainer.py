@@ -231,6 +231,7 @@ class VPRModel(pl.LightningModule):
         labels = labels.view(-1)
         with torch.no_grad():
             teacher_descriptors = self.teacher_model(teacher_images)
+
         student_descriptors = self.student_model(student_images)
         student_descriptors = self.feature_adapter(student_descriptors)
         rkd_distance_loss = self.rkd_distance_loss_fn(
@@ -246,7 +247,7 @@ class VPRModel(pl.LightningModule):
         loss = (
             self.contrastive_factor * cont_loss
             + self.rkd_distance_factor * rkd_distance_loss
-            + self.rkd * rkd_angle_loss
+            + self.rkd_angle_factor * rkd_angle_loss
             + self.darkrank_factor * darkrank_loss
         )
 
@@ -344,7 +345,7 @@ def distillation_trainer(args):
     student_method = get_method(args.method, False)
     teacher_method = get_method(args.teacher_method, True)
 
-    wandb_logger = WandbLogger(project="GSVCities", config=config)
+    wandb_logger = WandbLogger(project="GSVCities", config=config["train"])
 
     datamodule = GSVCitiesDataModuleDistillation(
         cities=get_cities(args),

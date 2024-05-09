@@ -165,7 +165,7 @@ class Resnet34gemModel(nn.Module):
         )
 
         self.aggregation = nn.Sequential(L2Norm(), GeM())
-        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
+        self.proj = nn.Sequential(nn.Linear(256, fc_output_dim), L2Norm())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)

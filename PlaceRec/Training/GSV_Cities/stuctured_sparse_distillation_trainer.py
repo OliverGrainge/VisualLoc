@@ -435,7 +435,7 @@ def sparse_structured_distillation_trainer(args):
     student_method = get_method(args.method, False)
     teacher_method = get_method(args.teacher_method, True)
 
-    wandb_logger = WandbLogger(project="GSVCities", config=config)
+    wandb_logger = WandbLogger(project="GSVCities", config=config["train"])
 
     datamodule = GSVCitiesDataModuleDistillation(
         cities=get_cities(args),
