@@ -1,13 +1,8 @@
 import multiprocessing as mp
-
-import pytorch_lightning as pl
-import torch
-from pytorch_lightning.callbacks import ModelCheckpoint
-
 from parsers import train_arguments
-from PlaceRec.utils import get_config, get_method
 
 args = train_arguments()
+
 
 # ================================ GSVCities Training ==================================
 

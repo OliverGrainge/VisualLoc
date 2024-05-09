@@ -31,13 +31,13 @@ eval:
 
 
 train:
-  debug: True
+  debug: False
   training_method: "gsv_cities_structured_sparse"
   method: "ResNet50_GeM"
   image_resolution: [320, 320]
-  enable_progress_bar: True
+  enable_progress_bar: False
 
-  finetune: True
+  finetune: False
   checkpoint: False
   num_workers: 0
 

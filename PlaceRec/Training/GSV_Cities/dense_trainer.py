@@ -261,7 +261,7 @@ def dense_trainer(args):
             save_top_k=1,
             mode="max",
         )
-
+    print("==============", args.debug)
     if args.debug:
         trainer = pl.Trainer(
             enable_progress_bar=args.enable_progress_bar,

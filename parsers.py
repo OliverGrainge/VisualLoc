@@ -42,7 +42,7 @@ def run_arguments():
 
     parser.add_argument(
         "--pin_memory",
-        type=bool,
+        action="store_true",
         default=config["run"]["pin_memory"],
         help="Choose whether to pin memory in GPU",
     )
@@ -103,11 +103,16 @@ def train_arguments():
 
     parser.add_argument(
         "--enable_progress_bar",
-        type=bool,
-        default=config["train"]["enable_progress_bar"],
+        action="store_true",  # Adds the flag if --debug is specified, otherwise defaults to False
+        default=False,
     )
 
-    parser.add_argument("--debug", type=bool, default=config["train"]["debug"])
+    parser.add_argument(
+        "--debug",
+        action="store_true",  # Adds the flag if --debug is specified, otherwise defaults to False
+        default=False,
+        help="Enable debug mode.",
+    )
 
     parser.add_argument(
         "--training_method", type=str, default=config["train"]["training_method"]
@@ -122,11 +127,9 @@ def train_arguments():
         nargs="+",
     )
 
-    parser.add_argument("--finetune", type=bool, default=config["train"]["finetune"])
+    parser.add_argument("--finetune", action="store_true", default=False)
 
-    parser.add_argument(
-        "--checkpoint", type=bool, default=config["train"]["checkpoint"]
-    )
+    parser.add_argument("--checkpoint", action="store_true", default=False)
 
     parser.add_argument(
         "--num_workers", type=int, default=config["train"]["num_workers"]
