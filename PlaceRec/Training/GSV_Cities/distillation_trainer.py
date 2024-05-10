@@ -33,37 +33,6 @@ def pdist(e, squared=False, eps=1e-12):
     return res
 
 
-class HardDarkRank(nn.Module):
-    def __init__(self, alpha=3, beta=3, permute_len=4):
-        super().__init__()
-        self.alpha = alpha
-        self.beta = beta
-        self.permute_len = permute_len
-
-    def forward(self, student, teacher):
-        score_teacher = -1 * self.alpha * pdist(teacher, squared=False).pow(self.beta)
-        score_student = -1 * self.alpha * pdist(student, squared=False).pow(self.beta)
-
-        permute_idx = score_teacher.sort(dim=1, descending=True)[1][
-            :, 1 : (self.permute_len + 1)
-        ]
-        ordered_student = torch.gather(score_student, 1, permute_idx)
-
-        log_prob = (
-            ordered_student
-            - torch.stack(
-                [
-                    torch.logsumexp(ordered_student[:, i:], dim=1)
-                    for i in range(permute_idx.size(1))
-                ],
-                dim=1,
-            )
-        ).sum(dim=1)
-        loss = (-1 * log_prob).mean()
-
-        return loss
-
-
 class RkdDistance(nn.Module):
     def forward(self, student, teacher):
         with torch.no_grad():
@@ -101,8 +70,10 @@ class VPRModel(pl.LightningModule):
 
     def __init__(
         self,
-        teacher_method,
-        student_method,
+        args,
+        training_method,
+        teacher_name,
+        student_name,
         lr=0.05,
         optimizer="sgd",
         weight_decay=1e-3,
@@ -117,9 +88,12 @@ class VPRModel(pl.LightningModule):
         contrastive_factor=1.0,
         rkd_angle_factor=1.0,
         rkd_distance_factor=0.0,
-        darkrank_factor=0.0,
     ):
         super().__init__()
+        self.training_method = training_method
+
+        self.teacher_method = get_method(teacher_name, True)
+        self.student_method = get_method(student_name, False)
 
         self.lr = lr
         self.optimizer = optimizer
@@ -131,7 +105,6 @@ class VPRModel(pl.LightningModule):
         self.contrastive_factor = contrastive_factor
         self.rkd_angle_factor = rkd_angle_factor
         self.rkd_distance_factor = rkd_distance_factor
-        self.darkrank_factor = darkrank_factor
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -142,17 +115,23 @@ class VPRModel(pl.LightningModule):
         self.batch_acc = []
 
         self.faiss_gpu = faiss_gpu
-        self.student_model = student_method.model
-        self.teacher_model = teacher_method.model
+        self.student_model = self.student_method.model
+        self.teacher_model = self.teacher_method.model
         self.student_model.train()
         self.teacher_model.eval()
         self.rkd_distance_loss_fn = RkdDistance()
         self.rkd_angle_loss_fn = RKdAngle()
-        self.darkrank_loss_fn = HardDarkRank()
 
-        self.feature_adapter = nn.Linear(
-            student_method.features_dim["global_feature_shape"][0],
-            teacher_method.features_dim["global_feature_shape"][0],
+        self.save_hyperparameters(args)
+        self.hparams.update(
+            {
+                "feature_size": self.student_method.features_dim[
+                    "global_feature_shape"
+                ],
+                "teacher_feature_size": self.teacher_method.features_dim[
+                    "global_feature_shape"
+                ],
+            }
         )
         assert isinstance(self.student_model, torch.nn.Module)
 
@@ -162,9 +141,7 @@ class VPRModel(pl.LightningModule):
 
     def configure_optimizers(self) -> Tuple[List[Optimizer], List[_LRScheduler]]:
 
-        model_parameters = list(self.student_model.parameters()) + list(
-            self.feature_adapter.parameters()
-        )
+        model_parameters = list(self.student_model.parameters())
 
         if self.optimizer.lower() == "sgd":
             optimizer = torch.optim.SGD(
@@ -231,16 +208,14 @@ class VPRModel(pl.LightningModule):
         labels = labels.view(-1)
         with torch.no_grad():
             teacher_descriptors = self.teacher_model(teacher_images)
-
         student_descriptors = self.student_model(student_images)
-        student_descriptors = self.feature_adapter(student_descriptors)
+
         rkd_distance_loss = self.rkd_distance_loss_fn(
             student_descriptors, teacher_descriptors
         )
         rkd_angle_loss = self.rkd_angle_loss_fn(
             student_descriptors, teacher_descriptors
         )
-        darkrank_loss = self.darkrank_loss_fn(student_descriptors, teacher_descriptors)
 
         cont_loss = self.loss_function(student_descriptors, labels)
 
@@ -248,12 +223,10 @@ class VPRModel(pl.LightningModule):
             self.contrastive_factor * cont_loss
             + self.rkd_distance_factor * rkd_distance_loss
             + self.rkd_angle_factor * rkd_angle_loss
-            + self.darkrank_factor * darkrank_loss
         )
 
         self.log("rkd_distance_loss", rkd_distance_loss)
         self.log("rkd_angle_loss", rkd_angle_loss)
-        self.log("darkrank_loss", darkrank_loss)
         self.log("contrastive_loss", cont_loss)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
@@ -342,14 +315,11 @@ def distillation_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    student_method = get_method(args.method, False)
-    teacher_method = get_method(args.teacher_method, True)
-
-    wandb_logger = WandbLogger(project="GSVCities", config=config["train"])
+    wandb_logger = WandbLogger(project="GSVCities", log_model="all")
 
     datamodule = GSVCitiesDataModuleDistillation(
         cities=get_cities(args),
-        batch_size=int(args.batch_size / 4),
+        batch_size=args.batch_size,
         img_per_place=4,
         min_img_per_place=4,
         shuffle_all=False,
@@ -362,8 +332,10 @@ def distillation_trainer(args):
     )
 
     model = VPRModel(
-        student_method=student_method,
-        teacher_method=teacher_method,
+        args,
+        training_method=args.training_method,
+        student_name=args.method,
+        teacher_name=args.teacher_method,
         lr=args.lr,
         weight_decay=args.weight_decay,
         momentum=args.momentum,
@@ -378,18 +350,17 @@ def distillation_trainer(args):
         contrastive_factor=args.contrastive_factor,
         rkd_angle_factor=args.rkd_angle_factor,
         rkd_distance_factor=args.rkd_distance_factor,
-        darkrank_factor=args.darkrank_factor,
     )
 
     if args.checkpoint:
         checkpoint_cb = ModelCheckpoint(
             dirpath="Checkpoints/gsv_cities_rdk/"
-            + student_method.name
+            + args.method
             + "_"
-            + teacher_method.name
+            + args.teacher_method
             + "/",
             monitor="pitts30k_val/R1",
-            filename=f"{student_method.name}"
+            filename=f"{args.method}"
             + "_epoch({epoch:02d})_step({step:04d})_R1[{pitts30k_val/R1:.4f}]_R5[{pitts30k_val/R5:.4f}]",
             auto_insert_metric_name=False,
             save_weights_only=True,
@@ -403,7 +374,7 @@ def distillation_trainer(args):
             devices="auto",
             accelerator="auto",
             strategy="auto",
-            default_root_dir=f"./LOGS/{student_method.name}_{teacher_method.name}",
+            default_root_dir=f"./LOGS/{args.method}_{args.teacher_method}",
             num_sanity_val_steps=0,
             precision="16-mixed",
             max_epochs=args.max_epochs,
@@ -420,7 +391,7 @@ def distillation_trainer(args):
             devices="auto",
             accelerator="auto",
             strategy="auto",
-            default_root_dir=f"./LOGS/{student_method.name}_{teacher_method.name}",
+            default_root_dir=f"./LOGS/{args.method}_{args.teacher_method}",
             num_sanity_val_steps=0,
             precision="16-mixed",
             max_epochs=args.max_epochs,

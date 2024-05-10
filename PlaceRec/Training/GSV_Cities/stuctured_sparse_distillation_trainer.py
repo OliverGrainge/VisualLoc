@@ -34,37 +34,6 @@ def pdist(e, squared=False, eps=1e-12):
     return res
 
 
-class HardDarkRank(nn.Module):
-    def __init__(self, alpha=3, beta=3, permute_len=4):
-        super().__init__()
-        self.alpha = alpha
-        self.beta = beta
-        self.permute_len = permute_len
-
-    def forward(self, student, teacher):
-        score_teacher = -1 * self.alpha * pdist(teacher, squared=False).pow(self.beta)
-        score_student = -1 * self.alpha * pdist(student, squared=False).pow(self.beta)
-
-        permute_idx = score_teacher.sort(dim=1, descending=True)[1][
-            :, 1 : (self.permute_len + 1)
-        ]
-        ordered_student = torch.gather(score_student, 1, permute_idx)
-
-        log_prob = (
-            ordered_student
-            - torch.stack(
-                [
-                    torch.logsumexp(ordered_student[:, i:], dim=1)
-                    for i in range(permute_idx.size(1))
-                ],
-                dim=1,
-            )
-        ).sum(dim=1)
-        loss = (-1 * log_prob).mean()
-
-        return loss
-
-
 class RkdDistance(nn.Module):
     def forward(self, student, teacher):
         with torch.no_grad():
@@ -215,11 +184,21 @@ class VPRModel(pl.LightningModule):
         self.student_model.train()
         self.rkd_distance_loss_fn = RkdDistance()
         self.rkd_angle_loss_fn = RKdAngle()
-        self.darkrank_loss_fn = HardDarkRank()
         self.epoch = 0
         self.feature_adapter = nn.Linear(
             student_method.features_dim["global_feature_shape"][0],
             teacher_method.features_dim["global_feature_shape"][0],
+        )
+        self.save_hyperparameters(args)
+        self.hparams.update(
+            {
+                "feature_size": self.student_method.features_dim[
+                    "global_feature_shape"
+                ],
+                "teacher_feature_size": self.teacher_method.features_dim[
+                    "global_feature_shape"
+                ],
+            }
         )
         assert isinstance(self.student_model, torch.nn.Module)
 
@@ -300,7 +279,6 @@ class VPRModel(pl.LightningModule):
         rkd_angle_loss = self.rkd_angle_loss_fn(
             student_descriptors, teacher_descriptors
         )
-        darkrank_loss = self.darkrank_loss_fn(student_descriptors, teacher_descriptors)
 
         cont_loss = self.loss_function(student_descriptors, labels)
 
@@ -308,12 +286,10 @@ class VPRModel(pl.LightningModule):
             self.contrastive_factor * cont_loss
             + self.rkd_distance_factor * rkd_distance_loss
             + self.rkd_angle_factor * rkd_angle_loss
-            + self.darkrank_factor * darkrank_loss
         )
 
         self.log("rkd_distance_loss", rkd_distance_loss)
         self.log("rkd_angle_loss", rkd_angle_loss)
-        self.log("darkrank_loss", darkrank_loss)
         self.log("contrastive_loss", cont_loss)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
@@ -479,7 +455,6 @@ def sparse_structured_distillation_trainer(args):
         optimizer=args.optimizer,
         rkd_angle_factor=args.rkd_angle_factor,
         rkd_distance_factor=args.rkd_distance_factor,
-        darkrank_factor=args.darkrank_factor,
         pruning_freq=args.pruning_freq,
     )
 

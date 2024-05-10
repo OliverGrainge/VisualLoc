@@ -3,6 +3,7 @@ from parsers import train_arguments
 
 args = train_arguments()
 
+
 # ================================ GSVCities Training ==================================
 
 if args.training_method == "gsv_cities_dense":

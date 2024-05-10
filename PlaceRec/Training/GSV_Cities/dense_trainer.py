@@ -26,7 +26,9 @@ class VPRModel(pl.LightningModule):
 
     def __init__(
         self,
-        method,
+        args,
+        training_method,
+        method_name,
         lr=0.05,
         optimizer="sgd",
         weight_decay=1e-3,
@@ -40,7 +42,9 @@ class VPRModel(pl.LightningModule):
         faiss_gpu=False,
     ):
         super().__init__()
-        self.name = method.name
+        self.training_method = training_method
+        self.name = method_name
+        method = get_method(method_name, False)
 
         self.lr = lr
         self.optimizer = optimizer
@@ -61,6 +65,11 @@ class VPRModel(pl.LightningModule):
         self.faiss_gpu = faiss_gpu
         self.model = method.model
         self.model.train()
+        self.save_hyperparameters(args)
+        self.hparams.update(
+            {"feature_size": self.method.features_dim["global_feature_shape"]}
+        )
+
         assert isinstance(self.model, torch.nn.Module)
 
     def forward(self, x):
@@ -220,11 +229,11 @@ def dense_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     method = get_method(args.method, False)
-    wandb_logger = WandbLogger(project="GSVCities", config=config)
+    wandb_logger = WandbLogger(project="GSVCities", log_model="all")
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),
-        batch_size=int(args.batch_size / 4),
+        batch_size=args.batch_size,
         img_per_place=4,
         min_img_per_place=4,
         shuffle_all=False,
@@ -236,7 +245,9 @@ def dense_trainer(args):
     )
 
     model = VPRModel(
-        method=method,
+        args,
+        training_method=args.training_method,
+        method_name=args.method,
         lr=args.lr,
         weight_decay=args.weight_decay,
         momentum=args.momentum,
@@ -261,7 +272,7 @@ def dense_trainer(args):
             save_top_k=1,
             mode="max",
         )
-    print("==============", args.debug)
+
     if args.debug:
         trainer = pl.Trainer(
             enable_progress_bar=args.enable_progress_bar,

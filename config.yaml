@@ -33,7 +33,7 @@ eval:
 train:
   debug: False
   training_method: "gsv_cities_structured_sparse"
-  method: "ResNet50_GeM"
+  method: "ResNet34_MixVPR"
   image_resolution: [320, 320]
   enable_progress_bar: False
 
@@ -63,8 +63,8 @@ train:
   pruning_freq: 2
 
   # Distillation
-  teacher_method: "DinoSalad"
-  teacher_resolution: [224, 224]
+  teacher_method: "MixVPR"
+  teacher_resolution: [320, 320]
   contrastive_factor: 1.0
   rkd_distance_factor: 1.0
   rkd_angle_factor: 0.0

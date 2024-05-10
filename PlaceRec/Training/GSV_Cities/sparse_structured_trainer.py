@@ -127,6 +127,10 @@ class VPRModel(pl.LightningModule):
         self.preprocess = method.preprocess
         self.model.train()
         self.epoch = 0
+        self.save_hyperparameters(args)
+        self.hparams.update(
+            {"feature_size": self.method.features_dim["global_feature_shape"]}
+        )
         assert isinstance(self.model, torch.nn.Module)
 
     def forward(self, x):
@@ -307,7 +311,7 @@ def sparse_structured_trainer(args):
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),
-        batch_size=int(args.batch_size / 4),
+        batch_size=args.batch_size,
         img_per_place=4,
         min_img_per_place=4,
         shuffle_all=False,
