@@ -67,7 +67,7 @@ class VPRModel(pl.LightningModule):
         self.model.train()
         self.save_hyperparameters(args)
         self.hparams.update(
-            {"feature_size": self.method.features_dim["global_feature_shape"]}
+            {"feature_size": method.features_dim["global_feature_shape"]}
         )
 
         assert isinstance(self.model, torch.nn.Module)

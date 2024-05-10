@@ -32,7 +32,7 @@ eval:
 
 train:
   debug: False
-  training_method: "gsv_cities_structured_sparse"
+  training_method: "gsv_cities_dense"
   method: "ResNet34_MixVPR"
   image_resolution: [320, 320]
   enable_progress_bar: False
