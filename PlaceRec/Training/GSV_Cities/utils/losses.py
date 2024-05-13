@@ -1,5 +1,6 @@
 from pytorch_metric_learning import losses, miners
 from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
+from pytorch_metric_learning.distances import LpDistance
 
 
 def get_loss(loss_name):
@@ -11,7 +12,7 @@ def get_loss(loss_name):
         )  # these are params for image retrieval
     if loss_name == "MultiSimilarityLoss":
         return losses.MultiSimilarityLoss(
-            alpha=1.0, beta=50, base=0.0, distance=DotProductSimilarity()
+            alpha=1.0, beta=50, base=0.0, distance=LpDistance(p=2)
         )
     if loss_name == "ContrastiveLoss":
         return losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
@@ -45,7 +46,7 @@ def get_miner(miner_name, margin=0.1):
             margin=margin, type_of_triplets="semihard"
         )  # all, hard, semihard, easy
     if miner_name == "MultiSimilarityMiner":
-        return miners.MultiSimilarityMiner(epsilon=margin, distance=CosineSimilarity())
+        return miners.MultiSimilarityMiner(epsilon=margin, distance=LpDistance(p=2))
     if miner_name == "PairMarginMiner":
         return miners.PairMarginMiner(
             pos_margin=0.7, neg_margin=0.3, distance=DotProductSimilarity()

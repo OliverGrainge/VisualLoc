@@ -88,6 +88,7 @@ class VPRModel(pl.LightningModule):
         contrastive_factor=1.0,
         rkd_angle_factor=1.0,
         rkd_distance_factor=0.0,
+        eval_distance="L2",
     ):
         super().__init__()
         self.training_method = training_method
@@ -105,6 +106,7 @@ class VPRModel(pl.LightningModule):
         self.contrastive_factor = contrastive_factor
         self.rkd_angle_factor = rkd_angle_factor
         self.rkd_distance_factor = rkd_distance_factor
+        self.eval_distance = eval_distance
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -302,7 +304,7 @@ class VPRModel(pl.LightningModule):
                 gt=ground_truth,
                 print_results=True,
                 dataset_name=val_set_name,
-                distance=config["train"]["eval_distance"],
+                distance=self.eval_distance,
             )
             del r_list, q_list, feats, num_references, ground_truth
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
@@ -352,6 +354,7 @@ def distillation_trainer(args):
         contrastive_factor=args.contrastive_factor,
         rkd_angle_factor=args.rkd_angle_factor,
         rkd_distance_factor=args.rkd_distance_factor,
+        eval_distance=args.eval_distance,
     )
 
     if args.checkpoint:

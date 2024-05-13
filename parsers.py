@@ -216,5 +216,9 @@ def train_arguments():
         "--darkrank_factor", type=float, default=config["train"]["darkrank_factor"]
     )
 
+    parser.add_argument(
+        "--eval_distance", type=str, default=config["train"]["eval_distance"]
+    )
+
     args = parser.parse_args()
     return args
