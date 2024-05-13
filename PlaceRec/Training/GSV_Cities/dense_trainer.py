@@ -213,7 +213,7 @@ class VPRModel(pl.LightningModule):
                 gt=ground_truth,
                 print_results=True,
                 dataset_name=val_set_name,
-                faiss_gpu=self.faiss_gpu,
+                distance=self.eval_distance,
             )
             del r_list, q_list, feats, num_references, ground_truth
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
