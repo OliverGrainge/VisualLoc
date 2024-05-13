@@ -40,6 +40,7 @@ class VPRModel(pl.LightningModule):
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
+        eval_distance="L2",
     ):
         super().__init__()
         self.training_method = training_method
@@ -53,6 +54,7 @@ class VPRModel(pl.LightningModule):
         self.warmup_steps = warmup_steps
         self.milestones = milestones
         self.lr_mult = lr_mult
+        self.eval_distance = eval_distance
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -259,6 +261,7 @@ def dense_trainer(args):
         miner_margin=args.miner_margin,
         faiss_gpu=False,
         optimizer=args.optimizer,
+        eval_distance=args.eval_distance,
     )
 
     if args.checkpoint:
@@ -288,7 +291,7 @@ def dense_trainer(args):
             logger=wandb_logger,
             log_every_n_steps=1,
             limit_train_batches=2,
-            check_val_every_n_epoch=20,
+            limit_val_batches=5,
         )
     else:
         trainer = pl.Trainer(

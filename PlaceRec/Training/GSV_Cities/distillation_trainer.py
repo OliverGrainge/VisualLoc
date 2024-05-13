@@ -59,7 +59,7 @@ class RKdAngle(nn.Module):
         norm_sd = F.normalize(sd, p=2, dim=2)
         s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
 
-        loss = F.smooth_l1_loss(s_angle, t_angle, reduction="elementwise_mean")
+        loss = F.smooth_l1_loss(s_angle, t_angle, reduction="mean")
         return loss
 
 
@@ -387,8 +387,8 @@ def distillation_trainer(args):
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
             log_every_n_steps=1,
-            limit_train_batches=2,
-            check_val_every_n_epoch=20,
+            limit_train_batches=3,
+            limit_val_batches=5,
         )
     else:
         trainer = pl.Trainer(
