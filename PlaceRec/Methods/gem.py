@@ -144,13 +144,16 @@ class Resnet50gemModel(nn.Module):
             layers_to_crop=[4],
         )
 
-        self.aggregation = nn.Sequential(L2Norm(), GeM())
-        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
+        self.aggregation = GeM()
+        self.proj = nn.Linear(1024, fc_output_dim)
+        self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.proj(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -164,13 +167,16 @@ class Resnet34gemModel(nn.Module):
             layers_to_crop=[4],
         )
 
-        self.aggregation = nn.Sequential(L2Norm(), GeM())
-        self.proj = nn.Sequential(nn.Linear(256, fc_output_dim), L2Norm())
+        self.aggregation = GeM()
+        self.proj = nn.Linear(256, fc_output_dim)
+        self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.proj(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -184,13 +190,16 @@ class Resnet18gemModel(nn.Module):
             layers_to_crop=[4],
         )
 
-        self.aggregation = nn.Sequential(L2Norm(), GeM())
-        self.proj = nn.Sequential(nn.Linear(1024, fc_output_dim), L2Norm())
+        self.aggregation = GeM()
+        self.proj = nn.Linear(1024, fc_output_dim)
+        self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.proj(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -198,13 +207,16 @@ class MobilenetV2gemModel(nn.Module):
     def __init__(self, fc_output_dim=2048):
         super().__init__()
         self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-        self.aggregation = nn.Sequential(L2Norm(), GeM())
-        self.proj = nn.Sequential(nn.Linear(1280, fc_output_dim), L2Norm())
+        self.aggregation = GeM()
+        self.proj = nn.Linear(1280, fc_output_dim)
+        self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.proj(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
