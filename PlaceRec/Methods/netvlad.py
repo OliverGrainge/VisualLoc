@@ -253,11 +253,12 @@ class NetVLADNet(nn.Module):
         self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
-    def forward(self, x):
+    def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.linear(x)
-        x = self.norm(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -279,11 +280,12 @@ class ResNet34_NetVLADNet(nn.Module):
         self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
-    def forward(self, x):
+    def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.linear(x)
-        x = self.norm(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -305,11 +307,12 @@ class ResNet18_NetVLADNet(nn.Module):
         self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
-    def forward(self, x):
+    def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.linear(x)
-        x = self.norm(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
@@ -325,11 +328,12 @@ class MobileNetV2_NetVLADNet(nn.Module):
         self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
-    def forward(self, x):
+    def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.linear(x)
-        x = self.norm(x)
+        if norm:
+            x = self.norm(x)
         return x
 
 
