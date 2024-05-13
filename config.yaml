@@ -36,7 +36,7 @@ train:
   method: "ResNet34_MixVPR"
   image_resolution: [320, 320]
   enable_progress_bar: False
-
+  eval_distance: "cosine"
   finetune: False
   checkpoint: False
   num_workers: 0

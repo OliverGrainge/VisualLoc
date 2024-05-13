@@ -10,21 +10,18 @@ def get_validation_recalls(
     k_values,
     gt,
     print_results=True,
-    faiss_gpu=False,
     dataset_name="dataset without name ?",
+    distance="L2",
 ):
     embed_size = r_list.shape[1]
-    if faiss_gpu:
-        res = faiss.StandardGpuResources()
-        flat_config = faiss.GpuIndexFlatConfig()
-        flat_config.useFloat16 = True
-        flat_config.device = 0
-        faiss_index = faiss.GpuIndexFlatL2(res, embed_size, flat_config)
-    # build index
-    else:
+    if distance == "L2":
         faiss_index = faiss.IndexFlatL2(embed_size)
+    else:
+        faiss_index = faiss.IndexFlatIP(embed_size)
 
     # add references
+    r_list = r_list / np.linalg.norm(r_list, axis=1, keepdims=True)
+    q_list = q_list / np.linalg.norm(q_list, axis=1, keepdims=True)
     faiss_index.add(r_list)
 
     # search for queries in the index

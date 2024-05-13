@@ -136,7 +136,7 @@ class VPRModel(pl.LightningModule):
         assert isinstance(self.student_model, torch.nn.Module)
 
     def forward(self, x):
-        x = self.student_model(x)
+        x = self.student_model(x, norm=True)
         return x
 
     def configure_optimizers(self) -> Tuple[List[Optimizer], List[_LRScheduler]]:
@@ -177,6 +177,7 @@ class VPRModel(pl.LightningModule):
     def loss_function(self, descriptors, labels):
         if self.miner is not None:
             miner_outputs = self.miner(descriptors, labels)
+            descriptors = descriptors / descriptors.norm(p=2, dim=1, keepdim=True)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
 
             nb_samples = descriptors.shape[0]
@@ -184,6 +185,7 @@ class VPRModel(pl.LightningModule):
             batch_acc = 1.0 - (nb_mined / nb_samples)
 
         else:
+            descriptors = descriptors / descriptors.norm(p=2, dim=1, keepdim=True)
             loss = self.loss_fn(descriptors, labels)
             batch_acc = 0.0
             if type(loss) == tuple:
@@ -197,7 +199,7 @@ class VPRModel(pl.LightningModule):
             prog_bar=True,
             logger=True,
         )
-        return sum(self.batch_acc) / len(self.batch_acc)
+        return loss
 
     def training_step(self, batch, batch_idx):
         teacher_places, student_places, labels = batch
@@ -207,8 +209,8 @@ class VPRModel(pl.LightningModule):
         student_images = student_places.view(BS * N, ch, h, w)
         labels = labels.view(-1)
         with torch.no_grad():
-            teacher_descriptors = self.teacher_model(teacher_images)
-        student_descriptors = self.student_model(student_images)
+            teacher_descriptors = self.teacher_model(teacher_images, norm=False)
+        student_descriptors = self.student_model(student_images, norm=False)
 
         rkd_distance_loss = self.rkd_distance_loss_fn(
             student_descriptors, teacher_descriptors
@@ -300,7 +302,7 @@ class VPRModel(pl.LightningModule):
                 gt=ground_truth,
                 print_results=True,
                 dataset_name=val_set_name,
-                faiss_gpu=self.faiss_gpu,
+                distance=config["train"]["eval_distance"],
             )
             del r_list, q_list, feats, num_references, ground_truth
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
@@ -397,7 +399,6 @@ def distillation_trainer(args):
             max_epochs=args.max_epochs,
             callbacks=[checkpoint_cb] if args.checkpoint else [],
             reload_dataloaders_every_n_epochs=1,
-            log_every_n_steps=20,
             logger=wandb_logger,
         )
 
