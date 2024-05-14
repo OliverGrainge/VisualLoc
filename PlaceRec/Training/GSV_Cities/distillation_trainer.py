@@ -34,32 +34,75 @@ def pdist(e, squared=False, eps=1e-12):
 
 
 class RkdDistance(nn.Module):
-    def forward(self, student, teacher):
-        with torch.no_grad():
-            t_d = pdist(teacher, squared=False)
-            mean_td = t_d[t_d > 0].mean()
-            t_d = t_d / mean_td
+    def forward(self, student, teacher, miner_outputs=None):
+        if miner_outputs is None:
+            with torch.no_grad():
+                t_d = pdist(teacher, squared=False)
+                mean_td = t_d[t_d > 0].mean()
+                t_d = t_d / mean_td
 
-        d = pdist(student, squared=False)
-        mean_d = d[d > 0].mean()
-        d = d / mean_d
+            d = pdist(student, squared=False)
+            mean_d = d[d > 0].mean()
+            d = d / mean_d
 
-        loss = F.smooth_l1_loss(d, t_d, reduction="mean")
+            loss = F.smooth_l1_loss(d, t_d, reduction="mean")
+        else:
+            teacher_anchor1 = teacher[miner_outputs[0]]
+            student_anchor1 = student[miner_outputs[0]]
+            teacher_pos = teacher[miner_outputs[1]]
+            student_pos = student[miner_outputs[1]]
+            teacher_anchor2 = teacher[miner_outputs[2]]
+            student_anchor2 = teacher[miner_outputs[2]]
+            teacher_neg = teacher[miner_outputs[3]]
+            student_neg = student[miner_outputs[3]]
+
+            t_anc_pos = torch.norm(teacher_anchor1 - teacher_pos, p=2, dim=1).flatten()
+            t_anc_neg = torch.norm(teacher_anchor2 - teacher_neg, p=2, dim=1).flatten()
+            teacher_relation = torch.concat((t_anc_pos, t_anc_neg))
+
+            s_anc_pos = torch.norm(student_anchor1 - student_pos, p=2, dim=1).flatten()
+            s_anc_neg = torch.norm(student_anchor2 - student_neg, p=2, dim=1).flatten()
+            student_relation = torch.concat((s_anc_pos, s_anc_neg))
+
+            loss = F.smooth_l1_loss(
+                student_relation, teacher_relation, reduction="mean"
+            )
+
         return loss
 
 
 class RKdAngle(nn.Module):
-    def forward(self, student, teacher):
-        with torch.no_grad():
-            td = teacher.unsqueeze(0) - teacher.unsqueeze(1)
-            norm_td = F.normalize(td, p=2, dim=2)
-            t_angle = torch.bmm(norm_td, norm_td.transpose(1, 2)).view(-1)
+    def forward(self, student, teacher, miner_outputs=None):
+        if miner_outputs is None:
+            with torch.no_grad():
+                td = teacher.unsqueeze(0) - teacher.unsqueeze(1)
+                norm_td = F.normalize(td, p=2, dim=2)
+                t_angle = torch.bmm(norm_td, norm_td.transpose(1, 2)).view(-1)
 
-        sd = student.unsqueeze(0) - student.unsqueeze(1)
-        norm_sd = F.normalize(sd, p=2, dim=2)
-        s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
+            sd = student.unsqueeze(0) - student.unsqueeze(1)
+            norm_sd = F.normalize(sd, p=2, dim=2)
+            s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
+            loss = F.smooth_l1_loss(s_angle, t_angle, reduction="mean")
+        else:
+            teacher_anchor1 = F.normalize(teacher[miner_outputs[0]], p=2, dim=1)
+            student_anchor1 = F.normalize(student[miner_outputs[0]], p=2, dim=1)
+            teacher_pos = F.normalize(teacher[miner_outputs[1]], p=2, dim=1)
+            student_pos = F.normalize(student[miner_outputs[1]], p=2, dim=1)
+            teacher_anchor2 = F.normalize(teacher[miner_outputs[2]], p=2, dim=1)
+            student_anchor2 = F.normalize(student[miner_outputs[2]], p=2, dim=1)
+            teacher_neg = F.normalize(teacher[miner_outputs[3]], p=2, dim=1)
+            student_neg = F.normalize(student[miner_outputs[3]], p=2, dim=1)
 
-        loss = F.smooth_l1_loss(s_angle, t_angle, reduction="mean")
+            t_anc_pos = torch.diag(teacher_anchor1 @ teacher_pos.T).flatten()
+            t_anc_neg = torch.diag(teacher_anchor2 @ teacher_neg.T).flatten()
+            teacher_relation = torch.concat((t_anc_pos, t_anc_neg))
+
+            s_anc_pos = torch.diag(student_anchor1 @ student_pos.T)
+            s_anc_neg = torch.diag(student_anchor2 @ student_neg.T)
+            student_relation = torch.concat((s_anc_pos, s_anc_neg))
+            loss = F.smooth_l1_loss(
+                student_relation, teacher_relation, reduction="mean"
+            )
         return loss
 
 
@@ -176,9 +219,8 @@ class VPRModel(pl.LightningModule):
         }
         return [optimizer], [warmup_scheduler, scheduler]
 
-    def loss_function(self, descriptors, labels):
-        if self.miner is not None:
-            miner_outputs = self.miner(descriptors, labels)
+    def loss_function(self, descriptors, labels, miner_outputs=None):
+        if miner_outputs is not None:
             descriptors = descriptors / descriptors.norm(p=2, dim=1, keepdim=True)
             loss = self.loss_fn(descriptors, labels, miner_outputs)
 
@@ -214,15 +256,18 @@ class VPRModel(pl.LightningModule):
             teacher_descriptors = self.teacher_model(teacher_images, norm=False)
         student_descriptors = self.student_model(student_images, norm=False)
 
+        miner_outputs = self.miner(student_descriptors, labels)
+
         rkd_distance_loss = self.rkd_distance_loss_fn(
-            student_descriptors, teacher_descriptors
+            student_descriptors, teacher_descriptors, miner_outputs=miner_outputs
         )
         rkd_angle_loss = self.rkd_angle_loss_fn(
-            student_descriptors, teacher_descriptors
+            student_descriptors, teacher_descriptors, miner_outputs=miner_outputs
         )
 
-        cont_loss = self.loss_function(student_descriptors, labels)
-
+        cont_loss = self.loss_function(
+            student_descriptors, labels, miner_outputs=miner_outputs
+        )
         loss = (
             self.contrastive_factor * cont_loss
             + self.rkd_distance_factor * rkd_distance_loss
