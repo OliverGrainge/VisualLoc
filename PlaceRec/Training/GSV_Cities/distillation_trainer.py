@@ -52,7 +52,7 @@ class RkdDistance(nn.Module):
             teacher_pos = teacher[miner_outputs[1]]
             student_pos = student[miner_outputs[1]]
             teacher_anchor2 = teacher[miner_outputs[2]]
-            student_anchor2 = teacher[miner_outputs[2]]
+            student_anchor2 = student[miner_outputs[2]]
             teacher_neg = teacher[miner_outputs[3]]
             student_neg = student[miner_outputs[3]]
 
@@ -67,7 +67,6 @@ class RkdDistance(nn.Module):
             loss = F.smooth_l1_loss(
                 student_relation, teacher_relation, reduction="mean"
             )
-
         return loss
 
 
