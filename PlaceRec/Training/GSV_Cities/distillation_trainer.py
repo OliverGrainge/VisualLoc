@@ -2,8 +2,6 @@ from typing import List, Optional, Tuple
 
 import pytorch_lightning as pl
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
@@ -16,93 +14,9 @@ from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
 )
 from PlaceRec.Training.GSV_Cities.sparse_utils import get_cities
 from PlaceRec.utils import get_config, get_method
+from PlaceRec.Training.GSV_Cities.utils import get_kd_loss
 
 config = get_config()
-
-
-def pdist(e, squared=False, eps=1e-12):
-    e_square = e.pow(2).sum(dim=1)
-    prod = e @ e.t()
-    res = (e_square.unsqueeze(1) + e_square.unsqueeze(0) - 2 * prod).clamp(min=eps)
-
-    if not squared:
-        res = res.sqrt()
-
-    res = res.clone()
-    res[range(len(e)), range(len(e))] = 0
-    return res
-
-
-class RkdDistance(nn.Module):
-    def forward(self, student, teacher, miner_outputs=None):
-        if miner_outputs is None:
-            with torch.no_grad():
-                t_d = pdist(teacher, squared=False)
-                mean_td = t_d[t_d > 0].mean()
-                t_d = t_d / mean_td
-
-            d = pdist(student, squared=False)
-            mean_d = d[d > 0].mean()
-            d = d / mean_d
-
-            loss = F.smooth_l1_loss(d, t_d, reduction="mean")
-        else:
-            teacher_anchor1 = teacher[miner_outputs[0]]
-            student_anchor1 = student[miner_outputs[0]]
-            teacher_pos = teacher[miner_outputs[1]]
-            student_pos = student[miner_outputs[1]]
-            teacher_anchor2 = teacher[miner_outputs[2]]
-            student_anchor2 = student[miner_outputs[2]]
-            teacher_neg = teacher[miner_outputs[3]]
-            student_neg = student[miner_outputs[3]]
-
-            t_anc_pos = torch.norm(teacher_anchor1 - teacher_pos, p=2, dim=1).flatten()
-            t_anc_neg = torch.norm(teacher_anchor2 - teacher_neg, p=2, dim=1).flatten()
-            teacher_relation = torch.concat((t_anc_pos, t_anc_neg))
-
-            s_anc_pos = torch.norm(student_anchor1 - student_pos, p=2, dim=1).flatten()
-            s_anc_neg = torch.norm(student_anchor2 - student_neg, p=2, dim=1).flatten()
-            student_relation = torch.concat((s_anc_pos, s_anc_neg))
-
-            loss = F.smooth_l1_loss(
-                student_relation, teacher_relation, reduction="mean"
-            )
-        return loss
-
-
-class RKdAngle(nn.Module):
-    def forward(self, student, teacher, miner_outputs=None):
-        if miner_outputs is None:
-            with torch.no_grad():
-                td = teacher.unsqueeze(0) - teacher.unsqueeze(1)
-                norm_td = F.normalize(td, p=2, dim=2)
-                t_angle = torch.bmm(norm_td, norm_td.transpose(1, 2)).view(-1)
-
-            sd = student.unsqueeze(0) - student.unsqueeze(1)
-            norm_sd = F.normalize(sd, p=2, dim=2)
-            s_angle = torch.bmm(norm_sd, norm_sd.transpose(1, 2)).view(-1)
-            loss = F.smooth_l1_loss(s_angle, t_angle, reduction="mean")
-        else:
-            teacher_anchor1 = F.normalize(teacher[miner_outputs[0]], p=2, dim=1)
-            student_anchor1 = F.normalize(student[miner_outputs[0]], p=2, dim=1)
-            teacher_pos = F.normalize(teacher[miner_outputs[1]], p=2, dim=1)
-            student_pos = F.normalize(student[miner_outputs[1]], p=2, dim=1)
-            teacher_anchor2 = F.normalize(teacher[miner_outputs[2]], p=2, dim=1)
-            student_anchor2 = F.normalize(student[miner_outputs[2]], p=2, dim=1)
-            teacher_neg = F.normalize(teacher[miner_outputs[3]], p=2, dim=1)
-            student_neg = F.normalize(student[miner_outputs[3]], p=2, dim=1)
-
-            t_anc_pos = torch.diag(teacher_anchor1 @ teacher_pos.T).flatten()
-            t_anc_neg = torch.diag(teacher_anchor2 @ teacher_neg.T).flatten()
-            teacher_relation = torch.concat((t_anc_pos, t_anc_neg))
-
-            s_anc_pos = torch.diag(student_anchor1 @ student_pos.T)
-            s_anc_neg = torch.diag(student_anchor2 @ student_neg.T)
-            student_relation = torch.concat((s_anc_pos, s_anc_neg))
-            loss = F.smooth_l1_loss(
-                student_relation, teacher_relation, reduction="mean"
-            )
-        return loss
 
 
 class VPRModel(pl.LightningModule):
@@ -124,12 +38,12 @@ class VPRModel(pl.LightningModule):
         milestones=[5, 10, 15],
         lr_mult=0.3,
         loss_name="MultiSimilarityLoss",
+        kd_loss_name="rkdangle",
         miner_name="MultiSimilarityMiner",
         miner_margin=0.1,
         faiss_gpu=False,
-        contrastive_factor=1.0,
-        rkd_angle_factor=1.0,
-        rkd_distance_factor=0.0,
+        kd_loss_factor=1.0,
+        metric_loss_factor=1.0,
         eval_distance="L2",
     ):
         super().__init__()
@@ -145,11 +59,10 @@ class VPRModel(pl.LightningModule):
         self.warmup_steps = warmup_steps
         self.milestones = milestones
         self.lr_mult = lr_mult
-        self.contrastive_factor = contrastive_factor
-        self.rkd_angle_factor = rkd_angle_factor
-        self.rkd_distance_factor = rkd_distance_factor
+        self.kd_loss_factor = kd_loss_factor
+        self.kd_loss_name = kd_loss_name
         self.eval_distance = eval_distance
-
+        self.metric_loss_factor = metric_loss_factor
         self.loss_name = loss_name
         self.miner_name = miner_name
         self.miner_margin = miner_margin
@@ -163,8 +76,7 @@ class VPRModel(pl.LightningModule):
         self.teacher_model = self.teacher_method.model
         self.student_model.train()
         self.teacher_model.eval()
-        self.rkd_distance_loss_fn = RkdDistance()
-        self.rkd_angle_loss_fn = RKdAngle()
+        self.kd_loss_fn = get_kd_loss(kd_loss_name)
 
         self.save_hyperparameters(args)
         self.hparams.update(
@@ -256,26 +168,15 @@ class VPRModel(pl.LightningModule):
         student_descriptors = self.student_model(student_images, norm=False)
 
         miner_outputs = self.miner(student_descriptors, labels)
+        kd_loss = self.kd_loss_fn(student_descriptors, teacher_descriptors)
 
-        rkd_distance_loss = self.rkd_distance_loss_fn(
-            student_descriptors, teacher_descriptors, miner_outputs=miner_outputs
-        )
-        rkd_angle_loss = self.rkd_angle_loss_fn(
-            student_descriptors, teacher_descriptors, miner_outputs=miner_outputs
-        )
-
-        cont_loss = self.loss_function(
+        metric_loss = self.loss_function(
             student_descriptors, labels, miner_outputs=miner_outputs
         )
-        loss = (
-            self.contrastive_factor * cont_loss
-            + self.rkd_distance_factor * rkd_distance_loss
-            + self.rkd_angle_factor * rkd_angle_loss
-        )
+        loss = self.metric_loss_factor * metric_loss + self.kd_loss_factor * kd_loss
 
-        self.log("rkd_distance_loss", rkd_distance_loss)
-        self.log("rkd_angle_loss", rkd_angle_loss)
-        self.log("contrastive_loss", cont_loss)
+        self.log("metric_loss", self.metric_loss_factor * metric_loss)
+        self.log("kd_loss", self.kd_loss_factor * kd_loss)
         self.log("loss", loss.item(), logger=True)
         return {"loss": loss}
 
@@ -395,9 +296,8 @@ def distillation_trainer(args):
         miner_margin=args.miner_margin,
         faiss_gpu=False,
         optimizer=args.optimizer,
-        contrastive_factor=args.contrastive_factor,
-        rkd_angle_factor=args.rkd_angle_factor,
-        rkd_distance_factor=args.rkd_distance_factor,
+        kd_loss_name=args.kd_loss_name,
+        kd_loss_factor=args.kd_loss_factor,
         eval_distance=args.eval_distance,
     )
 

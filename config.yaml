@@ -33,7 +33,7 @@ eval:
 train:
   debug: False
   training_method: "gsv_cities_dense"
-  method: "ResNet50_MixVPR"
+  method: "ResNet18_MixVPR"
   image_resolution: [320, 320]
   enable_progress_bar: False
   eval_distance: "cosine"
@@ -65,10 +65,9 @@ train:
   # Distillation
   teacher_method: "MixVPR"
   teacher_resolution: [320, 320]
-  contrastive_factor: 1.0
-  rkd_distance_factor: 1.0
-  rkd_angle_factor: 0.0
-  darkrank_factor: 0.0
+  metric_loss_factor: 1.0
+  kd_loss_factor: 50.0
+  kd_loss_name: "rkdangle" # either rkdangle, rkddistance, mse or kld
 
   
 

@@ -190,6 +190,12 @@ def train_arguments():
     )
 
     parser.add_argument(
+        "--metric_loss_factor",
+        type=float,
+        default=config["train"]["metric_loss_factor"],
+    )
+
+    parser.add_argument(
         "--teacher_resolution",
         type=int,
         default=config["train"]["teacher_resolution"],
@@ -197,23 +203,11 @@ def train_arguments():
     )
 
     parser.add_argument(
-        "--contrastive_factor",
-        type=float,
-        default=config["train"]["contrastive_factor"],
+        "--kd_loss_name", type=str, default=config["train"]["kd_loss_name"]
     )
 
     parser.add_argument(
-        "--rkd_distance_factor",
-        type=float,
-        default=config["train"]["rkd_distance_factor"],
-    )
-
-    parser.add_argument(
-        "--rkd_angle_factor", type=float, default=config["train"]["rkd_angle_factor"]
-    )
-
-    parser.add_argument(
-        "--darkrank_factor", type=float, default=config["train"]["darkrank_factor"]
+        "--kd_loss_factor", type=float, default=config["train"]["kd_loss_factor"]
     )
 
     parser.add_argument(
