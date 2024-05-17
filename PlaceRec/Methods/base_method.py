@@ -319,7 +319,6 @@ class BaseFunctionality(BaseTechnique):
             query_desc = query["global_descriptors"].astype(np.float32)
         elif isinstance(query, Image.Image):
             query_desc = self.compute_feature(query)
-
         if config["eval"]["distance"] == "cosine":
             faiss.normalize_L2(query_desc)
         dist, idx = self.map.search(query_desc, k)

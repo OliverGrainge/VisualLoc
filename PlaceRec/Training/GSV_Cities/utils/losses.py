@@ -1,6 +1,25 @@
 from pytorch_metric_learning import losses, miners
 from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
 from pytorch_metric_learning.distances import LpDistance
+import torch.nn as nn
+import torch.nn.functional as F
+import torch
+
+"""
+class MultiSimilarity(nn.Module):
+    def __init__(self, alpha=1.0, beta=50.0, base=0.0):
+        self.alpha = alpha
+        self.beta = beta
+        self.base = base
+    def forward(self, descriptors, labels, miner_outputs):
+        desc = F.normalize(descriptors, p=2, dim=1)
+        S = desc @ desc.T
+        s_pos = S[miner_outputs[0], miner_outputs[1]]
+        pos_term = torch.exp(-self.alpha*(s_pos-self.base)).sum()
+
+        s_neg = S[miner_outputs[1], miner_outputs[2]]
+        neg_term = torch.exp(self.beta(s_neg - self.base)).sum()
+"""
 
 
 def get_loss(loss_name):
@@ -28,7 +47,10 @@ def get_loss(loss_name):
         )  # The MoCo paper uses 0.07, while SimCLR uses 0.5.
     if loss_name == "TripletMarginLoss":
         return losses.TripletMarginLoss(
-            margin=0.1, swap=False, smooth_loss=False, triplets_per_anchor="all"
+            margin=0.1,
+            swap=False,
+            smooth_loss=False,
+            triplets_per_anchor="all",
         )  # or an int, for example 100
     if loss_name == "CentroidTripletLoss":
         return losses.CentroidTripletLoss(

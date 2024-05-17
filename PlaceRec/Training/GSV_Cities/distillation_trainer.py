@@ -264,7 +264,7 @@ def distillation_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    wandb_logger = WandbLogger(project="GSVCities", log_model="all")
+    wandb_logger = WandbLogger(project="GSVCities")
 
     datamodule = GSVCitiesDataModuleDistillation(
         cities=get_cities(args),

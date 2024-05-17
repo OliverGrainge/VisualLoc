@@ -19,6 +19,25 @@ package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
 
 
+class ShuffleNetV2FeatureExtractor(nn.Module):
+    def __init__(self):
+        super(ShuffleNetV2FeatureExtractor, self).__init__()
+        original_model = torchvision.models.shufflenet_v2_x1_0(pretrained=True)
+        self.features = nn.Sequential(
+            original_model.conv1,
+            original_model.maxpool,
+            original_model.stage2,
+            original_model.stage3,
+            original_model.stage4,
+            original_model.conv5,
+        )
+        del original_model
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
 class ResNet(nn.Module):
     def __init__(
         self,
@@ -259,10 +278,29 @@ class VPRModel(pl.LightningModule):
         # ----------------------------------
         # get the backbone and the aggregator
         if "mobilenetv2" in backbone_arch.lower():
-            self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features[
-                :-1
-            ]
+            self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features
             self.aggregator = get_aggregator(agg_arch, agg_config)
+
+        elif "mobilenetv2_50" in backbone_arch.lower():
+            self.backbone = torchvision.models.mobilenet_v2(
+                pretrained=False, width_mult=0.5
+            ).features
+            self.aggregator = get_aggregator(agg_arch, agg_config)
+
+        elif "mobilenetv2_75" in backbone_arch.lower():
+            self.backbone = torchvision.models.mobilenet_v2(
+                pretrained=False, width_mult=0.75
+            ).features
+            self.aggregator = get_aggregator(agg_arch, agg_config)
+
+        elif "squeezenetv1" in backbone_arch.lower():
+            self.backbone = torchvision.models.squeezenet1_0(pretrained=True).features
+            self.aggregator = get_aggregator(agg_arch, agg_config)
+
+        elif "shufflenetv2" in backbone_arch.lower():
+            self.backbone = ShuffleNetV2FeatureExtractor()
+            self.aggregator = get_aggregator(agg_arch, agg_config)
+
         else:
             self.backbone = get_backbone(
                 backbone_arch, pretrained, layers_to_freeze, layers_to_crop
@@ -284,6 +322,18 @@ preprocess = transforms.Compose(
         transforms.ToTensor(),
         transforms.Resize(
             (320, 320),
+            interpolation=transforms.InterpolationMode.BILINEAR,
+            antialias=True,
+        ),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+small_preprocess = transforms.Compose(
+    [
+        transforms.ToTensor(),
+        transforms.Resize(
+            (224, 224),
             interpolation=transforms.InterpolationMode.BILINEAR,
             antialias=True,
         ),
@@ -363,8 +413,8 @@ class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
             layers_to_crop=[],
             agg_arch="ConvAP",
             agg_config={
-                "in_channels": 512,
-                "out_channels": 1024,
+                "in_channels": 1280,
+                "out_channels": 256,
                 "s1": 2,
                 "s2": 2,
             },
@@ -375,13 +425,84 @@ class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
             self.load_weights(weight_path)
             super().__init__(
                 model=self.model,
-                preprocess=preprocess,
+                preprocess=small_preprocess,
                 name=name,
                 weight_path=weight_path,
             )
         else:
             super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=None,
+            )
+
+
+class MobileNetV2_50_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "mobilenetv2_50_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="mobilenetv2_50",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 1280,
+                "out_channels": 256,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=None,
+            )
+
+
+class MobileNetV2_75_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "mobilenetv2_75_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="mobilenetv2_75",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 1280,
+                "out_channels": 256,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=None,
             )
 
 
@@ -395,7 +516,7 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 512,
-                "out_channels": 1024,
+                "out_channels": 256,
                 "s1": 2,
                 "s2": 2,
             },
@@ -426,7 +547,76 @@ class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 320,
-                "out_channels": 1024,
+                "out_channels": 256,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=None,
+            )
+
+
+# squeezenet = models.squeezenet1_0(pretrained=True)
+# shufflenet_v2 = models.shufflenet_v2_x1_0(pretrained=True)
+
+
+class ShuffleNetV2_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "shufflenetv2_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="shufflenetv2",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 1024,
+                "out_channels": 256,
+                "s1": 2,
+                "s2": 2,
+            },
+        )
+        if pretrained:
+            if not os.path.exists(weight_path):
+                raise Exception(f"Could not find weights at {weight_path}")
+            self.load_weights(weight_path)
+            super().__init__(
+                model=self.model,
+                preprocess=preprocess,
+                name=name,
+                weight_path=weight_path,
+            )
+        else:
+            super().__init__(
+                model=self.model, preprocess=preprocess, name=name, weight_path=None
+            )
+
+
+class SqueezeNetV1_ConvAP(SingleStageBaseModelWrapper):
+    def __init__(self, pretrained: bool = True):
+        name = "shufflenetv2_convap"
+        weight_path = join(config["weights_directory"], name + ".ckpt")
+        self.model = VPRModel(
+            backbone_arch="squeezenetv1",
+            layers_to_crop=[],
+            agg_arch="ConvAP",
+            agg_config={
+                "in_channels": 512,
+                "out_channels": 256,
                 "s1": 2,
                 "s2": 2,
             },

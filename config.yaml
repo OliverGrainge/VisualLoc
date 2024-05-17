@@ -27,7 +27,7 @@ eval:
   partition: "test"
   device: "cpu"
   metrics: ["recall@1", "recall@5"]
-  distance: "l2" # either l2 or cosine
+  distance: "cosine" # either l2 or cosine
 
 
 train:
@@ -63,11 +63,11 @@ train:
   pruning_freq: 2
 
   # Distillation
-  teacher_method: "MixVPR"
-  teacher_resolution: [320, 320]
+  teacher_method: "ResNet18_ConvAP"
+  teacher_resolution: [224, 224]
   metric_loss_factor: 1.0
   kd_loss_factor: 50.0
-  kd_loss_name: "rkdangle" # either rkdangle, rkddistance, mse or kld
+  kd_loss_name: "mse" # either rkdangle, rkddistance, mse or kld
 
   
 

@@ -304,7 +304,7 @@ class HessianUnstructuredPruner:
 
 def get_cities(args):
     if args.finetune == True:
-        cities = ["London", "Boston", "Barcelona"]
+        cities = ["London"]
     else:
         cities = [
             "Bangkok",

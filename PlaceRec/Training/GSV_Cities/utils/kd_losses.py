@@ -79,7 +79,7 @@ class RkdDistance(nn.Module):
 def get_kd_loss(kd_loss_name):
     if kd_loss_name.lower() == "rkddistance":
         return RkdDistance()
-    elif kd_loss_name.lower() == "rdkangle":
+    elif kd_loss_name.lower() == "rkdangle":
         return RKdAngle()
     elif kd_loss_name.lower() == "mse":
         return KDMSELoss()
