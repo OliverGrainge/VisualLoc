@@ -165,16 +165,18 @@ class VPRModel(pl.LightningModule):
         labels = labels.view(-1)
         with torch.no_grad():
             teacher_descriptors = self.teacher_model(teacher_images, norm=False)
+            teacher_descriptors = teacher_descriptors.detach()
         student_descriptors = self.student_model(student_images, norm=False)
 
         miner_outputs = self.miner(student_descriptors, labels)
-        kd_loss = self.kd_loss_fn(student_descriptors, teacher_descriptors)
+        kd_loss = self.kd_loss_fn(
+            student_descriptors, teacher_descriptors, miner_outputs
+        )
 
         metric_loss = self.loss_function(
             student_descriptors, labels, miner_outputs=miner_outputs
         )
         loss = self.metric_loss_factor * metric_loss + self.kd_loss_factor * kd_loss
-
         self.log("metric_loss", self.metric_loss_factor * metric_loss)
         self.log("kd_loss", self.kd_loss_factor * kd_loss)
         self.log("loss", loss.item(), logger=True)

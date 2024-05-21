@@ -16,7 +16,7 @@ weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliv
 run: 
   datasets: ["pitts30k"]
   methods: ["MixVPR"]
-  num_workers: 0
+  num_workers: 16
   pin_memory: False
   batchsize: 1
   device: "cpu"
@@ -32,23 +32,23 @@ eval:
 
 train:
   debug: False
-  training_method: "gsv_cities_distillation"
-  method: "ResNet18_ConvAP"
+  training_method: "gsv_cities_dense"
+  method: "ShuffleNetV2_ConvAP"
   image_resolution: [224, 224]
   enable_progress_bar: False
   eval_distance: "cosine"
   finetune: False
   checkpoint: False
-  num_workers: 0
+  num_workers: 16
 
   # optimization
   optimizer: "adam"
-  max_epochs: 20
-  batch_size: 12
+  max_epochs: 10
+  batch_size: 120
   lr: 0.0002
   weight_decay: 0
   momentum: 0.9
-  warmup_steps: 600
+  warmup_steps: 1
   milestones: 5 10 15 25
   lr_mult: 0.3
   loss_name: "MultiSimilarityLoss"
@@ -63,11 +63,11 @@ train:
   pruning_freq: 2
 
   # Distillation
-  teacher_method: "ConvAP"
-  teacher_resolution: [320, 320]
+  teacher_method: "ResNet18_ConvAP"
+  teacher_resolution: [224, 224]
   metric_loss_factor: 1.0
   kd_loss_factor: 50.0
-  kd_loss_name: "mse" # either rkdangle, rkddistance, mse or kld
+  kd_loss_name: "relaxedms" # either rkdangle, rkddistance, mse or kld
 
   
 

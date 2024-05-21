@@ -28,16 +28,16 @@ class Pitts30k(BaseDataset):
         self.map_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_test_dbImages.npy"))
+                for pth in np.load(join(self.root, "pitts30k_val_dbImages.npy"))
             ]
         )
         self.query_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_test_qImages.npy"))
+                for pth in np.load(join(self.root, "pitts30k_val_qImages.npy"))
             ]
         )
-        self.gt = np.load(join(self.root, "pitts30k_test_gt.npy"), allow_pickle=True)
+        self.gt = np.load(join(self.root, "pitts30k_val_gt.npy"), allow_pickle=True)
 
         self.name = "pitts30k"
 

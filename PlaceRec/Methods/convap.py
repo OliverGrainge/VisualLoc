@@ -527,13 +527,16 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             self.load_weights(weight_path)
             super().__init__(
                 model=self.model,
-                preprocess=preprocess,
+                preprocess=small_preprocess,
                 name=name,
                 weight_path=weight_path,
             )
         else:
             super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
+                model=self.model,
+                preprocess=small_preprocess,
+                name=name,
+                weight_path=None,
             )
 
 

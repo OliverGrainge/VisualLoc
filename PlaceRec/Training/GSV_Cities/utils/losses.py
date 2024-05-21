@@ -5,21 +5,59 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 
-"""
-class MultiSimilarity(nn.Module):
+
+class MyMultiSimilarity(nn.Module):
     def __init__(self, alpha=1.0, beta=50.0, base=0.0):
+        super().__init__()
+
         self.alpha = alpha
         self.beta = beta
         self.base = base
+
     def forward(self, descriptors, labels, miner_outputs):
         desc = F.normalize(descriptors, p=2, dim=1)
         S = desc @ desc.T
-        s_pos = S[miner_outputs[0], miner_outputs[1]]
-        pos_term = torch.exp(-self.alpha*(s_pos-self.base)).sum()
+        pos_exp = self.apply_margin(S, self.base)
+        neg_exp = self.apply_margin(self.base, S)
 
-        s_neg = S[miner_outputs[1], miner_outputs[2]]
-        neg_term = torch.exp(self.beta(s_neg - self.base)).sum()
-"""
+        pos_mask, neg_mask = self.get_masks(S, miner_outputs)
+        print(
+            miner_outputs[0].shape,
+            pos_exp[pos_mask].shape,
+            miner_outputs[2].shape,
+            neg_exp[neg_mask].shape,
+        )
+        pos_loss = (1.0 / self.alpha) * self.logsumexp(
+            self.alpha * pos_exp, keep_mask=pos_mask.bool(), add_one=True
+        )
+        neg_loss = (1.0 / self.beta) * self.logsumexp(
+            self.beta * neg_exp, keep_mask=neg_mask.bool(), add_one=True
+        )
+        return torch.mean(pos_loss + neg_loss)
+
+    def get_masks(self, similarity, miner_outputs):
+        a1, p, a2, n = miner_outputs
+        pos_mask, neg_mask = torch.zeros_like(similarity), torch.zeros_like(similarity)
+        pos_mask[a1, p] = 1
+        neg_mask[a2, n] = 1
+        return pos_mask.bool(), neg_mask.bool()
+
+    def apply_margin(self, x, margin):
+        return margin - x
+
+    def logsumexp(self, x, keep_mask=None, add_one=True, dim=1):
+        if keep_mask is not None:
+            x = x.masked_fill(~keep_mask, torch.finfo(x.dtype).min)
+        if add_one:
+            zeros = torch.zeros(
+                x.size(dim - 1), dtype=x.dtype, device=x.device
+            ).unsqueeze(dim)
+            x = torch.cat([x, zeros], dim=dim)
+
+        output = torch.logsumexp(x, dim=dim, keepdim=True)
+        if keep_mask is not None:
+            output = output.masked_fill(~torch.any(keep_mask, dim=dim, keepdim=True), 0)
+        return output
 
 
 def get_loss(loss_name):
@@ -31,10 +69,12 @@ def get_loss(loss_name):
         )  # these are params for image retrieval
     if loss_name == "MultiSimilarityLoss":
         return losses.MultiSimilarityLoss(
-            alpha=1.0, beta=50, base=0.0, distance=LpDistance(p=2)
+            alpha=1.0, beta=50, base=0.0, distance=CosineSimilarity()
         )
+    if loss_name == "MyMultiSimilarityLoss":
+        return MyMultiSimilarity()
     if loss_name == "ContrastiveLoss":
-        return losses.ContrastiveLoss(pos_margin=0, neg_margin=1)
+        return losses.ContrastiveLoss(pos_margin=0, neg_margin=0.5)
     if loss_name == "Lifted":
         return losses.GeneralizedLiftedStructureLoss(
             neg_margin=0, pos_margin=1, distance=DotProductSimilarity()
@@ -62,15 +102,22 @@ def get_loss(loss_name):
     raise NotImplementedError(f"Sorry, <{loss_name}> loss function is not implemented!")
 
 
+class DummyMiner(nn.Module):
+    def forward(self, embeddings, labels):
+        return None
+
+
 def get_miner(miner_name, margin=0.1):
     if miner_name == "TripletMarginMiner":
         return miners.TripletMarginMiner(
             margin=margin, type_of_triplets="semihard"
         )  # all, hard, semihard, easy
     if miner_name == "MultiSimilarityMiner":
-        return miners.MultiSimilarityMiner(epsilon=margin, distance=LpDistance(p=2))
+        return miners.MultiSimilarityMiner(epsilon=margin, distance=CosineSimilarity())
     if miner_name == "PairMarginMiner":
         return miners.PairMarginMiner(
             pos_margin=0.7, neg_margin=0.3, distance=DotProductSimilarity()
         )
+    if miner_name == "none":
+        return DummyMiner()
     return None

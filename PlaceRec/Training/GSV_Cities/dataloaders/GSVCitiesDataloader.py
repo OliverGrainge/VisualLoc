@@ -230,7 +230,7 @@ class GSVCitiesDataModuleDistillation(pl.LightningDataModule):
                 T.Resize(
                     self.student_image_size, interpolation=T.InterpolationMode.BILINEAR
                 ),
-                T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BILINEAR),
+                # T.RandAugment(num_ops=3, interpolation=T.InterpolationMode.BILINEAR),
                 T.ToTensor(),
                 T.Normalize(mean=self.mean_dataset, std=self.std_dataset),
             ]

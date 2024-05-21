@@ -4,7 +4,14 @@ from .base_method import SingleStageBaseModelWrapper, TwoStageBaseModelWrapper
 from .cct_cls import CCT_CLS
 from .cct_netvlad import CCT_NetVLAD
 from .cct_seqpool import CCT_SEQPOOL
-from .convap import ConvAP, ResNet34_ConvAP, ResNet18_ConvAP, MobileNetV2_ConvAP
+from .convap import (
+    ConvAP,
+    ResNet34_ConvAP,
+    ResNet18_ConvAP,
+    MobileNetV2_ConvAP,
+    ShuffleNetV2_ConvAP,
+    SqueezeNetV1_ConvAP,
+)
 from .cosplace import CosPlace
 from .dino_salad import DinoSalad
 from .dinov2b14_cls import DINOv2B14_CLS
