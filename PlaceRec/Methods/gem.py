@@ -29,7 +29,7 @@ class GeM(nn.Module):
             .pow(1.0 / self.p)
             .view(x.shape[0], -1)
         )
-        return F.normalize(x.flatten(1), p=2, dim=-1)
+        return x.flatten(1)
 
 
 class ResNet(nn.Module):
@@ -141,11 +141,11 @@ class Resnet50gemModel(nn.Module):
             model_name="resnet50",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[4],
+            layers_to_crop=[],
         )
 
         self.aggregation = GeM()
-        self.proj = nn.Linear(1024, fc_output_dim)
+        self.proj = nn.Linear(2048, fc_output_dim)
         self.norm = L2Norm()
 
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
@@ -164,11 +164,11 @@ class Resnet34gemModel(nn.Module):
             model_name="resnet34",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[4],
+            layers_to_crop=[],
         )
 
         self.aggregation = GeM()
-        self.proj = nn.Linear(256, fc_output_dim)
+        self.proj = nn.Linear(512, fc_output_dim)
         self.norm = L2Norm()
 
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
@@ -187,11 +187,11 @@ class Resnet18gemModel(nn.Module):
             model_name="resnet18",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[4],
+            layers_to_crop=[],
         )
 
         self.aggregation = GeM()
-        self.proj = nn.Linear(1024, fc_output_dim)
+        self.proj = nn.Linear(512, fc_output_dim)
         self.norm = L2Norm()
 
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:

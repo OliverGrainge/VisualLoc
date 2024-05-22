@@ -43,8 +43,8 @@ train:
 
   # optimization
   optimizer: "adam"
-  max_epochs: 10
-  batch_size: 120
+  max_epochs: 30
+  batch_size: 80
   lr: 0.0002
   weight_decay: 0
   momentum: 0.9
