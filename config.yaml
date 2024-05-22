@@ -32,9 +32,9 @@ eval:
 
 train:
   debug: False
-  training_method: "gsv_cities_dense"
-  method: "ShuffleNetV2_ConvAP"
-  image_resolution: [224, 224]
+  training_method: "gsv_cities_structured_sparse"
+  method: "ConvAP"
+  image_resolution: [320, 320]
   enable_progress_bar: False
   eval_distance: "cosine"
   finetune: False
@@ -57,10 +57,10 @@ train:
 
   # Pruning
   pruning_type: "magnitude"
-  final_sparsity: 0.99
+  final_sparsity: 0.75
   initial_sparsity: 0.0
-  pruning_schedule: "cosine"
-  pruning_freq: 2
+  pruning_schedule: "linear"
+  pruning_freq: 1
 
   # Distillation
   teacher_method: "ResNet18_ConvAP"

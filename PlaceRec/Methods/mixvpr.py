@@ -190,6 +190,7 @@ class MixVPR_AGG(nn.Module):
         x = self.channel_proj(x)
         x = x.permute(0, 2, 1)
         x = self.row_proj(x)
+
         x = x.flatten(1)
         if norm:
             x = F.normalize(x, p=2, dim=-1)
@@ -365,7 +366,7 @@ class MixVPR(SingleStageBaseModelWrapper):
                 "out_channels": 256,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
-                "out_rows": 2,
+                "out_rows": 16,
             },
         )
 
@@ -401,7 +402,7 @@ class MobileNetV2_MixVPR(SingleStageBaseModelWrapper):
                 "out_channels": 256,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
-                "out_rows": 2,
+                "out_rows": 16,
             },
         )
 
@@ -437,7 +438,7 @@ class ResNet34_MixVPR(SingleStageBaseModelWrapper):
                 "out_channels": 256,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
-                "out_rows": 2,
+                "out_rows": 16,
             },
         )
 
@@ -473,7 +474,7 @@ class ResNet18_MixVPR(SingleStageBaseModelWrapper):
                 "out_channels": 256,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
-                "out_rows": 2,
+                "out_rows": 16,
             },
         )
 

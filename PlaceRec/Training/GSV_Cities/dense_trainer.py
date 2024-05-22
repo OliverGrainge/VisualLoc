@@ -231,7 +231,7 @@ def dense_trainer(args):
     torch.set_float32_matmul_precision("medium")
 
     method = get_method(args.method, False)
-    wandb_logger = WandbLogger(project="GSVCities", log_model="all")
+    wandb_logger = WandbLogger(project="GSVCities", name=args.method)
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),

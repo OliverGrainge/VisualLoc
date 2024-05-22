@@ -34,12 +34,6 @@ def get_scheduler(args):
 def setup_pruner(method, args):
     example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
-    print(
-        "===============> macs: ",
-        orig_macs / 1e6,
-        "    nparams",
-        orig_nparams,
-    )
 
     dont_prune = []
     for name, layer in method.model.named_modules():
@@ -63,7 +57,7 @@ def setup_pruner(method, args):
     else:
         raise Exception(f"Pruning method {args.pruning_type} is not found")
 
-    pruner = tp.pruner.MagnitudePruner(
+    pruner = tp.pruner.GroupNormPruner(
         method.model,
         example_img,
         importance,
@@ -85,7 +79,7 @@ class VPRModel(pl.LightningModule):
     def __init__(
         self,
         args,
-        method,
+        method_name,
         lr=0.05,
         optimizer="sgd",
         weight_decay=1e-3,
@@ -100,8 +94,8 @@ class VPRModel(pl.LightningModule):
         pruning_freq=5,
     ):
         super().__init__()
-        self.name = method.name
-        self.method = method
+        self.name = method_name
+        self.method = get_method(method_name, pretrained=True)
 
         self.lr = lr
         self.optimizer = optimizer
@@ -111,6 +105,12 @@ class VPRModel(pl.LightningModule):
         self.milestones = milestones
         self.lr_mult = lr_mult
         self.pruning_freq = pruning_freq
+        self.pruning_type = args.pruning_type
+        self.pruning_schedule = args.pruning_schedule
+        self.pruning_freq = args.pruning_freq
+        self.initial_sparsity = args.initial_sparsity
+        self.final_sparsity = args.final_sparsity
+        self.eval_distance = args.eval_distance
 
         self.loss_name = loss_name
         self.miner_name = miner_name
@@ -122,15 +122,16 @@ class VPRModel(pl.LightningModule):
 
         self.faiss_gpu = faiss_gpu
 
-        self.method, self.pruner, self.orig_nparams = setup_pruner(method, args)
-        self.model = method.model
-        self.preprocess = method.preprocess
+        self.method, self.pruner, self.orig_nparams = setup_pruner(self.method, args)
+        self.model = self.method.model
+        self.preprocess = self.method.preprocess
         self.model.train()
         self.epoch = 0
         self.save_hyperparameters(args)
         self.hparams.update(
             {"feature_size": self.method.features_dim["global_feature_shape"]}
         )
+
         assert isinstance(self.model, torch.nn.Module)
 
     def forward(self, x):
@@ -274,6 +275,12 @@ class VPRModel(pl.LightningModule):
             r_list = feats[:num_references]
             q_list = feats[num_references:]
 
+            macs, nparams = tp.utils.count_ops_and_params(
+                self.model,
+                self.method.example_input().to(next(self.model.parameters()).device),
+            )
+            sparsity = 1 - (nparams / self.orig_nparams)
+
             recalls_dict, predictions = utils.get_validation_recalls(
                 r_list=r_list,
                 q_list=q_list,
@@ -281,33 +288,30 @@ class VPRModel(pl.LightningModule):
                 gt=ground_truth,
                 print_results=True,
                 dataset_name=val_set_name,
-                faiss_gpu=self.faiss_gpu,
+                distance=self.eval_distance,
+                sparsity=sparsity,
             )
+
             del r_list, q_list, feats, num_references, ground_truth
+
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R5", recalls_dict[5], prog_bar=False, logger=True)
             self.log(
                 f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True
             )
-        print("\n\n")
-        self.val_R1 = recalls_dict[1]
-        macs, nparams = tp.utils.count_ops_and_params(
-            self.model,
-            self.method.example_input().to(next(self.model.parameters()).device),
-        )
+            print("\n\n")
 
-        self.log("sparsity", 1 - (nparams / self.orig_nparams))
+        self.log("sparsity", sparsity)
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
 
 
 # =================================== Training Loop ================================
 def sparse_structured_trainer(args):
-    method = get_method(args.method, False)
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    wandb_logger = WandbLogger(project="GSVCities", config=config["train"])
+    wandb_logger = WandbLogger(project="GSVCities", name=args.method)
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),
@@ -324,8 +328,8 @@ def sparse_structured_trainer(args):
 
     if args.checkpoint:
         checkpoint_cb = ModelCheckpoint(
-            dirpath=f"Checkpoints/gsv_cities_sparse_structured/{method.name}/{args.pruning_type}/",
-            filename=f"{method.name}"
+            dirpath=f"Checkpoints/gsv_cities_sparse_structured/{args.method}/{args.pruning_type}/",
+            filename=f"{args.method}"
             + "_epoch_{epoch:02d}_step_{step:04d}_R1_{pitts30k_val/R1:.4f}_sparsity_"
             + f"_{sparsity:.2f}",
             auto_insert_metric_name=False,
@@ -335,7 +339,7 @@ def sparse_structured_trainer(args):
 
     module = VPRModel(
         args=args,
-        method=method,
+        method_name=args.method,
         lr=args.lr,
         weight_decay=args.weight_decay,
         momentum=args.momentum,
@@ -355,7 +359,7 @@ def sparse_structured_trainer(args):
             devices="auto",
             accelerator="auto",
             strategy="auto",
-            default_root_dir=f"./LOGS/{method.name}",
+            default_root_dir=f"./LOGS/{args.method}",
             num_sanity_val_steps=0,
             precision="16-mixed",
             max_epochs=args.max_epochs,
@@ -376,7 +380,7 @@ def sparse_structured_trainer(args):
             devices="auto",
             accelerator="auto",
             strategy="auto",
-            default_root_dir=f"./LOGS/{method.name}",
+            default_root_dir=f"./LOGS/{args.method}",
             num_sanity_val_steps=0,
             precision="16-mixed",
             max_epochs=args.max_epochs,

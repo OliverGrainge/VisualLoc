@@ -69,7 +69,7 @@ def get_loss(loss_name):
         )  # these are params for image retrieval
     if loss_name == "MultiSimilarityLoss":
         return losses.MultiSimilarityLoss(
-            alpha=1.0, beta=50, base=0.0, distance=CosineSimilarity()
+            alpha=1.0, beta=50, base=0.0, distance=DotProductSimilarity()
         )
     if loss_name == "MyMultiSimilarityLoss":
         return MyMultiSimilarity()

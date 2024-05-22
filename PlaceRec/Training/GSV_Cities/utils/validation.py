@@ -12,6 +12,7 @@ def get_validation_recalls(
     print_results=True,
     dataset_name="dataset without name ?",
     distance="L2",
+    sparsity=None,
 ):
     embed_size = r_list.shape[1]
     if distance == "L2":
@@ -42,8 +43,13 @@ def get_validation_recalls(
     if print_results:
         print("\n")  # print a new line
         table = PrettyTable()
-        table.field_names = ["K"] + [str(k) for k in k_values]
-        table.add_row(["Recall@K"] + [f"{100*v:.2f}" for v in correct_at_k])
+        field_names = ["K"] + [str(k) for k in k_values]
+        rows = ["Recall@K"] + [f"{100*v:.2f}" for v in correct_at_k]
+        if sparsity is not None:
+            field_names += ["Sparsity"]
+            rows += [f"{sparsity:.4f}"]
+        table.field_names = field_names
+        table.add_row(rows)
         print(table.get_string(title=f"Performance on {dataset_name}"))
 
     return d, predictions

@@ -414,7 +414,7 @@ class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 1280,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },
@@ -448,7 +448,7 @@ class MobileNetV2_50_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 1280,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },
@@ -482,7 +482,7 @@ class MobileNetV2_75_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 1280,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },
@@ -516,7 +516,7 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 512,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },
@@ -588,7 +588,7 @@ class ShuffleNetV2_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 1024,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },
