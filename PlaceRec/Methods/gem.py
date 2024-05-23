@@ -232,7 +232,7 @@ preprocess = transforms.Compose(
 class ResNet50_GeM(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = Resnet50gemModel()
-        name = "resnet50_gem"
+        name = "gem"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(weight_path):

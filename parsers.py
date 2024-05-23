@@ -108,6 +108,12 @@ def train_arguments():
     )
 
     parser.add_argument(
+        "--aggregation_pruning_rate",
+        type=float,  # Adds the flag if --debug is specified, otherwise defaults to False
+        default=config["train"]["aggregation_pruning_rate"],
+    )
+
+    parser.add_argument(
         "--debug",
         action="store_true",  # Adds the flag if --debug is specified, otherwise defaults to False
         default=False,

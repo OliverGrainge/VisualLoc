@@ -7,7 +7,6 @@ __pycache__/*
 *__pycache__/*
 LOGS/*
 *.ckpt
-scratch.py
 *pyc
 PlaceRec/Training/GSV_Cities/dataloaders/__pycache__/*
 PlaceRec/Evaluate/results/*

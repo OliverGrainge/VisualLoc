@@ -243,7 +243,15 @@ def dense_trainer(args):
         image_size=args.image_resolution,
         num_workers=args.num_workers,
         show_data_stats=False,
-        val_set_names=["pitts30k_val"],
+        val_set_names=[
+            "pitts30k_val",
+            "inria",
+            "spedtest",
+            "mapillarysls",
+            "essex3in1",
+            "nordland",
+            "crossseasons",
+        ],
     )
 
     model = VPRModel(
@@ -306,6 +314,7 @@ def dense_trainer(args):
             callbacks=[checkpoint_cb] if args.checkpoint else [],
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
+            limit_train_batches=2,
         )
 
     trainer.fit(model=model, datamodule=datamodule)

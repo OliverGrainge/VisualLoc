@@ -118,18 +118,61 @@ class GSVCitiesDataModule(pl.LightningDataModule):
             # load validation sets (pitts_val, msls_val, ...etc)
             self.val_datasets = []
             for valid_set_name in self.val_set_names:
-                if "pitts30k" in valid_set_name.lower():
+                if "pitts30k_val" in valid_set_name.lower():
                     self.val_datasets.append(
                         PittsburghDataset(
                             which_ds=valid_set_name,
                             input_transform=self.valid_transform,
                         )
                     )
-                else:
-                    print(
-                        f"Validation set {valid_set_name} does not exist or has not been implemented yet"
+                if "mapillary" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import (
+                        MSLS,
                     )
-                    raise NotImplementedError
+
+                    self.val_datasets.append(MSLS(input_transform=self.valid_transform))
+
+                if "sped" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import (
+                        SPEDDataset,
+                    )
+
+                    self.val_datasets.append(
+                        SPEDDataset(input_transform=self.valid_transform)
+                    )
+                if "inria" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import (
+                        InriaDataset,
+                    )
+
+                    self.val_datasets.append(
+                        InriaDataset(input_transform=self.valid_transform)
+                    )
+                if "nordland" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import (
+                        NordlandDataset,
+                    )
+
+                    self.val_datasets.append(
+                        NordlandDataset(input_transform=self.valid_transform)
+                    )
+                if "essex3in1" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import (
+                        EssexDataset,
+                    )
+
+                    self.val_datasets.append(
+                        EssexDataset(input_transform=self.valid_transform)
+                    )
+                if "corssseasons" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.CrossSeasonDataset import (
+                        CrossSeasonDataset,
+                    )
+
+                    self.val_datasets.append(
+                        CrossSeasonDataset(input_transform=self.valid_transform)
+                    )
+
             if self.show_data_stats:
                 self.print_stats()
 
@@ -276,6 +319,45 @@ class GSVCitiesDataModuleDistillation(pl.LightningDataModule):
                             which_ds=valid_set_name,
                             input_transform=self.valid_transform,
                         )
+                    )
+                if "mapillary" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import (
+                        MSLS,
+                    )
+
+                    self.val_datasets.append(MSLS(input_transform=self.valid_transform))
+
+                if "spedtest" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import (
+                        SPEDDataset,
+                    )
+
+                    self.val_datasets.append(
+                        SPEDDataset(input_transform=self.valid_transform)
+                    )
+                if "inria" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import (
+                        InriaDataset,
+                    )
+
+                    self.val_datasets.append(
+                        InriaDataset(input_transform=self.valid_transform)
+                    )
+                if "nordland" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import (
+                        NordlandDataset,
+                    )
+
+                    self.val_datasets.append(
+                        NordlandDataset(input_transform=self.valid_transform)
+                    )
+                if "essex" in valid_set_name.lower():
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import (
+                        EssexDataset,
+                    )
+
+                    self.val_datasets.append(
+                        EssexDataset(input_transform=self.valid_transform)
                     )
                 else:
                     print(

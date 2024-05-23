@@ -344,7 +344,7 @@ small_preprocess = transforms.Compose(
 
 class ConvAP(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        name = "resnet50_convap"
+        name = "convap"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         self.model = VPRModel(
             backbone_arch="resnet50",
@@ -516,7 +516,7 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 512,
-                "out_channels": 1024,
+                "out_channels": 256,
                 "s1": 2,
                 "s2": 2,
             },
@@ -549,7 +549,7 @@ class MobileNetV2_ConvAP(SingleStageBaseModelWrapper):
             layers_to_crop=[],
             agg_arch="ConvAP",
             agg_config={
-                "in_channels": 320,
+                "in_channels": 1280,
                 "out_channels": 256,
                 "s1": 2,
                 "s2": 2,

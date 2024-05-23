@@ -43,24 +43,27 @@ train:
 
   # optimization
   optimizer: "adam"
-  max_epochs: 30
+  max_epochs: 20
   batch_size: 80
-  lr: 0.0002
+  lr: 0.00001
   weight_decay: 0
   momentum: 0.9
   warmup_steps: 1
-  milestones: 5 10 15 25
+  milestones: 1000 1100 1200
   lr_mult: 0.3
   loss_name: "MultiSimilarityLoss"
   miner_name: "MultiSimilarityMiner"
   miner_margin: 0.1
 
   # Pruning
+  
   pruning_type: "magnitude"
   final_sparsity: 0.75
+  aggregation_pruning_rate: 0.3
   initial_sparsity: 0.0
   pruning_schedule: "linear"
-  pruning_freq: 1
+  pruning_freq: 2
+
 
   # Distillation
   teacher_method: "ResNet18_ConvAP"

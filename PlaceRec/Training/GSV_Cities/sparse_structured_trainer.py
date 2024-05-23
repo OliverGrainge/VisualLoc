@@ -323,7 +323,15 @@ def sparse_structured_trainer(args):
         image_size=args.image_resolution,
         num_workers=args.num_workers,
         show_data_stats=False,
-        val_set_names=["pitts30k_val"],
+        val_set_names=[
+            "pitts30k_val",
+            "inria",
+            "spedtest",
+            "mapillarysls",
+            "essex3in1",
+            "nordland",
+            "crossseasons",
+        ],
     )
 
     if args.checkpoint:
@@ -391,6 +399,7 @@ def sparse_structured_trainer(args):
             else [],
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
+            check_val_every_n_epoch=args.pruning_freq,
         )
 
     trainer.fit(model=module, datamodule=datamodule)
