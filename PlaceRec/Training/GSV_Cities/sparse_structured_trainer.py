@@ -31,20 +31,77 @@ def get_scheduler(args):
     return schd
 
 
+def get_dont_prune(method, args):
+    if "mixvpr" in method.name.lower():
+        dont_prune = []
+
+        def loop_through(module):
+            for name, layer in module.named_children():
+                # If a layer has no children, it's a leaf layer
+                if len(list(layer.children())) == 0:
+                    if name != "row_proj" and isinstance(layer, nn.Linear):
+                        dont_prune.append(layer)
+                else:
+                    loop_through(layer)
+
+        loop_through(method.model)
+        return dont_prune
+    else:
+        return []
+
+
+def get_pruning_ratio_dict(method, args):
+    print(args.aggregation_pruning_rate)
+    if "convap" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+        # Define the pruning ratio dictionary
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "aggregator" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
+    if "mixvpr" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+        # Define the pruning ratio dictionary
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "aggregator" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
+    if "gem" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+
+        # Define the pruning ratio dictionary
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "aggregation" in name or "proj" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
+    if "netvlad" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+        print(layer_dict.keys())
+        # Define the pruning ratio dictionary
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "aggregator" in name or "linear" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
+
 def setup_pruner(method, args):
     example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
-
-    dont_prune = []
-    for name, layer in method.model.named_modules():
-        if (
-            "attention" in name
-            or "attn" in name
-            or "aggregator" in name
-            or "aggregation" in name
-            or "proj" in name
-        ):
-            dont_prune.append(layer)
 
     if args.pruning_type is None:
         raise Exception(" For structured pruning, Must choose pruning method.")
@@ -63,8 +120,8 @@ def setup_pruner(method, args):
         importance,
         iterative_steps=args.max_epochs // args.pruning_freq,
         iterative_pruning_ratio_scheduler=get_scheduler(args),
-        pruning_ratio=args.final_sparsity,
-        ignored_layers=dont_prune,
+        pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+        ignored_layers=get_dont_prune(method, args),
         global_pruning=False,
     )
 
@@ -210,6 +267,7 @@ class VPRModel(pl.LightningModule):
         """
         if self.epoch % self.pruning_freq == 0 and self.epoch != 0:
             self.pruner.step()
+            self.trainer.optimizers = self.configure_optimizers()[0]
         self.epoch += 1
 
     def on_train_epoch_end(self) -> None:
@@ -290,6 +348,7 @@ class VPRModel(pl.LightningModule):
                 dataset_name=val_set_name,
                 distance=self.eval_distance,
                 sparsity=sparsity,
+                descriptor_dim=val_step_outputs[0][0].shape[1],
             )
 
             del r_list, q_list, feats, num_references, ground_truth
@@ -300,7 +359,7 @@ class VPRModel(pl.LightningModule):
                 f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True
             )
             print("\n\n")
-
+        self.log("descriptor_dim", val_step_outputs[0][0].shape[1])
         self.log("sparsity", sparsity)
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
@@ -323,15 +382,16 @@ def sparse_structured_trainer(args):
         image_size=args.image_resolution,
         num_workers=args.num_workers,
         show_data_stats=False,
-        val_set_names=[
-            "pitts30k_val",
-            "inria",
-            "spedtest",
-            "mapillarysls",
-            "essex3in1",
-            "nordland",
-            "crossseasons",
-        ],
+        # val_set_names=[
+        #    "pitts30k_val",
+        #    "inria",
+        #    "spedtest",
+        #    "mapillarysls",
+        #    "essex3in1",
+        #    "nordland",
+        #    "crossseasons",
+        # ],
+        val_set_names=["spedtest"],
     )
 
     if args.checkpoint:
@@ -400,6 +460,7 @@ def sparse_structured_trainer(args):
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
             check_val_every_n_epoch=args.pruning_freq,
+            limit_train_batches=5,
         )
 
     trainer.fit(model=module, datamodule=datamodule)

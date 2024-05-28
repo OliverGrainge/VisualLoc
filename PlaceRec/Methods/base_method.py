@@ -216,7 +216,8 @@ class BaseFunctionality(BaseTechnique):
         return self.model(x)
 
     def load_weights(self, weights_path):
-        state_dict = torch.load(weights_path, map_location="cpu")
+        state_dict = torch.load(weights_path, map_location="cpu")  # ["state_dict"]
+
         if isinstance(state_dict, nn.Module):
             self.model = state_dict
             return
@@ -225,6 +226,12 @@ class BaseFunctionality(BaseTechnique):
             state_dict = state_dict["state_dict"]
         elif "model_state_dict" in list(state_dict.keys()):
             state_dict = state_dict["model_state_dict"]
+
+        for (
+            idx,
+            key,
+        ) in enumerate(list(state_dict.keys())):
+            print(key, list(self.model.state_dict().keys())[idx])
 
         def adapt_state_dict(model, state_dict):
             model_keys = list(model.state_dict().keys())

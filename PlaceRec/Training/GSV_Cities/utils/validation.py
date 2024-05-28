@@ -13,6 +13,7 @@ def get_validation_recalls(
     dataset_name="dataset without name ?",
     distance="L2",
     sparsity=None,
+    descriptor_dim=None,
 ):
     embed_size = r_list.shape[1]
     if distance == "L2":
@@ -48,6 +49,9 @@ def get_validation_recalls(
         if sparsity is not None:
             field_names += ["Sparsity"]
             rows += [f"{sparsity:.4f}"]
+        if descriptor_dim is not None:
+            field_names += ["descriptor dim"]
+            rows += [f"{descriptor_dim}"]
         table.field_names = field_names
         table.add_row(rows)
         print(table.get_string(title=f"Performance on {dataset_name}"))

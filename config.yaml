@@ -33,7 +33,7 @@ eval:
 train:
   debug: False
   training_method: "gsv_cities_structured_sparse"
-  method: "ConvAP"
+  method: "ResNet18_ConvAP"
   image_resolution: [320, 320]
   enable_progress_bar: False
   eval_distance: "cosine"
@@ -62,7 +62,7 @@ train:
   aggregation_pruning_rate: 0.3
   initial_sparsity: 0.0
   pruning_schedule: "linear"
-  pruning_freq: 2
+  pruning_freq: 1
 
 
   # Distillation

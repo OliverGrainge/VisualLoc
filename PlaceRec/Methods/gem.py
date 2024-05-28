@@ -253,7 +253,7 @@ class ResNet50_GeM(SingleStageBaseModelWrapper):
 class ResNet34_GeM(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = Resnet34gemModel()
-        name = "resnet50_gem"
+        name = "resnet34_gem"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
             if not os.path.exists(weight_path):
