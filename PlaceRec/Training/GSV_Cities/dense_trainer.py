@@ -314,7 +314,6 @@ def dense_trainer(args):
             callbacks=[checkpoint_cb] if args.checkpoint else [],
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
-            limit_train_batches=2,
         )
 
     trainer.fit(model=model, datamodule=datamodule)

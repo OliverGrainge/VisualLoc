@@ -8,6 +8,7 @@ from torch.optim import lr_scheduler
 from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.optim.optimizer import Optimizer
 from pytorch_lightning.loggers import WandbLogger
+import torch.nn as nn
 
 import PlaceRec.Training.GSV_Cities.utils as utils
 from PlaceRec.Training.GSV_Cities.dataloaders.GSVCitiesDataloader import (
@@ -339,6 +340,17 @@ class VPRModel(pl.LightningModule):
             )
             sparsity = 1 - (nparams / self.orig_nparams)
 
+            rat100p = utils.get_validation_recall_at_100precision(
+                r_list=r_list,
+                q_list=q_list,
+                gt=ground_truth,
+                print_results=True,
+                dataset_name=val_set_name,
+                distance=self.eval_distance,
+            )
+
+            self.log(f"{val_set_name}/recall@100p", rat100p)
+
             recalls_dict, predictions = utils.get_validation_recalls(
                 r_list=r_list,
                 q_list=q_list,
@@ -351,14 +363,39 @@ class VPRModel(pl.LightningModule):
                 descriptor_dim=val_step_outputs[0][0].shape[1],
             )
 
-            del r_list, q_list, feats, num_references, ground_truth
+            del r_list, q_list, ground_truth
 
+            self.log(
+                f"{val_set_name}/map_memory_mb",
+                (num_references * feats.shape[1] * 2) / (1024 * 1024),
+            )
+            self.log(
+                f"{val_set_name}/total_memory_mb",
+                (nparams * 2 + (num_references * feats.shape[1] * 2)) / (1024 * 1024),
+            )
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R5", recalls_dict[5], prog_bar=False, logger=True)
             self.log(
                 f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True
             )
             print("\n\n")
+        cpu_lat1 = utils.measure_cpu_latency(
+            self.model, self.method.example_input(), batch_size=1
+        )
+        gpu_lat1 = utils.measure_gpu_latency(
+            self.model, self.method.example_input(), batch_size=1
+        )
+        cpu_lat50 = utils.measure_cpu_latency(
+            self.model, self.method.example_input(), batch_size=50
+        )
+        gpu_lat50 = utils.measure_gpu_latency(
+            self.model, self.method.example_input(), batch_size=50
+        )
+
+        self.log("cpu_bs1_lat_ms", cpu_lat1)
+        self.log("gpu_bs1_lat_ms", gpu_lat1)
+        self.log("cpu_bs50_lat_ms", cpu_lat50)
+        self.log("gpu_bs50_lat_ms", gpu_lat50)
         self.log("descriptor_dim", val_step_outputs[0][0].shape[1])
         self.log("sparsity", sparsity)
         self.log("macs", macs / 1e6)
@@ -383,13 +420,13 @@ def sparse_structured_trainer(args):
         num_workers=args.num_workers,
         show_data_stats=False,
         # val_set_names=[
-        #    "pitts30k_val",
-        #    "inria",
-        #    "spedtest",
-        #    "mapillarysls",
-        #    "essex3in1",
-        #    "nordland",
-        #    "crossseasons",
+        #   "pitts30k_val",
+        #   "inria",
+        #   "spedtest",
+        #   "mapillarysls",
+        #   "essex3in1",
+        #   "nordland",
+        #   "crossseasons",
         # ],
         val_set_names=["spedtest"],
     )

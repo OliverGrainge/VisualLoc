@@ -81,7 +81,6 @@ class ResNet(nn.Module):
             elif "34" in model_name:
                 self.model = torchvision.models.resnet34(weights=weights)
             elif "18" in model_name:
-                # self.model = torchvision.models.resnet18(pretrained=False)
                 self.model = torchvision.models.resnet18(weights=weights)
             elif "wide_resnet50_2" in model_name:
                 self.model = torchvision.models.wide_resnet50_2(weights=weights)

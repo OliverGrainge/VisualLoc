@@ -33,7 +33,7 @@ eval:
 train:
   debug: False
   training_method: "gsv_cities_structured_sparse"
-  method: "ResNet18_ConvAP"
+  method: "ConvAP"
   image_resolution: [320, 320]
   enable_progress_bar: False
   eval_distance: "cosine"
@@ -43,13 +43,13 @@ train:
 
   # optimization
   optimizer: "adam"
-  max_epochs: 20
-  batch_size: 80
+  max_epochs: 30
+  batch_size: 40
   lr: 0.00001
   weight_decay: 0
   momentum: 0.9
   warmup_steps: 1
-  milestones: 1000 1100 1200
+  milestones: 5 10 15 20 25
   lr_mult: 0.3
   loss_name: "MultiSimilarityLoss"
   miner_name: "MultiSimilarityMiner"
@@ -59,7 +59,7 @@ train:
   
   pruning_type: "magnitude"
   final_sparsity: 0.75
-  aggregation_pruning_rate: 0.3
+  aggregation_pruning_rate: 0.375
   initial_sparsity: 0.0
   pruning_schedule: "linear"
   pruning_freq: 1
