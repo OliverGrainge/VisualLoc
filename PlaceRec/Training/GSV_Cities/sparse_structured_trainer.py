@@ -61,7 +61,9 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregator" in name:
-                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+                pruning_ratio_dict[layer_dict[name]] = (
+                    args.aggregation_pruning_rate * args.final_sparsity
+                )
         return pruning_ratio_dict
 
     if "mixvpr" in method.name:
@@ -72,7 +74,9 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregator" in name:
-                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+                pruning_ratio_dict[layer_dict[name]] = (
+                    args.aggregation_pruning_rate * args.final_sparsity
+                )
         return pruning_ratio_dict
 
     if "gem" in method.name:
@@ -84,7 +88,9 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregation" in name or "proj" in name:
-                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+                pruning_ratio_dict[layer_dict[name]] = (
+                    args.aggregation_pruning_rate * args.final_sparsity
+                )
         return pruning_ratio_dict
 
     if "netvlad" in method.name:
@@ -96,7 +102,9 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregator" in name or "linear" in name:
-                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+                pruning_ratio_dict[layer_dict[name]] = (
+                    args.aggregation_pruning_rate * args.final_sparsity
+                )
         return pruning_ratio_dict
 
 
@@ -324,6 +332,24 @@ class VPRModel(pl.LightningModule):
         if len(dm.val_datasets) == 1:  # we need to put the outputs in a list
             val_step_outputs = [val_step_outputs]
 
+        cpu_lat1 = utils.measure_cpu_latency(
+            self.model, self.method.example_input(), batch_size=1
+        )
+        gpu_lat1 = utils.measure_gpu_latency(
+            self.model, self.method.example_input(), batch_size=1
+        )
+        cpu_lat50 = utils.measure_cpu_latency(
+            self.model, self.method.example_input(), batch_size=50
+        )
+        gpu_lat50 = utils.measure_gpu_latency(
+            self.model, self.method.example_input(), batch_size=50
+        )
+
+        self.log("cpu_bs1_lat_ms", cpu_lat1)
+        self.log("gpu_bs1_lat_ms", gpu_lat1)
+        self.log("cpu_bs50_lat_ms", cpu_lat50)
+        self.log("gpu_bs50_lat_ms", gpu_lat50)
+
         for i, (val_set_name, val_dataset) in enumerate(
             zip(dm.val_set_names, dm.val_datasets)
         ):
@@ -351,7 +377,7 @@ class VPRModel(pl.LightningModule):
 
             self.log(f"{val_set_name}/recall@100p", rat100p)
 
-            recalls_dict, predictions = utils.get_validation_recalls(
+            recalls_dict, predictions, ret_latency = utils.get_validation_recalls(
                 r_list=r_list,
                 q_list=q_list,
                 k_values=[1, 5, 10, 15, 20, 25],
@@ -369,9 +395,23 @@ class VPRModel(pl.LightningModule):
                 f"{val_set_name}/map_memory_mb",
                 (num_references * feats.shape[1] * 2) / (1024 * 1024),
             )
+
+            self.log(f"{val_set_name}/retrieval_lat_ms", ret_latency)
+
+            self.log(f"{val_set_name}/total_cpu_lat_bs50", cpu_lat50 + ret_latency)
+
+            self.log(f"{val_set_name}/total_cpu_lat_bs1", cpu_lat1 + ret_latency)
+
+            self.log(f"{val_set_name}/total_gpu_lat_bs50", gpu_lat50 + ret_latency)
+
+            self.log(f"{val_set_name}/total_gpu_lat_bs1", gpu_lat1 + ret_latency)
+
+            print(
+                f"{val_set_name}____references {num_references} dim {feats.shape[1]} map_memory {(num_references * feats.shape[1] * 4) / (1024 * 1024)} total memory {(nparams * 2 + (num_references * feats.shape[1] * 4)) / (1024 * 1024)}"
+            )
             self.log(
                 f"{val_set_name}/total_memory_mb",
-                (nparams * 2 + (num_references * feats.shape[1] * 2)) / (1024 * 1024),
+                (nparams * 2 + (num_references * feats.shape[1] * 4)) / (1024 * 1024),
             )
             self.log(f"{val_set_name}/R1", recalls_dict[1], prog_bar=False, logger=True)
             self.log(f"{val_set_name}/R5", recalls_dict[5], prog_bar=False, logger=True)
@@ -379,27 +419,13 @@ class VPRModel(pl.LightningModule):
                 f"{val_set_name}/R10", recalls_dict[10], prog_bar=False, logger=True
             )
             print("\n\n")
-        cpu_lat1 = utils.measure_cpu_latency(
-            self.model, self.method.example_input(), batch_size=1
-        )
-        gpu_lat1 = utils.measure_gpu_latency(
-            self.model, self.method.example_input(), batch_size=1
-        )
-        cpu_lat50 = utils.measure_cpu_latency(
-            self.model, self.method.example_input(), batch_size=50
-        )
-        gpu_lat50 = utils.measure_gpu_latency(
-            self.model, self.method.example_input(), batch_size=50
-        )
 
-        self.log("cpu_bs1_lat_ms", cpu_lat1)
-        self.log("gpu_bs1_lat_ms", gpu_lat1)
-        self.log("cpu_bs50_lat_ms", cpu_lat50)
-        self.log("gpu_bs50_lat_ms", gpu_lat50)
+        self.log("flops", macs)
         self.log("descriptor_dim", val_step_outputs[0][0].shape[1])
         self.log("sparsity", sparsity)
         self.log("macs", macs / 1e6)
         self.log("nparams", nparams)
+        self.log("model_memory_mb", (nparams * 4) / (1024 * 1024))
 
 
 # =================================== Training Loop ================================
@@ -419,16 +445,16 @@ def sparse_structured_trainer(args):
         image_size=args.image_resolution,
         num_workers=args.num_workers,
         show_data_stats=False,
-        # val_set_names=[
-        #   "pitts30k_val",
-        #   "inria",
-        #   "spedtest",
-        #   "mapillarysls",
-        #   "essex3in1",
-        #   "nordland",
-        #   "crossseasons",
-        # ],
-        val_set_names=["spedtest"],
+        val_set_names=[
+            "pitts30k_val",
+            "inria",
+            "spedtest",
+            "mapillarysls",
+            "essex3in1",
+            "nordland",
+            "crossseasons",
+        ],
+        # val_set_names=["spedtest"],
     )
 
     if args.checkpoint:
@@ -497,7 +523,6 @@ def sparse_structured_trainer(args):
             reload_dataloaders_every_n_epochs=1,
             logger=wandb_logger,
             check_val_every_n_epoch=args.pruning_freq,
-            limit_train_batches=5,
         )
 
     trainer.fit(model=module, datamodule=datamodule)

@@ -43,7 +43,7 @@ train:
 
   # optimization
   optimizer: "adam"
-  max_epochs: 30
+  max_epochs: 10
   batch_size: 40
   lr: 0.00001
   weight_decay: 0
@@ -56,10 +56,9 @@ train:
   miner_margin: 0.1
 
   # Pruning
-  
   pruning_type: "magnitude"
   final_sparsity: 0.75
-  aggregation_pruning_rate: 0.375
+  aggregation_pruning_rate: 1.0
   initial_sparsity: 0.0
   pruning_schedule: "linear"
   pruning_freq: 1

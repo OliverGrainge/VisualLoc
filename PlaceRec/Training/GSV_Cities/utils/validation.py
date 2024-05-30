@@ -23,19 +23,31 @@ def get_validation_recalls(
     else:
         faiss_index = faiss.IndexFlatIP(embed_size)
 
-    # add references
+    # Normalize the reference and query lists
     r_list = r_list / np.linalg.norm(r_list, axis=1, keepdims=True)
     q_list = q_list / np.linalg.norm(q_list, axis=1, keepdims=True)
+
+    # Add references to the index
     faiss_index.add(r_list)
 
-    # search for queries in the index
+    # Start timing the retrieval process
+    times = []
+    for _ in range(5):
+        start_time = time.time()
+        _, _ = faiss_index.search(q_list, 1)
+        end_time = time.time()
+        times.append(end_time - start_time)
+
+    # Search for queries in the index
     _, predictions = faiss_index.search(q_list, max(k_values))
 
-    # start calculating recall_at_k
+    # Calculate retrieval latency in milliseconds
+    retrieval_latency_ms = np.mean(times) * 1000
+
+    # Calculate recall_at_k
     correct_at_k = np.zeros(len(k_values))
     for q_idx, pred in enumerate(predictions):
         for i, n in enumerate(k_values):
-            # if in top N then also in top NN, where NN > N
             if np.any(np.in1d(pred[:n], gt[q_idx])):
                 correct_at_k[i:] += 1
                 break
@@ -46,19 +58,23 @@ def get_validation_recalls(
     if print_results:
         print("\n")  # print a new line
         table = PrettyTable()
-        field_names = ["K"] + [str(k) for k in k_values]
-        rows = ["Recall@K"] + [f"{100*v:.2f}" for v in correct_at_k]
+        field_names = ["K"] + [str(k) for k in k_values] + ["Latency (ms)"]
+        rows = (
+            ["Recall@K"]
+            + [f"{100*v:.2f}" for v in correct_at_k]
+            + [f"{retrieval_latency_ms:.2f}"]
+        )
         if sparsity is not None:
             field_names += ["Sparsity"]
             rows += [f"{sparsity:.4f}"]
         if descriptor_dim is not None:
-            field_names += ["descriptor dim"]
+            field_names += ["Descriptor Dim"]
             rows += [f"{descriptor_dim}"]
         table.field_names = field_names
         table.add_row(rows)
         print(table.get_string(title=f"Performance on {dataset_name}"))
 
-    return d, predictions
+    return d, predictions, retrieval_latency_ms
 
 
 def get_validation_recall_at_100precision(
