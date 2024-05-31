@@ -184,12 +184,25 @@ class MixVPR_AGG(nn.Module):
         self.row_proj = nn.Linear(hw, out_rows)
 
     def forward(self, x, norm: bool = True):
+        print("====================== 1", x.shape)
         x = x.flatten(2)
+        print("====================== 2", x.shape)
         x = self.mix(x)
+        print("====================== 3", x.shape)
         x = x.permute(0, 2, 1)
+        print("====================== 4", x.shape)
         x = self.channel_proj(x)
+        print("====================== 5", x.shape)
         x = x.permute(0, 2, 1)
+        print("====================== 6", x.shape)
         x = self.row_proj(x)
+        print("====================== 7", x.shape)
+        print(" ")
+        print(" ")
+        print(" ")
+
+        #
+        # x = self.row_proj(x)
 
         x = x.flatten(1)
         if norm:
@@ -363,10 +376,10 @@ class MixVPR(SingleStageBaseModelWrapper):
                 "in_channels": 1024,
                 "in_h": 20,
                 "in_w": 20,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "mix_depth": 4,
                 "mlp_ratio": 1,
-                "out_rows": 16,
+                "out_rows": 4,
             },
         )
 

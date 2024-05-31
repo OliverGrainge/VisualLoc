@@ -5,6 +5,7 @@ import torch_pruning as tp
 from PlaceRec.Training.GSV_Cities.sparse_utils import pruning_schedule
 from PlaceRec.utils import get_method
 from parsers import train_arguments
+import numpy as np
 
 
 def get_scheduler(args):
@@ -20,26 +21,27 @@ def get_scheduler(args):
 
 
 def get_dont_prune(method, args):
-    if "mixvpr" in method.name.lower():
+    if method.name == "vit_salad":
         dont_prune = []
-
-        def loop_through(module):
-            for name, layer in module.named_children():
-                # If a layer has no children, it's a leaf layer
-                if len(list(layer.children())) == 0:
-                    if name != "row_proj" and isinstance(layer, nn.Linear):
-                        dont_prune.append(layer)
-                else:
-                    loop_through(layer)
-
-        loop_through(method.model)
+        for name, module in method.model.named_modules():
+            print(name)
+            if "aggregation" in name:
+                dont_prune.append(module)
         return dont_prune
-    else:
-        return []
+
+
+def get_channel_groups(method, args):
+    if "vit" in method.name:
+        channel_groups = {}
+        for m in method.model.modules():
+            if isinstance(m, nn.MultiheadAttention):
+                channel_groups[m] = m.num_heads
+        return channel_groups
+    return []
 
 
 def get_pruning_ratio_dict(method, args):
-    print(args.aggregation_pruning_rate)
+    print("==============================", args.aggregation_pruning_rate)
     if "convap" in method.name:
         layer_dict = {name: module for name, module in method.model.named_modules()}
         # Define the pruning ratio dictionary
@@ -86,6 +88,16 @@ def get_pruning_ratio_dict(method, args):
                 pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
         return pruning_ratio_dict
 
+    if "vit" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "encoder.layers.encoder_layer_11.mlp" in name or "encoder.ln" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
 
 def setup_pruner(method, args):
     example_img = method.example_input().to(method.device)
@@ -103,13 +115,14 @@ def setup_pruner(method, args):
         raise Exception(f"Pruning method {args.pruning_type} is not found")
 
     pruner = tp.pruner.GroupNormPruner(
-        method.model,
+        method.model.backbone,
         example_img,
         importance,
         iterative_steps=args.max_epochs // args.pruning_freq,
         iterative_pruning_ratio_scheduler=get_scheduler(args),
         pruning_ratio_dict=get_pruning_ratio_dict(method, args),
         ignored_layers=get_dont_prune(method, args),
+        channel_groups=get_channel_groups(method, args),
         global_pruning=False,
     )
 
@@ -140,21 +153,97 @@ def get_sparsity(method, orig_nparams):
 
 args = train_arguments()
 
-method = get_method("ConvAP", pretrained=False)
-layer_names = [name for name, _ in method.model.named_modules()]
+method = get_method("MixVPR", pretrained=False)
 
+
+def get_mixvpr_in_channel_proj(method):
+    layers = {}
+    for name, layer in method.model.named_modules():
+        # print(name, layer)
+        if name == "aggregator.channel_proj":
+            layers["layer"] = layer
+        if name == "backbone.model.layer3.5.bn3":
+            layers["prev_layer"] = layer
+    return layers
+
+
+def get_mixvpr_out_channel_proj(method):
+    layers = {}
+    for name, layer in method.model.aggregator.named_modules():
+        if name in ["channel_proj", "row_proj"]:
+            layers[name] = layer
+    return layers
+
+
+def prune_mixvpr_in_channel_proj(method):
+    layers = get_mixvpr_in_channel_proj(method)
+    num_prune = layers["layer"].in_features - layers["prev_layer"].num_features
+    l1_norm = torch.norm(layers["layer"].weight, p=1, dim=0)
+    indices_to_prune = torch.topk(l1_norm, num_prune, largest=False).indices
+    all_indices = torch.arange(layers["layer"].in_features)
+    indices_to_keep = torch.tensor(
+        [idx for idx in all_indices if idx not in indices_to_prune]
+    )
+    new_weight = layers["layer"].weight[:, indices_to_keep].detach()
+
+    if layers["layer"].bias is not None:
+        new_bias = layers[
+            "layer"
+        ].bias.detach()  # Bias remains unchanged because output features are unchanged
+    else:
+        new_bias = None
+    new_layer = nn.Linear(new_weight.size(1), layers["layer"].out_features)
+    new_layer.weight = nn.Parameter(new_weight)
+    new_layer.bias = nn.Parameter(new_bias) if new_bias is not None else None
+    method.model.aggregator.channel_proj = new_layer
+
+
+def prune_mixvpr_out_channel_proj(method, step):
+    layers = get_mixvpr_out_channel_proj(method)
+    amount = pruning_schedule(step, True) * args.aggregation_pruning_rate
+    num_out_features = layers["channel_proj"].out_features
+    num_prune = int(amount * num_out_features)
+    l1_norm = torch.norm(layers["channel_proj"].weight.data, p=1, dim=1)
+    indices_to_prune = torch.topk(l1_norm, num_prune, largest=False).indices
+    mask = torch.ones(num_out_features, dtype=bool)
+    mask[indices_to_prune] = False
+    new_weight = layers["channel_proj"].weight.data[mask, :].detach()
+    if layers["channel_proj"].bias is not None:
+        new_bias = layers["channel_proj"].bias[mask].detach()
+    else:
+        new_bias = None
+    new_layer = nn.Linear(layers["channel_proj"].in_features, new_weight.size(0))
+    new_layer.weight = nn.Parameter(new_weight)
+    if new_bias is not None:
+        new_layer.bias = nn.Parameter(new_bias)
+    else:
+        new_layer.bias = None
+    method.model.aggregator.channel_proj = new_layer
+
+
+layer_names = [name for name, _ in method.model.named_modules()]
 
 method, pruner, orig_nparams = setup_pruner(method, args)
 
-
+out = method.model(method.example_input().to(next(method.model.parameters()).device))
+step = 0
 for epoch in range(args.max_epochs // args.pruning_freq):
     if epoch > 0:
         pruner.step()
+        prune_mixvpr_in_channel_proj(method)
+        prune_mixvpr_out_channel_proj(method, epoch)
+
+        # needed for vit
+        # method.model.hidden_dim = method.model.conv_proj.out_channels
+        # needed for vit_salad
+        # method.model.backbone.backbone.hidden_dim = method.model.backbone.backbone.conv_proj.out_channels
+
     sparsity = get_sparsity(method, orig_nparams)
     img = method.example_input().to(next(method.model.parameters()).device)
     out = method.model(img)
 
     print(f"Epoch: {epoch}  Sparsity: {sparsity:.3f}  Output Dim: {out.shape[1]}")
+
 """
 import numpy as np 
 import matplotlib.pyplot as plt

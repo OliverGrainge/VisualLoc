@@ -24,3 +24,4 @@ from .gem import ResNet50_GeM, ResNet34_GeM, ResNet18_GeM, MobileNetV2_GeM
 from .selavpr import SelaVPR
 from .sfrs import SFRS
 from .vit_cls import ViT_CLS
+from .vit_salad import ViTSalad

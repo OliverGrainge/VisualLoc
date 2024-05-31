@@ -1,9 +1,9 @@
 # Desktop
-datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
-weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
+#datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
+#weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
 # Laptop
-#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
-#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
 #datasets_directory: "/scratch/oeg1n18/datasets"
 #weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
@@ -16,7 +16,7 @@ weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliv
 run: 
   datasets: ["pitts30k"]
   methods: ["MixVPR"]
-  num_workers: 16
+  num_workers: 0
   pin_memory: False
   batchsize: 1
   device: "cpu"
@@ -58,7 +58,7 @@ train:
   # Pruning
   pruning_type: "magnitude"
   final_sparsity: 0.75
-  aggregation_pruning_rate: 1.0
+  aggregation_pruning_rate: 2.0
   initial_sparsity: 0.0
   pruning_schedule: "linear"
   pruning_freq: 1

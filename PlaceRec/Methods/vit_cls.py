@@ -14,6 +14,7 @@ from torch import nn
 from torchvision import transforms
 from tqdm import tqdm
 from transformers import ViTModel
+from torchvision.models import vit_b_16
 
 from PlaceRec.utils import get_config
 
@@ -34,10 +35,26 @@ class VitWrapper(nn.Module):
     def __init__(self, vit_model):
         super().__init__()
         self.vit_model = vit_model
+        self.truncate_after_block = 10
+
+        # Copy the layers up to the truncation point
+        self.features = nn.Sequential(
+            self.vit_model.conv_proj,
+            self.vit_model.encoder.layers[:10],
+        )
+
+        # The embedding layer
+        self.embeddings = self.vit_model.embeddings
+        self.layernorm = self.vit_model.encoder.layernorm
 
     def forward(self, x):
-        x = self.vit_model(x).last_hidden_state[:, 0, :]
-        x = F.normalize(x.flatten(1), p=2, dim=-1)
+        x = self.features[0](x)
+        n = x.shape[0]
+        x = x.flatten(2).transpose(1, 2)
+        x = self.embeddings(x)
+        for layer in self.features[1]:
+            x = layer(x)
+        x = self.layernorm(x)
         return x
 
 
@@ -55,9 +72,8 @@ class ViT_CLS(SingleStageBaseModelWrapper):
         name = "vit_cls"
         weight_path = join(config["weights_directory"], name + ".ckpt")
 
-        self.model = ViTModel.from_pretrained("google/vit-base-patch16-224-in21k")
-        self.model.encoder.layer = self.model.encoder.layer[:10]
-        self.model = VitWrapper(self.model)
+        self.model = vit_b_16(pretrained=True)
+        self.model.heads = nn.Identity()
 
         if pretrained:
             if not os.path.exists(weight_path):

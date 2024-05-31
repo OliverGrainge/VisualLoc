@@ -11,7 +11,7 @@ args = run_arguments()
 
 # ================================ Compute Descriptors ==================================
 for method_name in args.methods:
-    method = get_method(method_name, pretrained=True)
+    method = get_method(method_name, pretrained=False)
     method.set_device(args.device)
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
