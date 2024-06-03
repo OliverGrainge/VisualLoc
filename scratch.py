@@ -99,63 +99,6 @@ def get_pruning_ratio_dict(method, args):
         return pruning_ratio_dict
 
 
-def setup_pruner(method, args):
-    example_img = method.example_input().to(method.device)
-    orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
-
-    if args.pruning_type is None:
-        raise Exception(" For structured pruning, Must choose pruning method.")
-    elif args.pruning_type == "magnitude":
-        importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
-    elif args.pruning_type == "first-order":
-        importance = tp.importance.GroupTaylorImportance()
-    elif args.pruning_type == "second-order":
-        importance = tp.importance.GroupHessianImportance()
-    else:
-        raise Exception(f"Pruning method {args.pruning_type} is not found")
-
-    pruner = tp.pruner.GroupNormPruner(
-        method.model.backbone,
-        example_img,
-        importance,
-        iterative_steps=args.max_epochs // args.pruning_freq,
-        iterative_pruning_ratio_scheduler=get_scheduler(args),
-        pruning_ratio_dict=get_pruning_ratio_dict(method, args),
-        ignored_layers=get_dont_prune(method, args),
-        channel_groups=get_channel_groups(method, args),
-        global_pruning=False,
-    )
-
-    return method, pruner, orig_nparams
-
-
-def get_layer_names(method):
-    names = []
-
-    def rec(model):
-        for name, child in model.named_children():
-            if len(list(child.children())) == 0:
-                names.append(name)
-            else:
-                rec(child)
-
-    rec(method.model)
-    return names
-
-
-def get_sparsity(method, orig_nparams):
-    macs, nparams = tp.utils.count_ops_and_params(
-        method.model,
-        method.example_input().to(next(method.model.parameters()).device),
-    )
-    return 1 - (nparams / orig_nparams)
-
-
-args = train_arguments()
-
-method = get_method("MixVPR", pretrained=False)
-
-
 def get_mixvpr_in_channel_proj(method):
     layers = {}
     for name, layer in method.model.named_modules():
@@ -221,6 +164,92 @@ def prune_mixvpr_out_channel_proj(method, step):
     method.model.aggregator.channel_proj = new_layer
 
 
+def setup_pruner(method, args):
+    example_img = method.example_input().to(method.device)
+    orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
+
+    if args.pruning_type is None:
+        raise Exception(" For structured pruning, Must choose pruning method.")
+    elif args.pruning_type == "magnitude":
+        importance = tp.importance.MagnitudeImportance(p=2, group_reduction="mean")
+    elif args.pruning_type == "first-order":
+        importance = tp.importance.GroupTaylorImportance()
+    elif args.pruning_type == "second-order":
+        importance = tp.importance.GroupHessianImportance()
+    else:
+        raise Exception(f"Pruning method {args.pruning_type} is not found")
+
+    if args.method.lower() == "mixvpr":
+        pruner = tp.pruner.GroupNormPruner(
+            method.model.backbone,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
+
+        class MixVPRPruner:
+            def __init__(self, pruner, method):
+                self.pruner = pruner
+                self.method = method
+                self.epoch = 0
+
+            def step(self):
+                self.pruner.step()
+                prune_mixvpr_in_channel_proj(self.method)
+                prune_mixvpr_out_channel_proj(self.method, epoch)
+                self.epoch += 1
+
+        pruner = MixVPRPruner(pruner, method)
+        return method, pruner, orig_nparams
+
+    else:
+        pruner = tp.pruner.GroupNormPruner(
+            method.model,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
+
+        return method, pruner, orig_nparams
+
+
+def get_layer_names(method):
+    names = []
+
+    def rec(model):
+        for name, child in model.named_children():
+            if len(list(child.children())) == 0:
+                names.append(name)
+            else:
+                rec(child)
+
+    rec(method.model)
+    return names
+
+
+def get_sparsity(method, orig_nparams):
+    macs, nparams = tp.utils.count_ops_and_params(
+        method.model,
+        method.example_input().to(next(method.model.parameters()).device),
+    )
+    return 1 - (nparams / orig_nparams)
+
+
+args = train_arguments()
+
+method = get_method("NetVLAD", pretrained=False)
+
+
 layer_names = [name for name, _ in method.model.named_modules()]
 
 method, pruner, orig_nparams = setup_pruner(method, args)
@@ -230,9 +259,6 @@ step = 0
 for epoch in range(args.max_epochs // args.pruning_freq):
     if epoch > 0:
         pruner.step()
-        prune_mixvpr_in_channel_proj(method)
-        prune_mixvpr_out_channel_proj(method, epoch)
-
         # needed for vit
         # method.model.hidden_dim = method.model.conv_proj.out_channels
         # needed for vit_salad
