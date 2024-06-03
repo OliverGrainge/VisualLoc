@@ -6,6 +6,7 @@ from PlaceRec.Training.GSV_Cities.sparse_utils import pruning_schedule
 from PlaceRec.utils import get_method
 from parsers import train_arguments
 import numpy as np
+import PlaceRec.Training.GSV_Cities.utils as utils
 from sklearn.cluster import KMeans
 
 
@@ -309,20 +310,11 @@ def get_sparsity(method, orig_nparams):
 args = train_arguments()
 
 method = get_method("NetVLAD", pretrained=False)
-
-
-layer_names = [name for name, _ in method.model.named_modules()]
-
 method, pruner, orig_nparams = setup_pruner(method, args)
 step = 0
 for epoch in range(args.max_epochs // args.pruning_freq):
     if epoch > 0:
         pruner.step()
-        # prune_netvlad_centroids(method, step)
-        # needed for vit
-        # method.model.hidden_dim = method.model.conv_proj.out_channels
-        # needed for vit_salad
-        # method.model.backbone.backbone.hidden_dim = method.model.backbone.backbone.conv_proj.out_channels
 
     sparsity = get_sparsity(method, orig_nparams)
     img = method.example_input().to(next(method.model.parameters()).device)
