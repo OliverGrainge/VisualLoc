@@ -33,26 +33,27 @@ def get_scheduler(args):
 
 
 def get_dont_prune(method, args):
-    if "mixvpr" in method.name.lower():
+    if "netvlad" in method.name.lower():
         dont_prune = []
-
-        def loop_through(module):
-            for name, layer in module.named_children():
-                # If a layer has no children, it's a leaf layer
-                if len(list(layer.children())) == 0:
-                    if name != "row_proj" and isinstance(layer, nn.Linear):
-                        dont_prune.append(layer)
-                else:
-                    loop_through(layer)
-
-        loop_through(method.model)
+        for name, module in method.model.named_modules():
+            if "channel_pool" in name:
+                dont_prune.append(module)
         return dont_prune
-    else:
-        return []
+    return []
+
+
+def get_channel_groups(method, args):
+    if "vit" in method.name:
+        channel_groups = {}
+        for m in method.model.modules():
+            if isinstance(m, nn.MultiheadAttention):
+                channel_groups[m] = m.num_heads
+        return channel_groups
+    return []
 
 
 def get_pruning_ratio_dict(method, args):
-    print(args.aggregation_pruning_rate)
+    print("==============================", args.aggregation_pruning_rate)
     if "convap" in method.name:
         layer_dict = {name: module for name, module in method.model.named_modules()}
         # Define the pruning ratio dictionary
@@ -61,9 +62,7 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregator" in name:
-                pruning_ratio_dict[layer_dict[name]] = (
-                    args.aggregation_pruning_rate * args.final_sparsity
-                )
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
         return pruning_ratio_dict
 
     if "mixvpr" in method.name:
@@ -74,9 +73,7 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregator" in name:
-                pruning_ratio_dict[layer_dict[name]] = (
-                    args.aggregation_pruning_rate * args.final_sparsity
-                )
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
         return pruning_ratio_dict
 
     if "gem" in method.name:
@@ -88,24 +85,127 @@ def get_pruning_ratio_dict(method, args):
         }
         for name in layer_dict:
             if "aggregation" in name or "proj" in name:
-                pruning_ratio_dict[layer_dict[name]] = (
-                    args.aggregation_pruning_rate * args.final_sparsity
-                )
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
         return pruning_ratio_dict
 
     if "netvlad" in method.name:
         layer_dict = {name: module for name, module in method.model.named_modules()}
-        print(layer_dict.keys())
         # Define the pruning ratio dictionary
         pruning_ratio_dict = {
             layer: args.final_sparsity for layer in layer_dict.values()
         }
         for name in layer_dict:
             if "aggregator" in name or "linear" in name:
-                pruning_ratio_dict[layer_dict[name]] = (
-                    args.aggregation_pruning_rate * args.final_sparsity
-                )
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
         return pruning_ratio_dict
+
+    if "vit" in method.name:
+        layer_dict = {name: module for name, module in method.model.named_modules()}
+        pruning_ratio_dict = {
+            layer: args.final_sparsity for layer in layer_dict.values()
+        }
+        for name in layer_dict:
+            if "encoder.layers.encoder_layer_11.mlp" in name or "encoder.ln" in name:
+                pruning_ratio_dict[layer_dict[name]] = args.aggregation_pruning_rate
+        return pruning_ratio_dict
+
+
+def get_mixvpr_in_channel_proj(method):
+    layers = {}
+    for name, layer in method.model.named_modules():
+        # print(name, layer)
+        if name == "aggregator.channel_proj":
+            layers["layer"] = layer
+        if name == "backbone.model.layer3.5.bn3":
+            layers["prev_layer"] = layer
+    return layers
+
+
+def get_mixvpr_out_channel_proj(method):
+    layers = {}
+    for name, layer in method.model.aggregator.named_modules():
+        if name in ["channel_proj", "row_proj"]:
+            layers[name] = layer
+    return layers
+
+
+def prune_mixvpr_in_channel_proj(method):
+    layers = get_mixvpr_in_channel_proj(method)
+    num_prune = layers["layer"].in_features - layers["prev_layer"].num_features
+    l1_norm = torch.norm(layers["layer"].weight, p=1, dim=0)
+    indices_to_prune = torch.topk(l1_norm, num_prune, largest=False).indices
+    all_indices = torch.arange(layers["layer"].in_features)
+    indices_to_keep = torch.tensor(
+        [idx for idx in all_indices if idx not in indices_to_prune]
+    )
+    new_weight = layers["layer"].weight[:, indices_to_keep].detach()
+
+    if layers["layer"].bias is not None:
+        new_bias = layers[
+            "layer"
+        ].bias.detach()  # Bias remains unchanged because output features are unchanged
+    else:
+        new_bias = None
+    new_layer = nn.Linear(new_weight.size(1), layers["layer"].out_features)
+    new_layer.weight = nn.Parameter(new_weight)
+    new_layer.bias = nn.Parameter(new_bias) if new_bias is not None else None
+    method.model.aggregator.channel_proj = new_layer
+
+
+def prune_mixvpr_out_channel_proj(method, step):
+    layers = get_mixvpr_out_channel_proj(method)
+    amount = pruning_schedule(step, True) * args.aggregation_pruning_rate
+    num_out_features = layers["channel_proj"].out_features
+    num_prune = int(amount * num_out_features)
+    l1_norm = torch.norm(layers["channel_proj"].weight.data, p=1, dim=1)
+    indices_to_prune = torch.topk(l1_norm, num_prune, largest=False).indices
+    mask = torch.ones(num_out_features, dtype=bool)
+    mask[indices_to_prune] = False
+    new_weight = layers["channel_proj"].weight.data[mask, :].detach()
+    if layers["channel_proj"].bias is not None:
+        new_bias = layers["channel_proj"].bias[mask].detach()
+    else:
+        new_bias = None
+    new_layer = nn.Linear(layers["channel_proj"].in_features, new_weight.size(0))
+    new_layer.weight = nn.Parameter(new_weight)
+    if new_bias is not None:
+        new_layer.bias = nn.Parameter(new_bias)
+    else:
+        new_layer.bias = None
+    method.model.aggregator.channel_proj = new_layer
+
+
+def prune_netvlad_centroids(method, step):
+    # Prune centroids
+    centroids = method.model.aggregation.centroids
+    centroids_data = centroids.detach().cpu().numpy()
+    amount = pruning_schedule(step, True) * args.aggregation_pruning_rate
+    num_clusters = int((1 - amount) * centroids_data.shape[0])
+    kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(centroids_data)
+    clustered_data = kmeans.cluster_centers_
+    new_centroids = torch.tensor(clustered_data, dtype=centroids.dtype).to(
+        centroids.device
+    )
+    method.model.aggregation.centroids = torch.nn.Parameter(new_centroids)
+    method.model.aggregation.clusters_num = int(new_centroids.shape[0])
+
+    # Calculate L1 norm of each filter in the convolutional layer using torch.norm
+    conv_filters = method.model.aggregation.conv.weight
+    filter_importance = torch.norm(
+        conv_filters, p=1, dim=(1, 2, 3)
+    )  # Apply L1 norm across channel, height, and width dimensions
+
+    # Prune convolutional filters
+    _, important_indices = torch.topk(
+        filter_importance, num_clusters
+    )  # Get indices of top filters
+    new_conv_weights = conv_filters[important_indices, :, :, :]
+    method.model.aggregation.conv.weight = torch.nn.Parameter(new_conv_weights)
+
+    # Optionally, adjust the bias if it exists
+    if method.model.aggregation.conv.bias is not None:
+        new_conv_biases = method.model.aggregation.conv.bias[important_indices]
+        method.model.aggregation.conv.bias = torch.nn.Parameter(new_conv_biases)
 
 
 def setup_pruner(method, args):
@@ -123,18 +223,76 @@ def setup_pruner(method, args):
     else:
         raise Exception(f"Pruning method {args.pruning_type} is not found")
 
-    pruner = tp.pruner.GroupNormPruner(
-        method.model,
-        example_img,
-        importance,
-        iterative_steps=args.max_epochs // args.pruning_freq,
-        iterative_pruning_ratio_scheduler=get_scheduler(args),
-        pruning_ratio_dict=get_pruning_ratio_dict(method, args),
-        ignored_layers=get_dont_prune(method, args),
-        global_pruning=False,
-    )
+    if args.method.lower() == "mixvpr":
+        pruner = tp.pruner.GroupNormPruner(
+            method.model.backbone,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
 
-    return method, pruner, orig_nparams
+        class MixVPRPruner:
+            def __init__(self, pruner, method):
+                self.pruner = pruner
+                self.method = method
+                self.epoch = 0
+
+            def step(self):
+                self.pruner.step()
+                prune_mixvpr_in_channel_proj(self.method)
+                prune_mixvpr_out_channel_proj(self.method, self.epoch)
+                self.epoch += 1
+
+        pruner = MixVPRPruner(pruner, method)
+        return method, pruner, orig_nparams
+
+    elif args.method.lower() == "netvlad":
+        pruner = tp.pruner.GroupNormPruner(
+            method.model.backbone,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
+
+        class NetVLADPruner:
+            def __init__(self, pruner, method):
+                self.pruner = pruner
+                self.method = method
+                self.epoch = 0
+
+            def step(self):
+                self.pruner.step()
+                prune_netvlad_centroids(self.method, self.epoch)
+                self.epoch += 1
+
+        pruner = NetVLADPruner(pruner, method)
+
+        return method, pruner, orig_nparams
+
+    else:
+        pruner = tp.pruner.GroupNormPruner(
+            method.model,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
+
+        return method, pruner, orig_nparams
 
 
 class VPRModel(pl.LightningModule):

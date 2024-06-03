@@ -309,7 +309,7 @@ def get_sparsity(method, orig_nparams):
 
 args = train_arguments()
 
-method = get_method("NetVLAD", pretrained=False)
+method = get_method(args.method, pretrained=False)
 method, pruner, orig_nparams = setup_pruner(method, args)
 step = 0
 for epoch in range(args.max_epochs // args.pruning_freq):

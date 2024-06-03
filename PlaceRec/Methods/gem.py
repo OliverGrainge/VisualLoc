@@ -140,7 +140,7 @@ class Resnet50gemModel(nn.Module):
             model_name="resnet50",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[],
+            layers_to_crop=[4],
         )
 
         self.aggregation = GeM()
