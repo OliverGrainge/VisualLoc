@@ -8,6 +8,7 @@ from parsers import train_arguments
 import numpy as np
 import PlaceRec.Training.GSV_Cities.utils as utils
 from sklearn.cluster import KMeans
+import csv
 
 
 def get_scheduler(args):
@@ -312,15 +313,57 @@ args = train_arguments()
 method = get_method(args.method, pretrained=False)
 method, pruner, orig_nparams = setup_pruner(method, args)
 step = 0
-for epoch in range(args.max_epochs // args.pruning_freq):
-    if epoch > 0:
-        pruner.step()
+# Initialize CSV file and writer
+with open(f"{method.name}_latency_measurements.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerow(
+        [
+            "Epoch",
+            "Sparsity",
+            "Output_Dim",
+            "CPU_Latency_bs1",
+            "GPU_Latency_bs1",
+            "CPU_Latency_bs50",
+            "GPU_Latency_bs50",
+        ]
+    )
 
-    sparsity = get_sparsity(method, orig_nparams)
-    img = method.example_input().to(next(method.model.parameters()).device)
-    out = method.model(img)
-    step += 1
-    print(f"Epoch: {epoch}  Sparsity: {sparsity:.3f}  Output Dim: {out.shape}")
+    step = 0
+    for epoch in range(args.max_epochs // args.pruning_freq):
+        if epoch > 0:
+            pruner.step()
+
+        sparsity = get_sparsity(method, orig_nparams)
+        img = method.example_input().to(next(method.model.parameters()).device)
+        out = method.model(img)
+        cpu_lat1 = utils.measure_cpu_latency(
+            method.model, method.example_input(), batch_size=1
+        )
+        gpu_lat1 = utils.measure_gpu_latency(
+            method.model, method.example_input(), batch_size=1
+        )
+        cpu_lat50 = utils.measure_cpu_latency(
+            method.model, method.example_input(), batch_size=50
+        )
+        gpu_lat50 = utils.measure_gpu_latency(
+            method.model, method.example_input(), batch_size=50
+        )
+
+        # Append a row for each epoch
+        writer.writerow(
+            [
+                epoch,
+                sparsity,
+                int(out.shape[1]),
+                cpu_lat1,
+                gpu_lat1,
+                cpu_lat50,
+                gpu_lat50,
+            ]
+        )
+
+        step += 1
+        print(f"Epoch: {epoch}  Sparsity: {sparsity:.3f}  Output Dim: {out.shape}")
 
 """
 import numpy as np 

@@ -140,7 +140,7 @@ class Resnet50gemModel(nn.Module):
             model_name="resnet50",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[4],
+            layers_to_crop=[],
         )
 
         self.aggregation = GeM()
@@ -150,7 +150,6 @@ class Resnet50gemModel(nn.Module):
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
-        x = self.proj(x)
         if norm:
             x = self.norm(x)
         return x
