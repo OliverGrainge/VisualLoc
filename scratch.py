@@ -314,7 +314,7 @@ method = get_method(args.method, pretrained=False)
 method, pruner, orig_nparams = setup_pruner(method, args)
 step = 0
 # Initialize CSV file and writer
-with open(f"{method.name}_latency_measurements.csv", "w", newline="") as file:
+with open(f"data/{method.name}_latency_measurements.csv", "w", newline="") as file:
     writer = csv.writer(file)
     writer.writerow(
         [
