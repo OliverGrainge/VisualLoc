@@ -6,6 +6,7 @@ from PlaceRec.Training.GSV_Cities.sparse_utils import pruning_schedule
 from PlaceRec.utils import get_method
 from parsers import train_arguments
 import numpy as np
+from sklearn.cluster import KMeans
 
 
 def get_scheduler(args):
@@ -21,13 +22,13 @@ def get_scheduler(args):
 
 
 def get_dont_prune(method, args):
-    if method.name == "vit_salad":
+    if "netvlad" in method.name.lower():
         dont_prune = []
         for name, module in method.model.named_modules():
-            print(name)
-            if "aggregation" in name:
+            if "channel_pool" in name:
                 dont_prune.append(module)
         return dont_prune
+    return []
 
 
 def get_channel_groups(method, args):
@@ -78,7 +79,6 @@ def get_pruning_ratio_dict(method, args):
 
     if "netvlad" in method.name:
         layer_dict = {name: module for name, module in method.model.named_modules()}
-        print(layer_dict.keys())
         # Define the pruning ratio dictionary
         pruning_ratio_dict = {
             layer: args.final_sparsity for layer in layer_dict.values()
@@ -164,6 +164,39 @@ def prune_mixvpr_out_channel_proj(method, step):
     method.model.aggregator.channel_proj = new_layer
 
 
+def prune_netvlad_centroids(method, step):
+    # Prune centroids
+    centroids = method.model.aggregation.centroids
+    centroids_data = centroids.detach().cpu().numpy()
+    amount = pruning_schedule(step, True) * args.aggregation_pruning_rate
+    num_clusters = int((1 - amount) * centroids_data.shape[0])
+    kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(centroids_data)
+    clustered_data = kmeans.cluster_centers_
+    new_centroids = torch.tensor(clustered_data, dtype=centroids.dtype).to(
+        centroids.device
+    )
+    method.model.aggregation.centroids = torch.nn.Parameter(new_centroids)
+    method.model.aggregation.clusters_num = int(new_centroids.shape[0])
+
+    # Calculate L1 norm of each filter in the convolutional layer using torch.norm
+    conv_filters = method.model.aggregation.conv.weight
+    filter_importance = torch.norm(
+        conv_filters, p=1, dim=(1, 2, 3)
+    )  # Apply L1 norm across channel, height, and width dimensions
+
+    # Prune convolutional filters
+    _, important_indices = torch.topk(
+        filter_importance, num_clusters
+    )  # Get indices of top filters
+    new_conv_weights = conv_filters[important_indices, :, :, :]
+    method.model.aggregation.conv.weight = torch.nn.Parameter(new_conv_weights)
+
+    # Optionally, adjust the bias if it exists
+    if method.model.aggregation.conv.bias is not None:
+        new_conv_biases = method.model.aggregation.conv.bias[important_indices]
+        method.model.aggregation.conv.bias = torch.nn.Parameter(new_conv_biases)
+
+
 def setup_pruner(method, args):
     example_img = method.example_input().to(method.device)
     orig_macs, orig_nparams = tp.utils.count_ops_and_params(method.model, example_img)
@@ -201,10 +234,38 @@ def setup_pruner(method, args):
             def step(self):
                 self.pruner.step()
                 prune_mixvpr_in_channel_proj(self.method)
-                prune_mixvpr_out_channel_proj(self.method, epoch)
+                prune_mixvpr_out_channel_proj(self.method, self.epoch)
                 self.epoch += 1
 
         pruner = MixVPRPruner(pruner, method)
+        return method, pruner, orig_nparams
+
+    elif args.method.lower() == "netvlad":
+        pruner = tp.pruner.GroupNormPruner(
+            method.model.backbone,
+            example_img,
+            importance,
+            iterative_steps=args.max_epochs // args.pruning_freq,
+            iterative_pruning_ratio_scheduler=get_scheduler(args),
+            pruning_ratio_dict=get_pruning_ratio_dict(method, args),
+            ignored_layers=get_dont_prune(method, args),
+            channel_groups=get_channel_groups(method, args),
+            global_pruning=False,
+        )
+
+        class NetVLADPruner:
+            def __init__(self, pruner, method):
+                self.pruner = pruner
+                self.method = method
+                self.epoch = 0
+
+            def step(self):
+                self.pruner.step()
+                prune_netvlad_centroids(self.method, self.epoch)
+                self.epoch += 1
+
+        pruner = NetVLADPruner(pruner, method)
+
         return method, pruner, orig_nparams
 
     else:
@@ -253,12 +314,11 @@ method = get_method("NetVLAD", pretrained=False)
 layer_names = [name for name, _ in method.model.named_modules()]
 
 method, pruner, orig_nparams = setup_pruner(method, args)
-
-out = method.model(method.example_input().to(next(method.model.parameters()).device))
 step = 0
 for epoch in range(args.max_epochs // args.pruning_freq):
     if epoch > 0:
         pruner.step()
+        # prune_netvlad_centroids(method, step)
         # needed for vit
         # method.model.hidden_dim = method.model.conv_proj.out_channels
         # needed for vit_salad
@@ -267,8 +327,8 @@ for epoch in range(args.max_epochs // args.pruning_freq):
     sparsity = get_sparsity(method, orig_nparams)
     img = method.example_input().to(next(method.model.parameters()).device)
     out = method.model(img)
-
-    print(f"Epoch: {epoch}  Sparsity: {sparsity:.3f}  Output Dim: {out.shape[1]}")
+    step += 1
+    print(f"Epoch: {epoch}  Sparsity: {sparsity:.3f}  Output Dim: {out.shape}")
 
 """
 import numpy as np 

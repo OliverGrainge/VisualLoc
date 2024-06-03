@@ -39,7 +39,7 @@ train:
   eval_distance: "cosine"
   finetune: False
   checkpoint: False
-  num_workers: 16
+  num_workers: 0
 
   # optimization
   optimizer: "adam"

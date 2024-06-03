@@ -10,6 +10,7 @@ import torch.nn.functional as F
 import torchvision
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
+from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 from PlaceRec.Datasets import Pitts30k
@@ -26,6 +27,7 @@ class ResNet(nn.Module):
         pretrained=True,
         layers_to_freeze=2,
         layers_to_crop=[],
+        output_dim=128,
     ):
         """Class representing the resnet backbone used in the pipeline
         we consider resnet network as a list of 5 blocks (from 0 to 4),
@@ -107,6 +109,12 @@ class ResNet(nn.Module):
             self.out_channels // 2 if self.model.layer3 is None else self.out_channels
         )
 
+        self.channel_pool = nn.Conv2d(
+            self.out_channels, 128, kernel_size=(1, 1), bias=False
+        )
+
+        self.out_channels = 128
+
     def forward(self, x):
         x = self.model.conv1(x)
         x = self.model.bn1(x)
@@ -118,6 +126,7 @@ class ResNet(nn.Module):
             x = self.model.layer3(x)
         if self.model.layer4 is not None:
             x = self.model.layer4(x)
+        x = self.channel_pool(x)
         return x
 
 
@@ -149,7 +158,6 @@ class NetVLADagg(nn.Module):
         self.alpha = 0
         self.normalize_input = normalize_input
         self.work_with_tokens = work_with_tokens
-        self.pool_conv = nn.Conv2d(in_channels, 128, kernel_size=(1, 1), bias=False)
         self.conv = nn.Conv2d(dim, clusters_num, kernel_size=(1, 1), bias=False)
         self.centroids = nn.Parameter(torch.rand(clusters_num, dim))
 
@@ -174,7 +182,6 @@ class NetVLADagg(nn.Module):
         self.conv.bias = None
 
     def forward(self, x):
-        x = self.pool_conv(x)
         N, D, H, W = x.shape[:]
         if self.normalize_input:
             x = F.normalize(x, p=2, dim=1)  # Across descriptor dim
@@ -214,7 +221,7 @@ class NetVLADagg(nn.Module):
             descriptors = np.zeros(shape=(descriptors_num, self.dim), dtype=np.float32)
             for iteration, (idx, inputs) in enumerate(tqdm(random_dl, ncols=100)):
                 inputs = inputs.to(next(backbone.parameters()).device)
-                outputs = self.pool_conv(backbone(inputs))
+                outputs = backbone(inputs)
                 norm_outputs = F.normalize(outputs, p=2, dim=1)
                 image_descriptors = norm_outputs.view(
                     norm_outputs.shape[0], self.dim, -1
@@ -249,14 +256,11 @@ class NetVLADNet(nn.Module):
             layers_to_crop=[4],
         )
         self.aggregation = NetVLADagg(clusters_num=64, dim=128, work_with_tokens=False)
-
-        self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
     def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
-        x = self.linear(x)
         if norm:
             x = self.norm(x)
         return x
@@ -277,13 +281,11 @@ class ResNet34_NetVLADNet(nn.Module):
             clusters_num=64, dim=128, in_channels=256, work_with_tokens=False
         )
 
-        self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
     def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
-        x = self.linear(x)
         if norm:
             x = self.norm(x)
         return x
@@ -304,13 +306,11 @@ class ResNet18_NetVLADNet(nn.Module):
             clusters_num=64, dim=128, in_channels=256, work_with_tokens=False
         )
 
-        self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
     def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
-        x = self.linear(x)
         if norm:
             x = self.norm(x)
         return x
@@ -325,13 +325,11 @@ class MobileNetV2_NetVLADNet(nn.Module):
         self.aggregation = NetVLADagg(
             clusters_num=64, dim=128, in_channels=320, work_with_tokens=False
         )
-        self.linear = nn.Linear(64 * 128, 64 * 128)
         self.norm = L2Norm()
 
     def forward(self, x, norm: bool = True):
         x = self.backbone(x)
         x = self.aggregation(x)
-        x = self.linear(x)
         if norm:
             x = self.norm(x)
         return x
