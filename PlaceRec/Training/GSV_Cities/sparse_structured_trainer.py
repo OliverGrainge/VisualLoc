@@ -619,11 +619,11 @@ def sparse_structured_trainer(args):
         checkpoint_cb = ModelCheckpoint(
             dirpath=f"Checkpoints/gsv_cities_sparse_structured/{args.method}/{args.pruning_type}/",
             filename=f"{args.method}"
-            + "_epoch_{epoch:02d}_step_{step:04d}_R1_{pitts30k_val/R1:.4f}_sparsity_"
-            + f"_{sparsity:.2f}",
+            + "_epoch_{epoch:02d}_step_{step:04d}_R1_{pitts30k_val/R1:.4f}_sparsity__{sparsity:.2f}",
             auto_insert_metric_name=False,
             save_weights_only=True,
             every_n_epochs=args.pruning_freq,
+            save_top_k=-1,
         )
 
     module = VPRModel(

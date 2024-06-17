@@ -117,6 +117,18 @@ class Eval:
         self.results[f"r@{k}_{self.dataset.name}"] = ratk
         return ratk
 
+    def descriptor_dim(self) -> float:
+        self.method.load_descriptors(self.dataset.name)
+        return self.method.query_desc["global_descriptors"].shape[1]
+
+    def map_memory(self) -> float:
+        self.method.load_descriptors(self.dataset.name)
+        return self.method.map_desc["global_descriptors"].nbytes / (1024**2)
+
+    def model_memory(self) -> float:
+        params = self.count_params()
+        return (params * 4) / (1024**2)
+
     def matching_latency(self, num_runs: int = 20) -> float:
         """
         Measures and returns the average latency of the place recognition method over a specified number of runs.
@@ -144,7 +156,7 @@ class Eval:
         )
         return (et - st) / num_runs * 1000
 
-    def extraction_cpu_latency(self, num_runs: int = 100) -> float:
+    def extraction_cpu_latency(self, batch_size: int = 1, num_runs: int = 100) -> float:
         """
         Measures and returns the CPU latency of the feature extraction process for the model over a number of runs.
 
@@ -159,6 +171,7 @@ class Eval:
         model = model.cpu()
         img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         input_data = self.method.preprocess(img)[None, :]
+        input_data = input_data.repeat(batch_size, 1, 1, 1)
         for _ in range(10):
             _ = model(input_data)
 
@@ -173,7 +186,7 @@ class Eval:
         self.results["extraction_cpu_latency_ms"] = average_time
         return average_time
 
-    def extraction_gpu_latency(self, num_runs: int = 100) -> float:
+    def extraction_gpu_latency(self, batch_size: int = 1, num_runs: int = 100) -> float:
         """
         Measures and returns the GPU latency of the feature extraction process for the model over a number of runs.
 
@@ -190,6 +203,7 @@ class Eval:
         model.eval()
         img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         input_data = self.method.preprocess(img)[None, :].cuda()
+        input_data = input_data.repeat(batch_size, 1, 1, 1)
         for _ in range(10):
             _ = model(input_data)
         torch.cuda.synchronize()

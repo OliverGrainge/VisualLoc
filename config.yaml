@@ -2,11 +2,11 @@
 #datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
 #weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
 # Laptop
-#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
-#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
-datasets_directory: "/scratch/oeg1n18/datasets"
-weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
+#datasets_directory: "/scratch/oeg1n18/datasets"
+#weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
 
 
 #####################################################################################################################################################
@@ -14,12 +14,12 @@ weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
 #####################################################################################################################################################
   
 run: 
-  datasets: ["pitts30k"]
+  datasets: ["Pitts30k"]
   methods: ["MixVPR"]
   num_workers: 0
   pin_memory: False
-  batchsize: 1
-  device: "cpu"
+  batchsize: 64
+  device: "mps"
 
 eval: 
   datasets: ["pitts30k"]
