@@ -15,21 +15,37 @@ from .base_method import SingleStageBaseModelWrapper
 filepath = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
 
-
+"""
 class GeM(nn.Module):
-    def __init__(self, p: int = 3, eps: float = 1e-6):
+    def __init__(self, p: int = 3, eps: float = 1e-6, fixed_size=(10,10)):
         super().__init__()
         self.p = nn.Parameter(torch.ones(1) * p)
         self.flatten = nn.Flatten()
         self.eps = eps
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        print("inpug: ", x.shape)
         x = (
             F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1)))
             .pow(1.0 / self.p)
             .view(x.shape[0], -1)
         )
+        print("output: ", x.shape)
         return x.flatten(1)
+"""
+
+
+class GeM(nn.Module):
+    def __init__(self, p=3, eps=1e-6):
+        super().__init__()
+        self.p = nn.Parameter(torch.ones(1) * p)
+        self.eps = eps
+
+    def forward(self, x):
+        x = x.clamp(min=self.eps).pow(self.p)
+        x = F.avg_pool2d(x, (10, 10))  # Use the fixed size
+        x = x.pow(1.0 / self.p)
+        return x.view(x.shape[0], -1)
 
 
 class ResNet(nn.Module):

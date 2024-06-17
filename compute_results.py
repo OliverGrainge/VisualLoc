@@ -7,9 +7,9 @@ import os
 import pandas as pd
 import torch
 
-type = "accuracy"  # either accuracy or latency.
+type = "latency"  # either accuracy or latency.
 datasets = ["SpedTest", "CrossSeason"]
-directory = "/Users/olivergrainge/Downloads/Checkpoints"
+directory = "/Users/olivergrainge/Downloads/Onnx_Checkpoints"
 
 
 config = get_config()
@@ -114,14 +114,20 @@ def load_results():
 def compute_recalls(weight_pth, results):
     method_name = weight_pth.split("_")[0]
 
-    method = get_method(method_name, pretrained=False)
-    method.load_weights(os.path.join(directory, weight_pth))
-    method.features_dim = method.features_size()
+    if ".ckpt" in weight_pth:
+        method = get_method(method_name, pretrained=False)
+        method.load_weights(os.path.join(directory, weight_pth))
+        method.features_dim = method.features_size()
+    else:
+        method = get_method(method_name, pretrained=False)
 
     run_once = False
     for dataset_name in datasets:
         dataset = get_dataset(dataset_name)
-        eval = Eval(method, dataset)
+        if ".onnx" in weight_pth:
+            eval = Eval(method, dataset, onnx_pth=os.path.join(directory, weight_pth))
+        else:
+            eval = Eval(method, dataset)
         if run_once == False:
             descriptor_dim = eval.descriptor_dim()
             flops = eval.count_flops()
@@ -154,7 +160,8 @@ def compute_recalls(weight_pth, results):
             gpu_lat_bs1 = eval.extraction_gpu_latency()
             cpu_lat_bs25 = eval.extraction_cpu_latency(batch_size=25)
             gpu_lat_bs25 = eval.extraction_gpu_latency(batch_size=25)
-            mat_lat = eval.matching_latency()
+            # mat_lat = eval.matching_latency()
+            mat_lat = 0.0
             cpu_total_lat_bs1 = cpu_lat_bs1 + mat_lat
             gpu_total_lat_bs1 = gpu_lat_bs1 + mat_lat
             cpu_total_lat_bs25 = cpu_lat_bs25 + mat_lat
@@ -181,5 +188,6 @@ def compute_recalls(weight_pth, results):
 weights_pths = load_model_weights("MixVPR", 1.0)
 for pth in weights_pths:
     results = load_results()
-    compute_descriptors(pth)
+    if type == "accuracy":
+        compute_descriptors(pth)
     compute_recalls(pth, results)
