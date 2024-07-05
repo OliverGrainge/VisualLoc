@@ -24,12 +24,14 @@ class ImageIdxDataset(Dataset):
 
     def __getitem__(self, idx):
         if self.preprocess is not None:
-            img = np.array(Image.open(self.img_paths[idx]))[:, :, :3]
+            img = np.array(Image.open(self.img_paths[idx]).convert("RGB"))[:, :, :3]
             img = Image.fromarray(img)
             img = self.preprocess(img)
             return idx, img
 
-        img = np.array(Image.open(self.img_paths[idx]).resize((224, 224)))[:, :, :3]
+        img = np.array(
+            Image.open(self.img_paths[idx]).convert("RGB").resize((224, 224))
+        )[:, :, :3]
         return idx, img
 
 

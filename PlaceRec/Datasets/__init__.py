@@ -9,3 +9,5 @@ from .pitts30k import Pitts30k_Val, Pitts30k_Test
 from .pitts250k import Pitts250k
 from .sfu import SFU
 from .spedtest import SpedTest
+from .amstertime import AmsterTime
+from .svox import SVOX

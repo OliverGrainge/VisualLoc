@@ -12,11 +12,14 @@ from PlaceRec.utils import ImageIdxDataset
 from torch.utils.data import DataLoader
 
 
-class BaseData(data.Dataset):
+class SVOX(data.Dataset):
     """Dataset with images from database and queries, used for inference (testing and building cache)."""
 
     def __init__(
-        self, datasets_folder="datasets", dataset_name="amstertime", split="test"
+        self,
+        datasets_folder="/Users/olivergrainge/Documents/github/datasets/VPR-datasets-downloader/datasets",
+        dataset_name="svox",
+        split="test",
     ):
         super().__init__()
         self.dataset_name = dataset_name
@@ -25,9 +28,10 @@ class BaseData(data.Dataset):
             raise FileNotFoundError(f"Folder {self.dataset_folder} does not exist")
         self.test_method = "hard_resize"
         self.resize = (320, 320)
+        self.name = self.dataset_name
 
         #### Read paths and UTM coordinates for all images.
-        database_folder = join(self.dataset_folder, "database")
+        database_folder = join(self.dataset_folder, "gallery")
         queries_folder = join(self.dataset_folder, "queries")
         if not os.path.exists(database_folder):
             raise FileNotFoundError(f"Folder {database_folder} does not exist")
@@ -55,6 +59,9 @@ class BaseData(data.Dataset):
         )
 
         self.images_paths = list(self.database_paths) + list(self.queries_paths)
+
+        self.query_paths = self.queries_paths
+        self.map_paths = self.database_paths
 
         self.database_num = len(self.database_paths)
         self.queries_num = len(self.queries_paths)
@@ -105,16 +112,3 @@ class BaseData(data.Dataset):
 
     def ground_truth(self):
         return self.soft_positives_per_query
-
-
-dataset = BaseData(
-    datasets_folder="/Users/olivergrainge/Documents/github/datasets/VPR-datasets-downloader/datasets"
-)
-
-print(dataset.queries_num)
-print(len(dataset.get_positives()))
-
-
-from PlaceRec.Datasets import Pitts30k_Val
-
-ds = Pitts30k_Val()
