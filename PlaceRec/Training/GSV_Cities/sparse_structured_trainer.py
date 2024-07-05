@@ -178,11 +178,11 @@ def prune_mixvpr_out_channel_proj(method, step, args):
     # num_out_features = layers["channel_proj"].out_features
     if "resnet34" in method.name.lower():
         num_out_features = 256
-        print(num_out_features, layers["channel_proj"].weight.data.shape)
+        # (num_out_features, layers["channel_proj"].weight.data.shape)
 
     else:
         num_out_features = 1024
-        print(num_out_features, layers["channel_proj"].weight.data.shape)
+        # print(num_out_features, layers["channel_proj"].weight.data.shape)
 
     num_prune = int(amount * num_out_features)
     l1_norm = torch.norm(layers["channel_proj"].weight.data, p=1, dim=1)
@@ -540,7 +540,7 @@ class VPRModel(pl.LightningModule):
     ):
         super().__init__()
         self.name = method_name
-        self.method = get_method(method_name, pretrained=False)
+        self.method = get_method(method_name, pretrained=True)
 
         self.lr = lr
         self.optimizer_type = optimizer
@@ -582,7 +582,7 @@ class VPRModel(pl.LightningModule):
         assert isinstance(self.model, torch.nn.Module)
 
         # print("=== filepath", f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
-        # torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
+        torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
 
     def forward(self, x):
         x = self.model(x)
@@ -652,30 +652,26 @@ class VPRModel(pl.LightningModule):
         """
         Completes the pruning step if required
         """
-        if self.pruning_freq == 1:
+        print("================== Starting Train Epoch", self.current_epoch)
+        if self.current_epoch % self.pruning_freq == 0:
             self.pruner.step()
             print(
                 "===============================================================  EPOCH PRUNING:",
                 self.current_epoch,
             )
-        else:
-            if self.current_epoch % self.pruning_freq == 0 and self.current_epoch != 0:
-                self.pruner.step()
-                print(
-                    "===============================================================  EPOCH PRUNING:",
-                    self.current_epoch,
-                )
 
-        if (self.current_epoch != 0) and (self.current_epoch % self.pruning_freq == 0):
+        if self.current_epoch % self.pruning_freq == 0:
             self.reset_optimizer()
-        self.adjust_learning_rate(self.trainer.optimizers[0], self.current_epoch)
+            print("Optimizer reset at train epoch start")
+        else:
+            self.adjust_learning_rate(self.trainer.optimizers[0], self.current_epoch)
+            print("learning rate adjusted at train epoch start")
         self.log("learning_rate", self.trainer.optimizers[0].param_groups[0]["lr"])
 
     def reset_optimizer(self):
         # Reinitialize the optimizer
 
         self.trainer.optimizers = self.configure_optimizers()
-        print("Optimizer reset")
 
     def adjust_learning_rate(self, optimizer, epoch):
         # Custom learning rate adjustment logic
@@ -691,12 +687,14 @@ class VPRModel(pl.LightningModule):
         """
         Hook called at the end of a training epoch to reset or update certain parameters.
         """
+        print("=========== Ending Training Epoch: ", self.current_epoch)
         self.batch_acc = []
 
     def on_validation_epoch_start(self) -> None:
         """
         Hook called at the start of a validation epoch to initialize or reset parameters.
         """
+        print("=========== Starting Validation Epoch: ", self.current_epoch)
         if len(self.trainer.datamodule.val_set_names) == 1:
             self.val_step_outputs = []
         else:
@@ -721,7 +719,6 @@ class VPRModel(pl.LightningModule):
         Returns:
             torch.Tensor: The descriptor vectors computed for the batch.
         """
-        return 0
         places, _ = batch
         # calculate descriptors
         descriptors = self(places).detach().cpu()
@@ -735,11 +732,12 @@ class VPRModel(pl.LightningModule):
         """
         Hook called at the end of a validation epoch to compute and log validation metrics.
         """
-        # val_step_outputs = self.val_step_outputs
-        # dm = self.trainer.datamodule
-        # self.val_step_outputs = []
-        # if len(dm.val_datasets) == 1:  # we need to put the outputs in a list
-        #    val_step_outputs = [val_step_outputs]
+        print("================ Validation Epoch End: ", self.current_epoch)
+        val_step_outputs = self.val_step_outputs
+        dm = self.trainer.datamodule
+        self.val_step_outputs = []
+        if len(dm.val_datasets) == 1:  # we need to put the outputs in a list
+            val_step_outputs = [val_step_outputs]
         """
         cpu_lat1 = utils.measure_cpu_latency(
             self.model, self.method.example_input(), batch_size=1
@@ -759,7 +757,7 @@ class VPRModel(pl.LightningModule):
         self.log("cpu_bs50_lat_ms", cpu_lat50)
         self.log("gpu_bs50_lat_ms", gpu_lat50)
         """
-        """
+
         for i, (val_set_name, val_dataset) in enumerate(
             zip(dm.val_set_names, dm.val_datasets)
         ):
@@ -805,17 +803,17 @@ class VPRModel(pl.LightningModule):
                 f"{val_set_name}/map_memory_mb",
                 (num_references * feats.shape[1] * 2) / (1024 * 1024),
             )
-  
-            #self.log(f"{val_set_name}/retrieval_lat_ms", ret_latency)
 
-            #self.log(f"{val_set_name}/total_cpu_lat_bs50", cpu_lat50 + ret_latency)
+            # self.log(f"{val_set_name}/retrieval_lat_ms", ret_latency)
 
-            #self.log(f"{val_set_name}/total_cpu_lat_bs1", cpu_lat1 + ret_latency)
+            # self.log(f"{val_set_name}/total_cpu_lat_bs50", cpu_lat50 + ret_latency)
 
-            #self.log(f"{val_set_name}/total_gpu_lat_bs50", gpu_lat50 + ret_latency)
+            # self.log(f"{val_set_name}/total_cpu_lat_bs1", cpu_lat1 + ret_latency)
 
-            #self.log(f"{val_set_name}/total_gpu_lat_bs1", gpu_lat1 + ret_latency)
-            
+            # self.log(f"{val_set_name}/total_gpu_lat_bs50", gpu_lat50 + ret_latency)
+
+            # self.log(f"{val_set_name}/total_gpu_lat_bs1", gpu_lat1 + ret_latency)
+
             print(
                 f"{val_set_name}____references {num_references} dim {feats.shape[1]} map_memory {(num_references * feats.shape[1] * 4) / (1024 * 1024)} total memory {(nparams * 2 + (num_references * feats.shape[1] * 4)) / (1024 * 1024)}"
             )
@@ -830,7 +828,6 @@ class VPRModel(pl.LightningModule):
             )
             print("\n\n")
 
-
         self.log("flops", macs)
         self.log("descriptor_dim", val_step_outputs[0][0].shape[1])
         self.log("sparsity", sparsity)
@@ -838,12 +835,6 @@ class VPRModel(pl.LightningModule):
         self.log("nparams", nparams)
         self.log("model_memory_mb", (nparams * 4) / (1024 * 1024))
 
-        """
-        macs, nparams = tp.utils.count_ops_and_params(
-            self.model,
-            self.method.example_input().to(next(self.model.parameters()).device),
-        )
-        sparsity = 1 - (nparams / self.orig_nparams)
         print("-----")
         print("-----")
         print("-----")
@@ -853,10 +844,11 @@ class VPRModel(pl.LightningModule):
         print("-----")
 
         # print("=== filepath", f"/home/oeg1n18/VisualLoc/Checkpoints/{self.name}_agg_{self.aggregation_pruning_rate:.2f}_sparsity_{sparsity:.3f}_R1_{recalls_dict[1]:.3f}.ckpt")
-        print("EPOCH:", self.current_epoch)
-        if self.current_epoch % self.pruning_freq == 0:
-            print("EPOCH SAVING:", self.current_epoch)
-            # torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/{self.name}_agg_{self.aggregation_pruning_rate:.2f}_sparsity_{sparsity:.3f}_R1_{recalls_dict[1]:.3f}.ckpt")
+        print("===================== EPOCH SAVING:", self.current_epoch)
+        torch.save(
+            self.model,
+            f"/home/oeg1n18/VisualLoc/Checkpoints/{self.name}_agg_{self.aggregation_pruning_rate:.2f}_sparsity_{sparsity:.3f}_R1_{recalls_dict[1]:.3f}.ckpt",
+        )
 
 
 # =================================== Training Loop ================================
@@ -864,7 +856,7 @@ def sparse_structured_trainer(args):
     pl.seed_everything(seed=1, workers=True)
     torch.set_float32_matmul_precision("medium")
 
-    # wandb_logger = WandbLogger(project="GSVCities", name=args.method)
+    wandb_logger = WandbLogger(project="GSVCities", name=args.method)
 
     print(args.milestones)
 
@@ -907,7 +899,10 @@ def sparse_structured_trainer(args):
         checkpoint=args.checkpoint,
         aggregation_pruning_rate=args.aggregation_pruning_rate,
     )
-
+    if "netvlad" in args.method:
+        prec = 32
+    else:
+        prec = 16
     if args.debug:
         trainer = pl.Trainer(
             enable_progress_bar=args.enable_progress_bar,
@@ -916,16 +911,17 @@ def sparse_structured_trainer(args):
             strategy="auto",
             default_root_dir=f"./LOGS/{args.method}",
             num_sanity_val_steps=0,
-            precision="16-mixed",
+            # precision=32,
             max_epochs=args.max_epochs,
             reload_dataloaders_every_n_epochs=1,
-            # logger=wandb_logger,
+            logger=wandb_logger,
             log_every_n_steps=1,
             limit_train_batches=1,
-            check_val_every_n_epoch=1,
-            limit_val_batches=1,
+            check_val_every_n_epoch=args.pruning_freq,
+            # limit_val_batches=1,
         )
     else:
+        print("======================== Precision: ", prec)
         trainer = pl.Trainer(
             enable_progress_bar=args.enable_progress_bar,
             devices="auto",
@@ -933,11 +929,11 @@ def sparse_structured_trainer(args):
             strategy="auto",
             default_root_dir=f"./LOGS/{args.method}",
             num_sanity_val_steps=0,
-            precision="16-mixed",
+            # precision=32,
             max_epochs=args.max_epochs,
             reload_dataloaders_every_n_epochs=1,
-            # logger=wandb_logger,
-            check_val_every_n_epoch=1,
+            logger=wandb_logger,
+            check_val_every_n_epoch=args.pruning_freq,
         )
 
     trainer.fit(model=module, datamodule=datamodule)
