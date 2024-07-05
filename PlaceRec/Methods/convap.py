@@ -316,7 +316,6 @@ class VPRModel(pl.LightningModule):
 
 ######################################### CONVAP MODEL ########################################################
 
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -516,7 +515,7 @@ class ResNet18_ConvAP(SingleStageBaseModelWrapper):
             agg_arch="ConvAP",
             agg_config={
                 "in_channels": 512,
-                "out_channels": 256,
+                "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,
             },

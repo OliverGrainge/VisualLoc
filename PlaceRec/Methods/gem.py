@@ -166,6 +166,7 @@ class Resnet50gemModel(nn.Module):
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
+        x = self.proj(x)
         if norm:
             x = self.norm(x)
         return x

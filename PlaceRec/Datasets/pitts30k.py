@@ -19,7 +19,7 @@ config = get_config()
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 
-class Pitts30k(BaseDataset):
+class Pitts30k_Val(BaseDataset):
     def __init__(self):
         if not os.path.isdir(join(config["datasets_directory"], "Pittsburgh-Query")):
             raise Exception("Pitts30k Not Downloaded")
@@ -39,7 +39,71 @@ class Pitts30k(BaseDataset):
         )
         self.gt = np.load(join(self.root, "pitts30k_val_gt.npy"), allow_pickle=True)
 
-        self.name = "pitts30k"
+        self.name = "pitts30k_val"
+
+    def query_images_loader(
+        self,
+        batch_size: int = 16,
+        shuffle: bool = False,
+        preprocess: torchvision.transforms.transforms.Compose = None,
+        pin_memory: bool = False,
+        num_workers: int = 0,
+    ) -> torch.utils.data.DataLoader:
+        # build the dataloader
+        dataset = ImageIdxDataset(self.query_paths, preprocess=preprocess)
+        dataloader = DataLoader(
+            dataset,
+            shuffle=shuffle,
+            batch_size=batch_size,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+        )
+        return dataloader
+
+    def map_images_loader(
+        self,
+        batch_size: int = 16,
+        shuffle: bool = False,
+        preprocess: torchvision.transforms.transforms.Compose = None,
+        pin_memory: bool = False,
+        num_workers: int = 0,
+    ) -> torch.utils.data.DataLoader:
+        dataset = ImageIdxDataset(self.map_paths, preprocess=preprocess)
+
+        dataloader = DataLoader(
+            dataset,
+            shuffle=shuffle,
+            batch_size=batch_size,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+        )
+        return dataloader
+
+    def ground_truth(self) -> np.ndarray:
+        return self.gt
+
+
+class Pitts30k_Test(BaseDataset):
+    def __init__(self):
+        if not os.path.isdir(join(config["datasets_directory"], "Pittsburgh-Query")):
+            raise Exception("Pitts30k Not Downloaded")
+
+        self.root = join(config["datasets_directory"], "Pittsburgh-Query")
+        self.map_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "pitts30k_test_dbImages.npy"))
+            ]
+        )
+        self.query_paths = np.array(
+            [
+                join(self.root, pth)
+                for pth in np.load(join(self.root, "pitts30k_test_qImages.npy"))
+            ]
+        )
+        self.gt = np.load(join(self.root, "pitts30k_test_gt.npy"), allow_pickle=True)
+
+        self.name = "pitts30k_test"
 
     def query_images_loader(
         self,

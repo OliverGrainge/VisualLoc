@@ -13,6 +13,7 @@ from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+import regex as re
 
 from PlaceRec.utils import get_config, get_logger
 
@@ -255,6 +256,7 @@ class BaseFunctionality(BaseTechnique):
 
         if check_state_dict_for_pattern(state_dict, "_mask"):
             state_dict = make_pruning_permanent_on_model(state_dict)
+
         state_dict = adapt_state_dict(self.model, state_dict)
         self.model.load_state_dict(state_dict)
 

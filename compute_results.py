@@ -123,19 +123,22 @@ def compute_recalls(weight_pth, results):
 
     run_once = False
     for dataset_name in datasets:
-        dataset = get_dataset(dataset_name)
+
         if ".onnx" in weight_pth:
-            eval = Eval(method, dataset, onnx_pth=os.path.join(directory, weight_pth))
+            eval = Eval(
+                method, "Pitts30k", onnx_pth=os.path.join(directory, weight_pth)
+            )
         else:
+            dataset = get_dataset(dataset_name)
             eval = Eval(method, dataset)
-        if run_once == False:
             descriptor_dim = eval.descriptor_dim()
+            results.loc[weight_pth, "descriptor_dim"] = descriptor_dim
+
+        if run_once == False:
             flops = eval.count_flops()
             model_memory = eval.model_memory()
             sparsity = float(weight_pth.split("_")[4])
-
             results.loc[weight_pth, "method_name"] = method_name
-            results.loc[weight_pth, "descriptor_dim"] = descriptor_dim
             results.loc[weight_pth, "flops"] = flops
             results.loc[weight_pth, "model_memory"] = model_memory
             results.loc[weight_pth, "sparsity"] = sparsity
@@ -160,8 +163,6 @@ def compute_recalls(weight_pth, results):
             gpu_lat_bs1 = eval.extraction_gpu_latency()
             cpu_lat_bs25 = eval.extraction_cpu_latency(batch_size=25)
             gpu_lat_bs25 = eval.extraction_gpu_latency(batch_size=25)
-            # mat_lat = eval.matching_latency()
-            mat_lat = 0.0
             cpu_total_lat_bs1 = cpu_lat_bs1 + mat_lat
             gpu_total_lat_bs1 = gpu_lat_bs1 + mat_lat
             cpu_total_lat_bs25 = cpu_lat_bs25 + mat_lat

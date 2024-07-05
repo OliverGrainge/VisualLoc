@@ -13,7 +13,7 @@ from torchvision import transforms
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 
-from PlaceRec.Datasets import Pitts30k
+from PlaceRec.Datasets import Pitts30k_Val
 from PlaceRec.Methods import SingleStageBaseModelWrapper
 from PlaceRec.utils import L2Norm, get_config
 
@@ -354,7 +354,7 @@ class NetVLAD(SingleStageBaseModelWrapper):
                 self.model.to("mps")
             else:
                 self.model.to("cpu")
-            ds = Pitts30k()
+            ds = Pitts30k_Val()
             dl = ds.query_images_loader(preprocess=preprocess)
             cluster_ds = dl.dataset
             self.model.aggregation.initialize_netvlad_layer(
@@ -390,7 +390,7 @@ class MobileNetV2_NetVLAD(SingleStageBaseModelWrapper):
                 self.model.to("mps")
             else:
                 self.model.to("cpu")
-            ds = Pitts30k()
+            ds = Pitts30k_Val()
             dl = ds.query_images_loader(preprocess=preprocess)
             cluster_ds = dl.dataset
             self.model.aggregation.initialize_netvlad_layer(
@@ -426,7 +426,7 @@ class ResNet34_NetVLAD(SingleStageBaseModelWrapper):
                 self.model.to("mps")
             else:
                 self.model.to("cpu")
-            ds = Pitts30k()
+            ds = Pitts30k_Val()
             dl = ds.query_images_loader(preprocess=preprocess)
             cluster_ds = dl.dataset
             self.model.aggregation.initialize_netvlad_layer(
@@ -462,7 +462,7 @@ class ResNet18_NetVLAD(SingleStageBaseModelWrapper):
                 self.model.to("mps")
             else:
                 self.model.to("cpu")
-            ds = Pitts30k()
+            ds = Pitts30k_Val()
             dl = ds.query_images_loader(preprocess=preprocess)
             cluster_ds = dl.dataset
             self.model.aggregation.initialize_netvlad_layer(

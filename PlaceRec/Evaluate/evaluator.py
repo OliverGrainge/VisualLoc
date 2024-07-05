@@ -10,7 +10,8 @@ from PIL import Image
 from ptflops import get_model_complexity_info
 from tabulate import tabulate
 import onnxruntime as ort
-
+import faiss
+import pickle
 from PlaceRec.Methods.base_method import BaseTechnique
 from PlaceRec.utils import get_logger
 
@@ -55,7 +56,7 @@ class Eval:
         self.dataset = dataset
         self.method = method
         self.onnx_pth = onnx_pth
-        if self.dataset is not None:
+        if onnx_pth is None:
             self.gt = dataset.ground_truth()
 
         self.results = {}
@@ -163,6 +164,25 @@ class Eval:
         Returns:
             float: The average matching latency in milliseconds.
         """
+        if isinstance(self.dataset, str):
+            with open("dataset_sizes.pkl", "rb") as f:
+                dataset_dict = pickle.load(f)
+            dataset_size = dataset_dict[self.dataset]
+            db_vectors = np.random.random((dataset_size, self.desc_size)).astype(
+                "float32"
+            )
+            db_vectors /= np.linalg.norm(db_vectors, axis=1)[:, np.newaxis]
+            index = faiss.IndexFlatIP(self.desc_size)  # Inner Product (IP) index
+            index.add(db_vectors)
+            times = []
+            query_vectors = np.random.random((1, self.desc_size)).astype(np.float32)
+            for _ in range(num_runs):
+                st = time.time()
+                D, I = index.search(query_vectors, 1)  # D: distances, I: indices
+                et = time.time()
+                times.append(et - st)
+            return np.mean(times) / (num_runs * 1000)
+
         self.method.load_descriptors(self.dataset.name)
         single_query_desc = {}
         for key, value in self.method.query_desc.items():
@@ -204,7 +224,8 @@ class Eval:
             session = self.setup_onnx_session_cpu()
 
             for _ in range(10):
-                _ = session.run(None, {"input": input_data})
+                out = session.run(None, {"input": input_data})
+                self.desc_size = out[0].shape[1]
 
             # Measure inference time
             start_time = time.time()
