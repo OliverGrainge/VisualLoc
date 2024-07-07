@@ -16,9 +16,9 @@ weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliv
 run: 
   datasets: ["Pitts30k"]
   methods: ["MixVPR"]
-  num_workers: 0
+  num_workers: 16
   pin_memory: False
-  batchsize: 32
+  batchsize: 198
   device: "cuda"
 
 eval: 
@@ -39,7 +39,7 @@ train:
   eval_distance: "cosine"
   finetune: False
   checkpoint: False
-  num_workers: 0
+  num_workers: 16
 
   # optimization
   optimizer: "adam"
