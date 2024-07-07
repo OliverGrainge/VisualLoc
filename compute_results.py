@@ -7,10 +7,10 @@ import os
 import pandas as pd
 import torch
 
-type = "latency"  # either accuracy or latency.
+type = "accuracy"  # either accuracy or latency.
 datasets = ["MapillarySLS", "Pitts30k_Val", "AmsterTime", "SVOX"]
-directory = "/home/oliver/Documents/github/ResNet34_Onnx_Checkpoints"
-# directory = "/home/oliver/Documents/github/ResNet34_Checkpoints"
+# directory = "/home/oliver/Documents/github/ResNet34_Onnx_Checkpoints"
+directory = "/home/oliver/Documents/github/ResNet34_Checkpoints"
 methods = ["ResNet34_MixVPR", "ResNet34_GeM", "ResNet34_NetVLAD", "ResNet34_ConvAP"]
 gammas = [0.00, 0.25, 0.50, 0.75]
 
@@ -168,7 +168,6 @@ def compute_recalls(weight_pth, results):
             cpu_lat_bs1 = eval.extraction_cpu_latency()
             gpu_lat_bs1 = eval.extraction_gpu_latency()
             mat_lat = eval.matching_latency()
-            print("======", mat_lat)
             cpu_total_lat_bs1 = cpu_lat_bs1 + mat_lat
             gpu_total_lat_bs1 = gpu_lat_bs1 + mat_lat
 
@@ -184,25 +183,16 @@ def compute_recalls(weight_pth, results):
     results.to_csv("results.csv")
 
 
-weights_pths = load_model_weights("ResNet34_ConvAP", 0.75)
-for pth in weights_pths:
-    results = load_results()
-    if type == "accuracy":
-        compute_descriptors(pth)
-    print(
-        "========================================================================++++",
-        pth,
-    )
-    compute_recalls(pth, results)
-
-
-"""
-for method in methods: 
+for method in methods:
     for gamma in gammas:
         weights_pths = load_model_weights(method, gamma)
         for pth in weights_pths:
+            print(
+                "========================================================================++++",
+                pth,
+            )
             results = load_results()
             if type == "accuracy":
+                print("hello")
                 compute_descriptors(pth)
             compute_recalls(pth, results)
-"""
