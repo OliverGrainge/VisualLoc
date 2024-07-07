@@ -7,9 +7,9 @@ import os
 import pandas as pd
 import torch
 
-type = "latency"  # either accuracy or latency.
+type = "accuracy"  # either accuracy or latency.
 datasets = ["SpedTest", "CrossSeason"]
-directory = "/Users/olivergrainge/Downloads/Onnx_Checkpoints"
+directory = "/Users/olivergrainge/Downloads/ResNet34_Checkpoints"
 
 
 config = get_config()
@@ -20,20 +20,21 @@ def load_model_weights(method_name, aggregation_pruning_rate):
     filenames = os.listdir(directory)
     filtered_files = []
     for filename in filenames:
-
         if f"{method_name}_agg_{aggregation_pruning_rate}" in filename:
             filtered_files.append(filename)
-    sorted_files = sorted(filtered_files, key=lambda x: float(x.split("_")[4]))
+    sorted_files = sorted(filtered_files, key=lambda x: float(x.split("_")[5]))
     return sorted_files
 
 
-weights = load_model_weights("ConvAP", 1.00)
+weights = load_model_weights("ConvAP", 0.25)
 
 
 def compute_descriptors(weight_pth):
-    method_name = weight_pth.split("_")[0]
+    method_name = weight_pth.split("_")[0:2]
+    method_name = "_".join(method_name)
     method = get_method(method_name, pretrained=False)
-    method.load_weights(os.path.join(directory, weight_pth))
+    method.model = torch.load(os.path.join(directory, weight_pth), map_location="cpu")
+    # method.load_weights(os.path.join(directory, weight_pth))
     method.features_dim = method.features_size()
     method.set_device(config["run"]["device"])
     for dataset_name in datasets:
@@ -102,8 +103,6 @@ def load_results():
                 f"{dataset}_matching_lat",
                 f"{dataset}_total_cpu_lat_bs1",
                 f"{dataset}_total_gpu_lat_bs1",
-                f"{dataset}_total_cpu_lat_bs25",
-                f"{dataset}_total_gpu_lat_bs25",
             ]
 
         results = pd.DataFrame(columns=basic_columns)
@@ -112,18 +111,20 @@ def load_results():
 
 
 def compute_recalls(weight_pth, results):
-    method_name = weight_pth.split("_")[0]
+    method_name = weight_pth.split("_")[0:2]
+    method_name = "_".join(method_name)
 
     if ".ckpt" in weight_pth:
         method = get_method(method_name, pretrained=False)
-        method.load_weights(os.path.join(directory, weight_pth))
+        method.model = torch.load(
+            os.path.join(directory, weight_pth), map_location="cpu"
+        )
         method.features_dim = method.features_size()
     else:
         method = get_method(method_name, pretrained=False)
 
     run_once = False
     for dataset_name in datasets:
-
         if ".onnx" in weight_pth:
             eval = Eval(
                 method, "Pitts30k", onnx_pth=os.path.join(directory, weight_pth)
@@ -137,7 +138,7 @@ def compute_recalls(weight_pth, results):
         if run_once == False:
             flops = eval.count_flops()
             model_memory = eval.model_memory()
-            sparsity = float(weight_pth.split("_")[4])
+            sparsity = float(weight_pth.split("_")[5])
             results.loc[weight_pth, "method_name"] = method_name
             results.loc[weight_pth, "flops"] = flops
             results.loc[weight_pth, "model_memory"] = model_memory
@@ -159,34 +160,23 @@ def compute_recalls(weight_pth, results):
             results.loc[weight_pth, f"{dataset_name}_total_memory"] = total_memory
 
         else:
+            mat_lat = eval.matching_latency()
             cpu_lat_bs1 = eval.extraction_cpu_latency()
             gpu_lat_bs1 = eval.extraction_gpu_latency()
-            cpu_lat_bs25 = eval.extraction_cpu_latency(batch_size=25)
-            gpu_lat_bs25 = eval.extraction_gpu_latency(batch_size=25)
             cpu_total_lat_bs1 = cpu_lat_bs1 + mat_lat
             gpu_total_lat_bs1 = gpu_lat_bs1 + mat_lat
-            cpu_total_lat_bs25 = cpu_lat_bs25 + mat_lat
-            gpu_total_lat_bs25 = gpu_lat_bs25 + mat_lat
 
             results.loc[weight_pth, f"{dataset}_matching_lat"] = mat_lat
             results.loc[weight_pth, "extraction_lat_cpu_bs1"] = cpu_lat_bs1
             results.loc[weight_pth, "extraction_lat_gpu_bs1"] = gpu_lat_bs1
-            results.loc[weight_pth, "extraction_lat_cpu_bs25"] = cpu_lat_bs25
-            results.loc[weight_pth, "extraction_lat_gpu_bs25"] = gpu_lat_bs25
 
             results.loc[weight_pth, f"{dataset}_total_gpu_lat_bs1"] = gpu_total_lat_bs1
-            results.loc[
-                weight_pth, f"{dataset}_total_gpu_lat_bs25"
-            ] = gpu_total_lat_bs25
             results.loc[weight_pth, f"{dataset}_total_cpu_lat_bs1"] = cpu_total_lat_bs1
-            results.loc[
-                weight_pth, f"{dataset}_total_cpu_lat_bs25"
-            ] = cpu_total_lat_bs25
 
     results.to_csv("results.csv")
 
 
-weights_pths = load_model_weights("MixVPR", 1.0)
+weights_pths = load_model_weights("MixVPR", 0.25)
 for pth in weights_pths:
     results = load_results()
     if type == "accuracy":

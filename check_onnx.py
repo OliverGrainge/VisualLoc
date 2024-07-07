@@ -23,12 +23,12 @@ def load_and_infer_onnx_models(directory, input_tensor):
         result = sess.run([output_name], {input_name: input_tensor})
 
         # Print the result
-        print(f"Inference result for {model_file}: {result}")
+        print(f"Inference result for {model_file}, {result[0].shape}")
 
         # Define the directory containing the ONNX models
 
 
-directory = "/Users/olivergrainge/Downloads/Onnx_Checkpoints"
+directory = "/Users/olivergrainge/Downloads/ResNet34_Onnx_Checkpoints"
 
 # Create a dummy input tensor that matches the expected input shape of your models
 # Example: a tensor with shape (1, 3, 224, 224) for models expecting 224x224 RGB images
