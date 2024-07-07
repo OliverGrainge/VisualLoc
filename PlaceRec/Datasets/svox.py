@@ -10,6 +10,9 @@ from torch.utils import data
 import torchvision
 from PlaceRec.utils import ImageIdxDataset
 from torch.utils.data import DataLoader
+from PlaceRec.utils import get_config
+
+config = get_config()
 
 
 class SVOX(data.Dataset):
@@ -17,7 +20,9 @@ class SVOX(data.Dataset):
 
     def __init__(
         self,
-        datasets_folder="/Users/olivergrainge/Documents/github/datasets/VPR-datasets-downloader/datasets",
+        datasets_folder=join(
+            config["datasets_directory"], "VPR-datasets-downloader/datasets"
+        ),
         dataset_name="svox",
         split="test",
     ):
@@ -32,7 +37,7 @@ class SVOX(data.Dataset):
 
         #### Read paths and UTM coordinates for all images.
         database_folder = join(self.dataset_folder, "gallery")
-        queries_folder = join(self.dataset_folder, "queries")
+        queries_folder = join(self.dataset_folder, "queries_night")
         if not os.path.exists(database_folder):
             raise FileNotFoundError(f"Folder {database_folder} does not exist")
         if not os.path.exists(queries_folder):

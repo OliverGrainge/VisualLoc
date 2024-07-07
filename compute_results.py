@@ -7,10 +7,12 @@ import os
 import pandas as pd
 import torch
 
-type = "accuracy"  # either accuracy or latency.
-datasets = ["SpedTest", "CrossSeason"]
-directory = "/Users/olivergrainge/Downloads/ResNet34_Checkpoints"
-
+type = "latency"  # either accuracy or latency.
+datasets = ["MapillarySLS", "Pitts30k_Val", "AmsterTime", "SVOX"]
+directory = "/home/oliver/Documents/github/ResNet34_Onnx_Checkpoints"
+# directory = "/home/oliver/Documents/github/ResNet34_Checkpoints"
+methods = ["ResNet34_MixVPR", "ResNet34_GeM", "ResNet34_NetVLAD", "ResNet34_ConvAP"]
+gammas = [0.00, 0.25, 0.50, 0.75]
 
 config = get_config()
 
@@ -89,8 +91,6 @@ def load_results():
             "model_memory",
             "extraction_lat_cpu_bs1",
             "extraction_lat_gpu_bs1",
-            "extraction_lat_cpu_bs25",
-            "extraction_lat_gpu_bs25",
         ]
 
         for dataset in datasets:
@@ -127,7 +127,7 @@ def compute_recalls(weight_pth, results):
     for dataset_name in datasets:
         if ".onnx" in weight_pth:
             eval = Eval(
-                method, "Pitts30k", onnx_pth=os.path.join(directory, weight_pth)
+                method, "Pitts30k_Val", onnx_pth=os.path.join(directory, weight_pth)
             )
         else:
             dataset = get_dataset(dataset_name)
@@ -136,13 +136,17 @@ def compute_recalls(weight_pth, results):
             results.loc[weight_pth, "descriptor_dim"] = descriptor_dim
 
         if run_once == False:
+            if ".onnx" in weight_pth:
+                pth = weight_pth.replace(".onnx", ".ckpt")
+            else:
+                pth = weight_pth
             flops = eval.count_flops()
             model_memory = eval.model_memory()
-            sparsity = float(weight_pth.split("_")[5])
-            results.loc[weight_pth, "method_name"] = method_name
-            results.loc[weight_pth, "flops"] = flops
-            results.loc[weight_pth, "model_memory"] = model_memory
-            results.loc[weight_pth, "sparsity"] = sparsity
+            sparsity = float(pth.split("_")[5])
+            results.loc[pth, "method_name"] = method_name
+            results.loc[pth, "flops"] = flops
+            results.loc[pth, "model_memory"] = model_memory
+            results.loc[pth, "sparsity"] = sparsity
             run_once = True
 
         if type == "accuracy":
@@ -160,25 +164,45 @@ def compute_recalls(weight_pth, results):
             results.loc[weight_pth, f"{dataset_name}_total_memory"] = total_memory
 
         else:
-            mat_lat = eval.matching_latency()
+
             cpu_lat_bs1 = eval.extraction_cpu_latency()
             gpu_lat_bs1 = eval.extraction_gpu_latency()
+            mat_lat = eval.matching_latency()
+            print("======", mat_lat)
             cpu_total_lat_bs1 = cpu_lat_bs1 + mat_lat
             gpu_total_lat_bs1 = gpu_lat_bs1 + mat_lat
 
-            results.loc[weight_pth, f"{dataset}_matching_lat"] = mat_lat
-            results.loc[weight_pth, "extraction_lat_cpu_bs1"] = cpu_lat_bs1
-            results.loc[weight_pth, "extraction_lat_gpu_bs1"] = gpu_lat_bs1
+            pth = weight_pth.replace(".onnx", ".ckpt")
+            print("============================================", pth)
+            results.loc[pth, f"{dataset_name}_matching_lat"] = mat_lat
+            results.loc[pth, "extraction_lat_cpu_bs1"] = cpu_lat_bs1
+            results.loc[pth, "extraction_lat_gpu_bs1"] = gpu_lat_bs1
 
-            results.loc[weight_pth, f"{dataset}_total_gpu_lat_bs1"] = gpu_total_lat_bs1
-            results.loc[weight_pth, f"{dataset}_total_cpu_lat_bs1"] = cpu_total_lat_bs1
+            results.loc[pth, f"{dataset_name}_total_gpu_lat_bs1"] = gpu_total_lat_bs1
+            results.loc[pth, f"{dataset_name}_total_cpu_lat_bs1"] = cpu_total_lat_bs1
 
     results.to_csv("results.csv")
 
 
-weights_pths = load_model_weights("MixVPR", 0.25)
+weights_pths = load_model_weights("ResNet34_ConvAP", 0.75)
 for pth in weights_pths:
     results = load_results()
     if type == "accuracy":
         compute_descriptors(pth)
+    print(
+        "========================================================================++++",
+        pth,
+    )
     compute_recalls(pth, results)
+
+
+"""
+for method in methods: 
+    for gamma in gammas:
+        weights_pths = load_model_weights(method, gamma)
+        for pth in weights_pths:
+            results = load_results()
+            if type == "accuracy":
+                compute_descriptors(pth)
+            compute_recalls(pth, results)
+"""

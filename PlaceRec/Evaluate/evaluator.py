@@ -181,7 +181,7 @@ class Eval:
                 D, I = index.search(query_vectors, 1)  # D: distances, I: indices
                 et = time.time()
                 times.append(et - st)
-            return np.mean(times) / (num_runs * 1000)
+            return np.mean(times) * 1000
 
         self.method.load_descriptors(self.dataset.name)
         single_query_desc = {}
@@ -196,9 +196,10 @@ class Eval:
         et = time.time()
 
         self.results[f"{self.dataset.name}_matching_latency_ms"] = (
-            (et - st) / num_runs * 1000
-        )
-        return (et - st) / num_runs * 1000
+            (et - st) / num_runs
+        ) * 1000
+
+        return ((et - st) / num_runs) * 1000
 
     def extraction_cpu_latency(self, batch_size: int = 1, num_runs: int = 100) -> float:
         """
@@ -224,17 +225,17 @@ class Eval:
             session = self.setup_onnx_session_cpu()
 
             for _ in range(10):
-                out = session.run(None, {"input": input_data})
+                out = session.run(None, {"input.1": input_data})
                 self.desc_size = out[0].shape[1]
 
             # Measure inference time
             start_time = time.time()
             for _ in range(num_runs):
-                _ = session.run(None, {"input": input_data})
+                _ = session.run(None, {"input.1": input_data})
             end_time = time.time()
             average_time = (
-                (end_time - start_time) / num_runs * 1000
-            )  # Convert to milliseconds
+                (end_time - start_time) / num_runs
+            ) * 1000  # Convert to milliseconds
             self.results["extraction_cpu_latency_ms"] = average_time
             return average_time
 
@@ -276,12 +277,12 @@ class Eval:
             session = self.setup_onnx_session_gpu()
 
             for _ in range(10):
-                _ = session.run(None, {"input": input_data})
+                _ = session.run(None, {"input.1": input_data})
 
             # Measure inference time
             start_time = time.time()
             for _ in range(num_runs):
-                _ = session.run(None, {"input": input_data})
+                _ = session.run(None, {"input.1": input_data})
             end_time = time.time()
             average_time = (
                 (end_time - start_time) / num_runs * 1000

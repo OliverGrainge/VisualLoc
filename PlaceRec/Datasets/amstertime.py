@@ -10,6 +10,10 @@ from torch.utils import data
 import torchvision
 from PlaceRec.utils import ImageIdxDataset
 from torch.utils.data import DataLoader
+from PlaceRec.utils import get_config
+
+
+config = get_config()
 
 
 class AmsterTime(data.Dataset):
@@ -17,7 +21,9 @@ class AmsterTime(data.Dataset):
 
     def __init__(
         self,
-        datasets_folder="/Users/olivergrainge/Documents/github/datasets/VPR-datasets-downloader/datasets",
+        datasets_folder=join(
+            config["datasets_directory"], "VPR-datasets-downloader/datasets"
+        ),
         dataset_name="amstertime",
         split="test",
     ):
