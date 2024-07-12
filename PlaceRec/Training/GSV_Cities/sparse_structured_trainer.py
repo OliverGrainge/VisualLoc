@@ -185,6 +185,7 @@ def prune_mixvpr_out_channel_proj(method, step, args):
         # print(num_out_features, layers["channel_proj"].weight.data.shape)
 
     num_prune = int(amount * num_out_features)
+    num_prune = int(num_prune * args.aggregation_pruning_rate / args.final_sparsity)
     l1_norm = torch.norm(layers["channel_proj"].weight.data, p=1, dim=1)
     indices_to_prune = torch.topk(l1_norm, num_prune, largest=False).indices
     mask = torch.ones(layers["channel_proj"].weight.data.shape[0], dtype=bool)
@@ -208,7 +209,12 @@ def prune_netvlad_centroids(method, step, args):
     centroids = method.model.aggregation.centroids
     centroids_data = centroids.detach().cpu().numpy()
     amount = pruning_schedule(args, step * args.pruning_freq, True)
-    num_clusters = int((1 - amount) * centroids_data.shape[0])
+    num_to_remove = int(
+        amount
+        * centroids_data.shape[0]
+        * (args.aggregation_pruning_rate / args.final_sparsity)
+    )
+    num_clusters = int(centroids_data.shape[0] - num_to_remove - 0.5)
     kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(centroids_data)
     clustered_data = kmeans.cluster_centers_
     new_centroids = torch.tensor(clustered_data, dtype=centroids.dtype).to(
@@ -276,6 +282,9 @@ def prune_linear_layer_by_l2(in_features: int, layer: nn.Linear, epoch, args):
     # num_out_features = layer.out_features
     num_out_features = 2048
     num_neurons_to_prune_out = int(amount * num_out_features)
+    num_neurons_to_prune_out = int(
+        num_neurons_to_prune_out * args.aggregation_pruning_rate / args.final_sparsity
+    )
     prune_indices_out = torch.argsort(l2_norms_out)[:num_neurons_to_prune_out]
     keep_indices_out = torch.argsort(l2_norms_out)[num_neurons_to_prune_out:]
 
@@ -322,7 +331,9 @@ def prune_conv_layer_by_l2(in_channels: int, layer: nn.Conv2d, epoch, args):
         layer.weight.data.view(layer.out_channels, -1), dim=1, p=2
     )
 
-    num_channels_to_prune_out = int(amount * 1024)
+    num_channels_to_prune_out = int(
+        amount * 1024 * args.aggregation_pruning_rate / args.final_sparsity
+    )
     prune_indices_out = torch.argsort(l2_norms_out)[:num_channels_to_prune_out]
     keep_indices_out = torch.argsort(l2_norms_out)[num_channels_to_prune_out:]
 
@@ -582,7 +593,7 @@ class VPRModel(pl.LightningModule):
         assert isinstance(self.model, torch.nn.Module)
 
         # print("=== filepath", f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
-        torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
+        # torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
 
     def forward(self, x):
         x = self.model(x)
@@ -732,12 +743,14 @@ class VPRModel(pl.LightningModule):
         """
         Hook called at the end of a validation epoch to compute and log validation metrics.
         """
+
         print("================ Validation Epoch End: ", self.current_epoch)
         val_step_outputs = self.val_step_outputs
         dm = self.trainer.datamodule
         self.val_step_outputs = []
         if len(dm.val_datasets) == 1:  # we need to put the outputs in a list
             val_step_outputs = [val_step_outputs]
+
         """
         cpu_lat1 = utils.measure_cpu_latency(
             self.model, self.method.example_input(), batch_size=1
@@ -918,7 +931,7 @@ def sparse_structured_trainer(args):
             log_every_n_steps=1,
             limit_train_batches=1,
             check_val_every_n_epoch=args.pruning_freq,
-            # limit_val_batches=1,
+            limit_val_batches=1,
         )
     else:
         print("======================== Precision: ", prec)

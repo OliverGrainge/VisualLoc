@@ -57,7 +57,7 @@ train:
 
   # Pruning
   pruning_type: "magnitude"
-  final_sparsity: 0.5
+  final_sparsity: 0.75
   aggregation_pruning_rate: 2.0
   initial_sparsity: 0.0
   pruning_schedule: "linear"
