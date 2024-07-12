@@ -593,7 +593,7 @@ class VPRModel(pl.LightningModule):
         assert isinstance(self.model, torch.nn.Module)
 
         # print("=== filepath", f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
-        # torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
+        torch.save(self.model, f"/home/oeg1n18/VisualLoc/Checkpoints/test_save.ckpt")
 
     def forward(self, x):
         x = self.model(x)
