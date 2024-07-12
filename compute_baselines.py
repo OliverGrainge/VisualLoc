@@ -11,12 +11,11 @@ from PlaceRec.utils import get_dataset, get_method
 from PlaceRec.Evaluate import Eval
 
 datasets = ["Pitts30k_Val"]
-methods = ["ResNet34_NetVLAD", "ResNet34_MixVPR", "ResNet34_GeM", "ResNet34_ConvAP"]
-
-columns = ["method_name", "model_memory"]
+methods = ["MixVPR", "DinoSalad", "EigenPlaces", "SFRS"]
 
 batch_size = 24
 
+columns = ["method_name", "model_memory"]
 for ds in datasets:
     columns += [f"{ds}_total_memory", f"{ds}_R1", f"{ds}_map_memory"]
 df = pd.DataFrame(columns=columns)

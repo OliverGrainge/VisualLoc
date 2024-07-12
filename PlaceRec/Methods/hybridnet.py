@@ -186,7 +186,7 @@ else:
 
 class HybridNet(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
-        name = "alexnet_hybridnet"
+        name = "hybridnet"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         self.model = HybridNetModel()
         if pretrained:
@@ -204,10 +204,4 @@ class HybridNet(SingleStageBaseModelWrapper):
                 model=self.model, preprocess=preprocess, name=name, weight_path=None
             )
         # some layers not implemented on metal
-        self.set_device(self.device)
-
-    def set_device(self, device: str) -> None:
-        if "mps" in device:
-            device = "cpu"
-        self.device = device
-        self.model.to(device)
+        self.set_device("cpu")

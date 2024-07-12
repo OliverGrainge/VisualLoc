@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 1.5
+aggregation = 00
 dataset = "Pitts30k_Val"
 device = "gpu"
 batch_size = 1  # either 1 or 25

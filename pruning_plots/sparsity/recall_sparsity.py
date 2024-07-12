@@ -2,11 +2,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 1.5
+aggregation = 0.00
 dataset = "Pitts30k_Val"
 
 df = pd.read_csv("../results.csv")
-
 df = df[["method_name", "sparsity", f"{dataset}_R1", "agg_rate"]]
 df = df[df["agg_rate"] == aggregation]
 
