@@ -2,11 +2,11 @@
 #datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
 #weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
 # Laptop
-weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
-datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
-#datasets_directory: "/scratch/oeg1n18/datasets"
-#weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
+datasets_directory: "/scratch/oeg1n18/datasets"
+weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
 
 
 #####################################################################################################################################################
@@ -14,18 +14,18 @@ datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #####################################################################################################################################################
   
 run: 
-  datasets: ["Pitts30k"]
+  datasets: ["pitts30k"]
   methods: ["MixVPR"]
-  num_workers: 0
+  num_workers: 12
   pin_memory: False
-  batchsize: 32
-  device: "mps"
+  batchsize: 64
+  device: "cuda"
 
 eval: 
   datasets: ["pitts30k"]
   methods: ["MixVPR"]
   partition: "test"
-  device: "mps"
+  device: "cpu"
   metrics: ["recall@1", "recall@5"]
   distance: "cosine" # either l2 or cosine
 
@@ -43,14 +43,14 @@ train:
 
   # optimization
   optimizer: "adam"
-  max_epochs: 10
-  batch_size: 32
-  lr: 0.0002
+  max_epochs: 20
+  batch_size: 120
+  lr: 0.00005
   weight_decay: 0
   momentum: 0.9
-  warmup_steps: 2
-  milestones: 1 2 3 4 5
-  lr_mult: 0.3
+  warmup_steps: 1
+  milestones: 1 2 3 
+  lr_mult: 0.5
   loss_name: "MultiSimilarityLoss"
   miner_name: "MultiSimilarityMiner"
   miner_margin: 0.1
@@ -58,7 +58,7 @@ train:
   # Pruning
   pruning_type: "magnitude"
   final_sparsity: 0.75
-  aggregation_pruning_rate: 2.0
+  aggregation_pruning_rate: 1000.0
   initial_sparsity: 0.0
   pruning_schedule: "linear"
   pruning_freq: 2
@@ -72,6 +72,3 @@ train:
   kd_loss_name: "relaxedms" # either rkdangle, rkddistance, mse or kld
 
   
-
-
-
