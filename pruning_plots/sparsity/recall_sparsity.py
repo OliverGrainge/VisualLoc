@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 0.00
+aggregation = 0.25
 dataset = "Pitts30k_Val"
 
 df = pd.read_csv("../results.csv")

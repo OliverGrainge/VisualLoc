@@ -379,10 +379,11 @@ class ResNet34_ConvAP(SingleStageBaseModelWrapper):
         weight_path = join(config["weights_directory"], name + ".ckpt")
         self.model = VPRModel(
             backbone_arch="resnet34",
-            layers_to_crop=[],
+            layers_to_freeze=1,
+            layers_to_crop=[4],
             agg_arch="ConvAP",
             agg_config={
-                "in_channels": 512,
+                "in_channels": 256,
                 "out_channels": 1024,
                 "s1": 2,
                 "s2": 2,

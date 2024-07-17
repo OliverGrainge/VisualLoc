@@ -53,7 +53,7 @@ class ResNet(nn.Module):
         self,
         model_name="resnet50",
         pretrained=True,
-        layers_to_freeze=2,
+        layers_to_freeze=1,
         layers_to_crop=[],
     ):
         """Class representing the resnet backbone used in the pipeline
@@ -178,11 +178,11 @@ class Resnet34gemModel(nn.Module):
             model_name="resnet34",
             pretrained=True,
             layers_to_freeze=1,
-            layers_to_crop=[],
+            layers_to_crop=[4],
         )
 
         self.aggregation = GeM()
-        self.proj = nn.Linear(512, fc_output_dim)
+        self.proj = nn.Linear(1024, fc_output_dim)
         self.norm = L2Norm()
 
     def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:

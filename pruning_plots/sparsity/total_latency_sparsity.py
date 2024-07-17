@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 00
+aggregation = 0.75
 dataset = "Pitts30k_Val"
-device = "gpu"
+device = "cpu"
 batch_size = 1  # either 1 or 25
 
 df = pd.read_csv("../results.csv")

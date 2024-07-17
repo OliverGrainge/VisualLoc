@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 1.5
+aggregation = 0.0
 dataset = "Pitts30k_Val"
 device = "gpu"
 batch_size = 1  # either 1 or 25
@@ -14,8 +14,7 @@ df = df[
     ["method_name", f"extraction_lat_{device}_bs{batch_size}", f"sparsity", "agg_rate"]
 ]
 df = df[df["agg_rate"] == aggregation]
-
-
+print(df)
 # Plotting
 plt.figure(figsize=(10, 6))
 sns.lineplot(

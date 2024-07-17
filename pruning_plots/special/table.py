@@ -39,7 +39,6 @@ df.rename(columns=rename_columns, inplace=True)
 df["Method"] = df["Method"].replace("ResNet50_GeM", "GeM")
 
 # Convert Matching Latency from seconds to milliseconds
-df["Matching Latency"] *= 1000
 
 # Filter by closest sparsity to 25%
 def filter_closest_sparsity(group):
@@ -52,7 +51,7 @@ filtered_df = (
     .apply(filter_closest_sparsity)
     .reset_index(drop=True)
 )
-
+filtered_df = filtered_df.drop("sparsity", axis=1)
 # Generate LaTeX code with column lines
 column_format = "|l|r|r|r|r|r|r|r|"
 latex_table = filtered_df.to_latex(
@@ -60,7 +59,7 @@ latex_table = filtered_df.to_latex(
     column_format=column_format,
     caption="Filtered Data Closest to 25% Sparsity",
     label="tab:sparsity_data",
-    float_format="%.2f",
+    float_format="%.1f",
 )
 
 print(latex_table)

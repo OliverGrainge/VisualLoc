@@ -1,29 +1,9 @@
-from PlaceRec.Datasets import AmsterTime, SVOX, Pitts30k_Val, MapillarySLS
+from PlaceRec.Methods import ResNet34_ConvAP, ResNet34_GeM
+import torch
 
-amstertime = AmsterTime()
-import pickle
+gem = ResNet34_GeM(False).model.to("cpu")
+convap = ResNet34_ConvAP(False).model.to("cpu")
 
-with open("dataset_sizes.pkl", "rb") as f:
-    sizes = pickle.load(f)
+img = torch.randn(1, 3, 320, 320)
 
-
-print(amstertime.name, len(amstertime.map_paths))
-sizes["AmsterTime"] = len(amstertime.map_paths)
-
-ds = MapillarySLS()
-print(ds.name, len(ds.map_paths))
-sizes["MapillarySLS"] = len(ds.map_paths)
-
-ds = SVOX()
-print(ds.name, len(ds.map_paths))
-sizes["SVOX"] = len(ds.map_paths)
-
-
-ds = Pitts30k_Val()
-print(ds.name, len(ds.map_paths))
-sizes["Pitts30k_Val"] = len(ds.map_paths)
-
-print(sizes)
-
-with open("dataset_sizes.pkl", "wb") as f:
-    pickle.dump(sizes, f)
+out = gem(img)

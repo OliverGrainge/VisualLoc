@@ -28,7 +28,7 @@ def load_and_infer_onnx_models(directory, input_tensor):
         # Define the directory containing the ONNX models
 
 
-directory = "/Users/olivergrainge/Downloads/ResNet34_Onnx_Checkpoints"
+directory = "/Users/olivergrainge/Documents/github/VisualLoc/Onnx_Checkpoints"
 
 # Create a dummy input tensor that matches the expected input shape of your models
 # Example: a tensor with shape (1, 3, 224, 224) for models expecting 224x224 RGB images

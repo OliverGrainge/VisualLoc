@@ -357,6 +357,7 @@ class MixVPR(SingleStageBaseModelWrapper):
         self.model = VPRModel(
             backbone_arch="resnet50",
             layers_to_crop=[4],
+            layers_to_freeze=1,
             agg_arch="mixvpr",
             agg_config={
                 "in_channels": 1024,
@@ -428,6 +429,7 @@ class ResNet34_MixVPR(SingleStageBaseModelWrapper):
 
         self.model = VPRModel(
             backbone_arch="resnet34",
+            layers_to_freeze=1,
             layers_to_crop=[4],
             agg_arch="mixvpr",
             agg_config={
