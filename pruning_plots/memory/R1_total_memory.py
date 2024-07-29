@@ -64,7 +64,7 @@ ax.legend(handles=handles, title="Method")
 ax.set_title(f"Pitts30k Val R@1 vs Total VPR Memory (γ = {aggregation})")
 ax.set_xlabel("Total System Memory (Mb)")
 ax.set_ylabel("Pitts30k Val R@1")
-
+plt.subplots_adjust(bottom=0.15)
 # Show plot
 plt.savefig("total_mem.jpg", dpi=600)
 plt.show()

@@ -17,7 +17,7 @@ df = df[
 df = df[df["agg_rate"] == aggregation]
 
 # Create a figure with normal axis
-fig, ax = plt.subplots(figsize=(7, 3.5))
+fig, ax = plt.subplots(figsize=(6.5, 3.25))
 
 # Define color palette
 color_palette = plt.get_cmap("viridis")(np.linspace(0, 1, df["method_name"].nunique()))
@@ -74,7 +74,7 @@ ax.legend(handles=handles, title="Method")
 ax.set_title("Pitts30k Val R@1 vs Total VPR latency (ms)")
 ax.set_xlabel("Total System Latency (ms)")
 ax.set_ylabel("Pitts30k Val R@1")
-
+plt.subplots_adjust(bottom=0.17)
 # Show plot
 plt.savefig("total_latency.jpg", dpi=600)
 plt.show()
