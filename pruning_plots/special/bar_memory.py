@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+import numpy as np
 
 # Load the dataset
 df = pd.read_csv("../results.csv")
@@ -10,36 +10,56 @@ dataset = "Pitts30k_Val"
 device = "cpu"
 batch_size = 1
 
-# Show dataframe columns
-print(df.columns)
+# Filter to a specific method_name and agg_rate
+specific_method_name = "ResNet34_GeM"
+specific_agg_rate = 0.5  # Replace with the agg_rate you're interested in
 
-# Ensure you are filtering by the right column for sparsity; here I assume it's called 'sparsity'
-# and we're looking for rows where sparsity is closest to 30%
-df["sparsity_diff"] = (df["sparsity"] - 30).abs()
-df_closest_30 = df[
-    df.groupby("agg_rate")["sparsity_diff"].transform(min) == df["sparsity_diff"]
+df_filtered = df[
+    (df["method_name"] == specific_method_name) & (df["agg_rate"] == specific_agg_rate)
 ]
 
-# Check the DataFrame after filter
-print(df_closest_30.head())
-
-# Filter the relevant columns, assuming the memory columns are named as follows:
-df_closest_30 = df_closest_30[
+# Filter the relevant columns
+df_filtered = df_filtered[
     [
         "method_name",
-        f"{dataset}_map_memory",  # Memory used by model on MapillarySLS dataset
+        f"{dataset}_map_memory",  # Memory used by model on dataset
         "model_memory",  # Memory used by the model itself
         "agg_rate",  # Aggregation pruning rates
     ]
 ]
 
-# Plotting the stacked bar chart
-pivot_df = df_closest_30.pivot_table(
-    index="agg_rate", values=[f"{dataset}_map_memory", "model_memory"], aggfunc="sum"
+# Plotting each row as a separate bar, lined up next to each other without space
+fig, ax = plt.subplots(figsize=(12, 6))
+
+x = np.arange(len(df_filtered))
+width = 0.95  # Set width to 1 to remove spacing between bars
+
+ax.bar(x, df_filtered[f"{dataset}_map_memory"], width, label="Map Memory", color="blue")
+ax.bar(
+    x,
+    df_filtered["model_memory"],
+    width,
+    bottom=df_filtered[f"{dataset}_map_memory"],
+    label="Model Memory",
+    color="green",
 )
-pivot_df.plot(kind="bar", stacked=True)
-plt.title("Memory Usage by Aggregation Pruning Rate")
+
+plt.title(f"Memory Usage for {specific_method_name} (Agg Rate: {specific_agg_rate})")
 plt.ylabel("Memory (in units)")
-plt.xlabel("Aggregation Pruning Rate")
+plt.xlabel("Row Index")
 plt.legend(title="Memory Type")
+
+# Set x-ticks to be the row indices
+plt.xticks(x, [str(i) for i in range(len(df_filtered))])
+
+plt.grid(True, axis="y")
+plt.tight_layout()
+
+# Remove the top and right spines
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+# Adjust the x-axis limits to remove extra space on the sides
+plt.xlim(-0.5, len(df_filtered) - 0.5)
+
 plt.show()

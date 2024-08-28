@@ -1,29 +1,27 @@
-from PlaceRec.Datasets import AmsterTime, SVOX, Pitts30k_Val, MapillarySLS
+import torch
+import pandas as pd
+from PlaceRec.Evaluate import Eval
+from os.path import join
+from tqdm import tqdm
 
-amstertime = AmsterTime()
-import pickle
+directory = "/home/oliver/Downloads/ResNet34_Checkpoints"
 
-with open("dataset_sizes.pkl", "rb") as f:
-    sizes = pickle.load(f)
-
-
-print(amstertime.name, len(amstertime.map_paths))
-sizes["AmsterTime"] = len(amstertime.map_paths)
-
-ds = MapillarySLS()
-print(ds.name, len(ds.map_paths))
-sizes["MapillarySLS"] = len(ds.map_paths)
-
-ds = SVOX()
-print(ds.name, len(ds.map_paths))
-sizes["SVOX"] = len(ds.map_paths)
+df = pd.read_csv("pruning_plots/results.csv")
+df.set_index("weight_path", inplace=True)
 
 
-ds = Pitts30k_Val()
-print(ds.name, len(ds.map_paths))
-sizes["Pitts30k_Val"] = len(ds.map_paths)
+img = torch.randn(1, 3, 320, 320)
 
-print(sizes)
+for index, row in tqdm(df.iterrows()):
+    path = join(directory, index)
+    model = torch.load(path, map_location="cpu")
+    out = model(img)
+    df.loc[index, "descriptor_dim"] = out.shape[1]
+    print(index, out.shape[1])
 
-with open("dataset_sizes.pkl", "wb") as f:
-    pickle.dump(sizes, f)
+
+df_filt = df[df["agg_rate"] == 0.0]
+
+print(df_filt.head())
+
+print(df_filt["descriptor_dim"])

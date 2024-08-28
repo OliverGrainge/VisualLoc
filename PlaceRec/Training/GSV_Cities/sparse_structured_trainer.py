@@ -858,7 +858,11 @@ def sparse_structured_trainer(args):
 
     wandb_logger = WandbLogger(project="GSVCities", name=args.method)
 
-    print(args.milestones)
+    print(
+        "===========================================================================",
+        args.aggregation_pruning_rate,
+    )
+    raise Exception
 
     datamodule = GSVCitiesDataModule(
         cities=get_cities(args),

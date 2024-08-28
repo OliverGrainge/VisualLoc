@@ -8,11 +8,11 @@ import pandas as pd
 import torch
 
 type = "accuracy"  # either accuracy or latency.
-datasets = ["MapillarySLS", "Pitts30k_Val", "AmsterTime", "SVOX"]
+datasets = ["Pitts250k", "SpedTest", "InriaHolidays"]
 # directory = "/home/oliver/Documents/github/ResNet34_Onnx_Checkpoints"
-directory = "/home/oliver/Documents/github/ResNet34_Checkpoints"
+directory = "/home/oliver/Documents/github/VisualLoc/Checkpoints"
 methods = ["ResNet34_MixVPR", "ResNet34_GeM", "ResNet34_NetVLAD", "ResNet34_ConvAP"]
-gammas = [0.00, 0.25, 0.50, 0.75]
+gammas = [0.00, 0.23, 0.45, 0.68, 0.90]
 
 config = get_config()
 
@@ -28,7 +28,7 @@ def load_model_weights(method_name, aggregation_pruning_rate):
     return sorted_files
 
 
-weights = load_model_weights("ConvAP", 0.25)
+weights = load_model_weights("ConvAP", 0.23)
 
 
 def compute_descriptors(weight_pth):

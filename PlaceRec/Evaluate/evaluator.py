@@ -152,7 +152,7 @@ class Eval:
 
     def model_memory(self) -> float:
         params = self.count_params()
-        return (params * 4) / (1024**2)
+        return (params * 2) / (1024**2)
 
     def matching_latency(self, num_runs: int = 20) -> float:
         """

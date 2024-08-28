@@ -3,14 +3,13 @@ import pandas as pd
 import seaborn as sns
 
 # Constants and data loading
-aggregation = 2.0
+aggregation = 0.5
 dataset = "Pitts30k_Val"
 method = "ConvAP"
 device = "gpu"
 batch_size = 1  # either 1 or 25
 
 df = pd.read_csv("../results.csv")
-print(df.columns)
 
 # Filter and keep necessary columns
 df = df[
@@ -22,18 +21,21 @@ df = df[
         f"{dataset}_R1",
     ]
 ]
-
 # Define the method you want to plot
 method_of_interest = (
     method  # Replace 'YourMethodName' with the method you're interested in
 )
 
 # Filter data for a specific method
-df_filtered = df[df["method_name"] == "ConvAP"]
-agg_rates_of_interest = [0.0, 0.5, 1.0, 1.5]
+df_filtered = df[df["method_name"] == "ResNet34_ConvAP"]
+agg_rates_of_interest = [0.0, 0.25, 0.5, 0.75]
 df_filtered = df_filtered[df_filtered["agg_rate"].isin(agg_rates_of_interest)]
 
+df_filtered = (
+    df_filtered.groupby("agg_rate").apply(lambda x: x.iloc[:-1]).reset_index(drop=True)
+)
 
+# print(df_filtered.head())
 # Set up the figure and axes
 fig, axs = plt.subplots(2, 1, figsize=(6, 5))  # 2 rows, 1 column
 

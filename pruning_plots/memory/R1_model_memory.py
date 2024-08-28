@@ -38,6 +38,7 @@ for name, group in df.groupby("method_name"):
         color=method_colors[name],
     )
 
+"""
 # Plot and annotate baseline data points
 for name, group in baselines.groupby("method_name"):
     if name == "CosPlace":
@@ -50,16 +51,12 @@ for name, group in baselines.groupby("method_name"):
         color="black",
     )
     for index, row in group.iterrows():
-        ax.annotate(
-            name,
-            (row[f"{dataset}_total_memory"], row[f"{dataset}_R1"]),
-            textcoords="offset points",
-            xytext=(0, 10),
-            ha="center",
-        )
-
+        ax.annotate(name, (row[f"{dataset}_total_memory"], row[f"{dataset}_R1"]),
+                    textcoords="offset points", xytext=(0,10), ha='center')
+"""
 # Add legend and labels
 ax.legend()
+ax.set_ylim(0.8, 0.95)
 ax.set_xlabel(f"{dataset}_total_memory")
 ax.set_ylabel(f"{dataset}_R1")
 

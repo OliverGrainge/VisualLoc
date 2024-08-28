@@ -9,7 +9,7 @@ df = pd.read_csv("../results.csv")
 dataset = "Pitts30k_Val"
 device = "gpu"
 batch_size = 1
-agg_rate = 1.5
+agg_rate = 0.5
 
 # Filter the relevant columns
 df = df[df["agg_rate"] == agg_rate]

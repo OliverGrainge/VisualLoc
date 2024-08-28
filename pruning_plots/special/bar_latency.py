@@ -1,50 +1,80 @@
 import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
+import numpy as np
 
 # Load the dataset
 df = pd.read_csv("../results.csv")
 
 # Define the parameters
-dataset = "Nordlands"
+dataset = "Pitts30k_Val"
 device = "gpu"
 batch_size = 1
 
-# Show dataframe columns
-print(df.columns)
+# Filter the dataframe
+specific_method_name = "ResNet34_GeM"
+specific_agg_rate = 0.5
 
-# Ensure you are filtering by the right column for sparsity; here I assume it's called 'sparsity'
-# and we're looking for rows where sparsity is closest to 30%
-df["sparsity_diff"] = (df["sparsity"] - 30).abs()
-df_closest_30 = df[
-    df.groupby("agg_rate")["sparsity_diff"].transform(min) == df["sparsity_diff"]
+df_filtered = df[
+    (df["method_name"] == specific_method_name) & (df["agg_rate"] == specific_agg_rate)
 ]
 
-# Check the DataFrame after filter
-
-
-# Filter the relevant columns, assuming the memory columns are named as follows:
-df_closest_30 = df_closest_30[
+# Filter the relevant columns
+df_filtered = df_filtered[
     [
         "method_name",
-        f"{dataset}_matching_lat",  # Memory used by model on MapillarySLS dataset
-        f"extraction_lat_{device}_bs{batch_size}",  # Memory used by the model itself
-        "agg_rate",  # Aggregation pruning rates
+        f"{dataset}_matching_lat",
+        f"extraction_lat_{device}_bs{batch_size}",
+        "agg_rate",
+        "descriptor_dim",
     ]
 ]
+df_filtered = df_filtered[df_filtered["agg_rate"] == specific_agg_rate]
 
-df_closest_30[f"{dataset}_matching_lat"] = df[f"{dataset}_matching_lat"] * 1000
+print(df_filtered.head())
 
-print(df_closest_30.head())
-# Plotting the stacked bar chart
-pivot_df = df_closest_30.pivot_table(
-    index="agg_rate",
-    values=[f"extraction_lat_{device}_bs{batch_size}", f"{dataset}_matching_lat"],
-    aggfunc="sum",
+df_filtered = (
+    df_filtered.groupby("agg_rate").apply(lambda x: x.iloc[:-1]).reset_index(drop=True)
 )
-pivot_df.plot(kind="bar", stacked=True)
-plt.title("Latencye by Aggregation Pruning Rate")
-plt.ylabel("Latency (Mb)")
-plt.xlabel("Aggregation Pruning Rate")
-plt.legend(title="Model Type")
+
+# Plotting
+fig, ax = plt.subplots(figsize=(12, 6))
+
+x = np.arange(len(df_filtered))
+width = 0.95
+
+extraction_latency = df_filtered[f"extraction_lat_{device}_bs{batch_size}"]
+matching_latency = df_filtered[f"{dataset}_matching_lat"]
+
+ax.bar(x, extraction_latency, width, label="Extraction Latency", color="blue")
+ax.bar(
+    x,
+    matching_latency,
+    width,
+    bottom=extraction_latency,
+    label="Matching Latency",
+    color="green",
+)
+
+plt.title(f"Latency for {specific_method_name} (Agg Rate: {specific_agg_rate})")
+plt.ylabel("Latency (seconds)")
+plt.xlabel("Row Index")
+plt.legend(title="Latency Type")
+
+plt.xticks(x, [str(i) for i in range(len(df_filtered))])
+plt.grid(True, axis="y")
+
+# Remove the top and right spines
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+
+# Adjust the x-axis limits
+plt.xlim(-0.5, len(df_filtered) - 0.5)
+
+# Add descriptor dimensions on top of each bar
+for i, (total_latency, dim) in enumerate(
+    zip(extraction_latency + matching_latency, df_filtered["descriptor_dim"])
+):
+    ax.text(i, total_latency, f"{dim}", ha="center", va="bottom")
+
+plt.tight_layout()
 plt.show()

@@ -14,11 +14,11 @@ baselines = pd.read_csv("../baselines2.csv")
 df["method_name"] = df["method_name"].replace("ResNet50_GeM", "GeM")
 
 # Filter the dataframe based on the specified aggregation
-df = df[["method_name", f"{dataset}_total_memory", f"{dataset}_R1", "agg_rate"]]
+df = df[["method_name", f"{dataset}_map_memory", f"{dataset}_R1", "agg_rate"]]
 df = df[df["agg_rate"] == aggregation]
 
 # Filter the baselines dataframe for the same dataset
-baselines = baselines[["method_name", f"{dataset}_total_memory", f"{dataset}_R1"]]
+baselines = baselines[["method_name", f"{dataset}_map_memory", f"{dataset}_R1"]]
 
 # Create a figure with normal axis
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -30,7 +30,7 @@ method_colors = dict(zip(df["method_name"].unique(), color_palette))
 # Plot data on the normal axis
 for name, group in df.groupby("method_name"):
     ax.plot(
-        group[f"{dataset}_total_memory"],
+        group[f"{dataset}_map_memory"],
         group[f"{dataset}_R1"],
         label=name,
         marker="o",
@@ -40,10 +40,9 @@ for name, group in df.groupby("method_name"):
 
 # Plot and annotate baseline data points
 for name, group in baselines.groupby("method_name"):
-    if name == "CosPlace":
-        continue
+
     ax.scatter(
-        group[f"{dataset}_total_memory"],
+        group[f"{dataset}_map_memory"],
         group[f"{dataset}_R1"],
         label=f"{name} (baseline)",
         marker="x",
@@ -52,15 +51,16 @@ for name, group in baselines.groupby("method_name"):
     for index, row in group.iterrows():
         ax.annotate(
             name,
-            (row[f"{dataset}_total_memory"], row[f"{dataset}_R1"]),
+            (row[f"{dataset}_map_memory"], row[f"{dataset}_R1"]),
             textcoords="offset points",
             xytext=(0, 10),
             ha="center",
         )
 
 # Add legend and labels
+
 ax.legend()
-ax.set_xlabel(f"{dataset}_total_memory")
+ax.set_xlabel(f"{dataset}_map_memory")
 ax.set_ylabel(f"{dataset}_R1")
 
 # Show plot

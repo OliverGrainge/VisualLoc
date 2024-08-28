@@ -2,14 +2,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-aggregation = 1.5
+# Load data
+df = pd.read_csv("../results.csv")
+
+# Define parameters
+aggregation = 0.0
 dataset = "Pitts30k_Val"
 device = "gpu"
 batch_size = 1  # either 1 or 25
 
-df = pd.read_csv("../results.csv")
-print(df.columns)
-
+# Filter DataFrame based on the specified aggregation and necessary columns
 df = df[
     [
         "method_name",
@@ -20,6 +22,8 @@ df = df[
 ]
 df = df[df["agg_rate"] == aggregation]
 
+# Remove the last point from each group (method)
+df = df.groupby("method_name").apply(lambda x: x.iloc[:-1]).reset_index(drop=True)
 
 # Plotting
 plt.figure(figsize=(7, 4))

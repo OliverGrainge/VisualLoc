@@ -6,16 +6,18 @@ import seaborn as sns
 df = pd.read_csv("../results.csv")
 
 # Define parameters
-aggregation = 0.75
+aggregation = 0.0
 dataset = "Pitts30k_Val"
-device = "cpu"
+device = "gpu"
 batch_size = 1  # either 1 or 25
+
+print(df.columns)
 
 # Filter DataFrame based on the specified aggregation and necessary columns
 df = df[
     [
         "method_name",
-        f"{dataset}_total_{device}_lat_bs{batch_size}",
+        f"{dataset}_matching_lat",
         f"{dataset}_R1",
         "agg_rate",
     ]
@@ -29,7 +31,7 @@ df = df.groupby("method_name").apply(lambda x: x.iloc[:-1]).reset_index(drop=Tru
 plt.figure(figsize=(7, 4))
 sns.lineplot(
     data=df,
-    x=f"{dataset}_total_{device}_lat_bs{batch_size}",
+    x=f"{dataset}_matching_lat",
     y=f"{dataset}_R1",
     hue="method_name",
     style="method_name",

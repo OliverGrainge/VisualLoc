@@ -11,7 +11,7 @@ from PlaceRec.utils import get_dataset, get_method
 from PlaceRec.Evaluate import Eval
 
 datasets = ["Pitts30k_Val"]
-methods = ["MixVPR", "DinoSalad", "EigenPlaces", "SFRS"]
+methods = ["ResNet34_MixVPR", "ResNet34_NetVLAD", "ResNet34_ConvAP", "ResNet34_GeM"]
 
 batch_size = 24
 
@@ -24,7 +24,7 @@ data = []
 
 for method_name in methods:
     method = get_method(method_name, pretrained=True)
-    method.set_device("mps")
+    method.set_device("cuda")
     row = {}
     for ds_name in datasets:
         ds = get_dataset(ds_name)
@@ -61,4 +61,4 @@ for method_name in methods:
 
 
 df = pd.DataFrame(data, columns=columns)
-df.to_csv("pruning_plots/baselines2.csv")
+df.to_csv("pruning_plots/baselines3.csv")
