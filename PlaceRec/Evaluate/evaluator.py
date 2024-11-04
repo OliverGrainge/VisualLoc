@@ -61,6 +61,7 @@ class Eval:
 
         self.results = {}
 
+
     def setup_onnx_session_cpu(self):
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
@@ -87,6 +88,7 @@ class Eval:
         Returns:
             Dict: A dictionary containing all computed evaluation metrics.
         """
+        
         if self.dataset is not None:
             self.compute_all_matches()
             self.ratk(1)
@@ -111,13 +113,12 @@ class Eval:
         Returns:
             None: On failure, returns None and does not modify results.
         """
-        try:
-            self.method.load_descriptors(self.dataset.name)
-            self.matches, self.distances = self.method.place_recognise(
-                self.method.query_desc, k=k
-            )
-        except:
-            return None
+        print("hi")
+        self.method.load_descriptors(self.dataset.name)
+        self.matches, self.distances = self.method.place_recognise(
+            self.method.query_desc, k=k
+        )
+        
 
     def ratk(self, k: int) -> Dict:
         """

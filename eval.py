@@ -29,8 +29,9 @@ for method_name in args.methods:
     for dataset_name in args.datasets:
         dataset = get_dataset(dataset_name)
         eval = Eval(method, dataset)
-        new_result = eval.eval()
-        result_path = f"PlaceRec/Evaluate/results/{method.name}.pkl"
-        old_result = load_result(result_path)
-        new_result = old_result | new_result
-        save_result(result_path, new_result)
+        eval.eval()
+        #new_result = eval.ratk(1)
+        #result_path = f"PlaceRec/Evaluate/results/{method.name}.pkl"
+        #old_result = load_result(result_path)
+        #new_result = old_result | new_result
+        #save_result(result_path, new_result)

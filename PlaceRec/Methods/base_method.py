@@ -217,7 +217,7 @@ class BaseFunctionality(BaseTechnique):
         return self.model(x)
 
     def load_weights(self, weights_path):
-        state_dict = torch.load(weights_path, map_location="cpu")  # ["state_dict"]
+        state_dict = torch.load(weights_path, map_location="cpu", weights_only=False)  # ["state_dict"]
 
         if isinstance(state_dict, nn.Module):
             self.model = state_dict
@@ -279,11 +279,16 @@ class BaseFunctionality(BaseTechnique):
         self.map_desc = map_descriptors
         if config["eval"]["distance"] == "cosine":
             self.map = faiss.IndexFlatIP(map_descriptors["global_descriptors"].shape[1])
+            if np.any(np.isnan(map_descriptors["global_descriptors"])):
+                raise ValueError("NaN values detected in map descriptors")
             faiss.normalize_L2(map_descriptors["global_descriptors"])
             self.map.add(map_descriptors["global_descriptors"])
+            print("map descriptors: ", map_descriptors["global_descriptors"].shape, map_descriptors["global_descriptors"].dtype, type(map_descriptors["global_descriptors"]))
         elif config["eval"]["distance"] == "l2":
             self.map = faiss.IndexFlatL2(map_descriptors["global_descriptors"].shape[1])
             faiss.normalize_L2(map_descriptors["global_descriptors"])
+            if np.any(np.isnan(self.query_desc["global_descriptors"])):
+                raise ValueError("NaN values detected in query descriptors")
             self.map.add(map_descriptors["global_descriptors"])
         else:
             raise NotImplementedError("Distance Measure Not Implemented")
@@ -329,9 +334,17 @@ class BaseFunctionality(BaseTechnique):
             query_desc = query["global_descriptors"].astype(np.float32)
         elif isinstance(query, Image.Image):
             query_desc = self.compute_feature(query)
+
+        # Check for NaN values in query descriptors
+        if np.any(np.isnan(query_desc)):
+            raise ValueError("NaN values detected in query descriptors")
+
         if config["eval"]["distance"] == "cosine":
             faiss.normalize_L2(query_desc)
-        dist, idx = self.map.search(query_desc, k)
+        print('query descriptors', query_desc.shape, query_desc.dtype, type(query_desc))
+        print('map', type(self.map))
+        dist, idx = self.map.search(query_desc, k=k)
+        print("success")
         return idx, dist
 
     def similarity_matrix(
