@@ -25,7 +25,7 @@ def save_result(file_path: str, result: dict) -> dict:
 
 
 for method_name in args.methods:
-    method = get_method(method_name, pretrained=True)
+    method = get_method(method_name, pretrained=False)
     for dataset_name in args.datasets:
         dataset = get_dataset(dataset_name)
         eval = Eval(method, dataset)

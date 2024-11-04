@@ -1,20 +1,13 @@
-import glob
+
 import os
-import random
-import sys
 from dataclasses import dataclass
 from os.path import join
 from typing import List, Literal, Union
 
 import einops as ein
-import faiss
-import faiss.contrib.torch_utils
 import fast_pytorch_kmeans as fpk
-import natsort
 import numpy as np
 import torch
-import transformers as hft
-import tyro
 from onedrivedownloader import download
 from PIL import Image
 from sklearn.decomposition import PCA

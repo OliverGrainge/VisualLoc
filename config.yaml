@@ -1,9 +1,9 @@
 # Desktop
-datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
-weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
+#datasets_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/datasets/Datasets"
+#weights_directory: "/media/oliver/9e8e8649-c1f2-4524-9025-f2c751d67f57/home/oliver/Documents/VisualLoc_Weights"
 # Laptop
-#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
-#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
 #datasets_directory: "/scratch/oeg1n18/datasets"
 #weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"
@@ -28,7 +28,6 @@ eval:
   device: "cpu"
   metrics: ["recall@1", "recall@5"]
   distance: "cosine" # either l2 or cosine
-
 
 train:
   debug: False
@@ -63,13 +62,6 @@ train:
   pruning_schedule: "linear"
   pruning_freq: 2
 
-
-  # Distillation
-  teacher_method: "ResNet18_ConvAP"
-  teacher_resolution: [224, 224]
-  metric_loss_factor: 1.0
-  kd_loss_factor: 50.0
-  kd_loss_name: "relaxedms" # either rkdangle, rkddistance, mse or kld
 
   
 
