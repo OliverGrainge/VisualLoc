@@ -28,16 +28,16 @@ class Pitts30k_Val(BaseDataset):
         self.map_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_val_dbImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/pitts30k_val_dbImages.npy")
             ]
         )
         self.query_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_val_qImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/pitts30k_val_qImages.npy")
             ]
         )
-        self.gt = np.load(join(self.root, "pitts30k_val_gt.npy"), allow_pickle=True)
+        self.gt = np.load("PlaceRec/Datasets/image_paths/pitts30k_val_gt.npy", allow_pickle=True)
 
         self.name = "pitts30k_val"
 
@@ -92,16 +92,17 @@ class Pitts30k_Test(BaseDataset):
         self.map_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_test_dbImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/pitts30k_test_dbImages.npy")
             ]
         )
+        
         self.query_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "pitts30k_test_qImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/pitts30k_test_qImages.npy")
             ]
         )
-        self.gt = np.load(join(self.root, "pitts30k_test_gt.npy"), allow_pickle=True)
+        self.gt = np.load("PlaceRec/Datasets/image_paths/pitts30k_test_gt.npy", allow_pickle=True)
 
         self.name = "pitts30k_test"
 
@@ -148,4 +149,5 @@ class Pitts30k_Test(BaseDataset):
 
 
 if __name__ == "__main__":
-    ds = Pitts30k()
+    ds = Pitts30k_Test()
+    ds = Pitts30k_Val()
