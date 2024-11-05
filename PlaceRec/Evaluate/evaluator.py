@@ -14,6 +14,7 @@ from ptflops import get_model_complexity_info
 from onnxruntime.quantization import quantize_dynamic, QuantType
 from tabulate import tabulate
 from onnxruntime.quantization import CalibrationDataReader
+from onnxruntime.quantization.quant_utils import QuantFormat
 import onnx
 from onnxruntime import quantization
 
@@ -126,7 +127,8 @@ class Eval:
         quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
                                                model_output="PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
                                                calibration_data_reader=qdr,
-                                               extra_options=q_static_opts)
+                                               extra_options=q_static_opts,
+                                               quant_format=QuantFormat.QOperator)
         
         q_static_opts = {"ActivationSymmetric":True,
                             "WeightSymmetric":True}
@@ -139,7 +141,8 @@ class Eval:
         quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
                                                model_output="PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
                                                calibration_data_reader=qdr,
-                                               extra_options=q_static_opts)
+                                               extra_options=q_static_opts, 
+                                               quant_format=QuantFormat.QOperator)
 
     def convert_to_onnx(self):
         """
