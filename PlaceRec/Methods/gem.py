@@ -5,8 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torch.nn import functional as F
-from torchvision import models, transforms
-from torchvision.models import ResNet50_Weights
+from torchvision import transforms
 
 from PlaceRec.utils import L2Norm, get_config
 
@@ -175,8 +174,6 @@ class Resnet34gemModel(nn.Module):
         return x
 
 
-
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
@@ -226,6 +223,3 @@ class ResNet34_GeM(SingleStageBaseModelWrapper):
             super().__init__(
                 model=self.model, preprocess=preprocess, name=name, weight_path=None
             )
-
-
-

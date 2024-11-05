@@ -1,11 +1,11 @@
 import os
 
+import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.utils.prune as prune
 from tqdm import tqdm
-import numpy as np
 
 from PlaceRec.Training.GSV_Cities.utils import get_loss, get_miner
 from PlaceRec.utils import get_config

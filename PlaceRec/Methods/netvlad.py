@@ -8,9 +8,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+from sklearn.cluster import KMeans
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from torchvision import transforms
-from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 from PlaceRec.Datasets import Pitts30k_Val
@@ -235,9 +235,9 @@ class NetVLADagg(nn.Module):
                         image_descriptors.shape[1], descs_num_per_image, replace=False
                     )
                     startix = batchix + ix * descs_num_per_image
-                    descriptors[
-                        startix : startix + descs_num_per_image, :
-                    ] = image_descriptors[ix, sample, :]
+                    descriptors[startix : startix + descs_num_per_image, :] = (
+                        image_descriptors[ix, sample, :]
+                    )
         kmeans = faiss.Kmeans(self.dim, self.clusters_num, niter=100, verbose=False)
         kmeans.train(descriptors)
         self.init_params(kmeans.centroids, descriptors)
@@ -245,8 +245,6 @@ class NetVLADagg(nn.Module):
 
 
 class NetVLADNet(nn.Module):
-    """The used networks are composed of a backbone and an aggregation layer."""
-
     def __init__(self):
         super().__init__()
         self.backbone = ResNet(
@@ -267,8 +265,6 @@ class NetVLADNet(nn.Module):
 
 
 class ResNet34_NetVLADNet(nn.Module):
-    """The used networks are composed of a backbone and an aggregation layer."""
-
     def __init__(self):
         super().__init__()
         self.backbone = ResNet(
@@ -289,7 +285,6 @@ class ResNet34_NetVLADNet(nn.Module):
         if norm:
             x = self.norm(x)
         return x
-
 
 
 preprocess = transforms.Compose(

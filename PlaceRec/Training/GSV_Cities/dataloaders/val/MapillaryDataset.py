@@ -1,12 +1,13 @@
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as T
+from os.path import join
 
 import matplotlib.pyplot as plt
-import torch
 import numpy as np
+import torch
+import torchvision.transforms as T
 from PIL import Image
+from torch.utils.data import DataLoader, Dataset
+
 from PlaceRec.utils import get_config
-from os.path import join
 
 config = get_config()
 

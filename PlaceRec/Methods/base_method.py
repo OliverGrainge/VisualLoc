@@ -1,6 +1,5 @@
 import os
 import pickle
-import warnings
 from abc import ABC, abstractmethod
 from typing import Dict, Tuple, Union
 
@@ -8,12 +7,10 @@ import faiss
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.utils.prune as prune
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-import regex as re
 
 from PlaceRec.utils import get_config, get_logger
 
@@ -217,7 +214,9 @@ class BaseFunctionality(BaseTechnique):
         return self.model(x)
 
     def load_weights(self, weights_path):
-        state_dict = torch.load(weights_path, map_location="cpu", weights_only=False)  # ["state_dict"]
+        state_dict = torch.load(
+            weights_path, map_location="cpu", weights_only=False
+        )  # ["state_dict"]
 
         if isinstance(state_dict, nn.Module):
             self.model = state_dict

@@ -1,9 +1,10 @@
+import time
+
 import faiss
 import faiss.contrib.torch_utils
 import numpy as np
-from prettytable import PrettyTable
 import torch
-import time
+from prettytable import PrettyTable
 
 
 def get_validation_recalls(

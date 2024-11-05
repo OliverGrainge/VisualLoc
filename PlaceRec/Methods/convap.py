@@ -1,41 +1,19 @@
 import os
 import pickle
 from os.path import join
-from typing import Tuple
 
-import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 from torchvision import transforms
-from tqdm import tqdm
 
 from ..utils import get_config
 from .base_method import SingleStageBaseModelWrapper
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
-
-
-class ShuffleNetV2FeatureExtractor(nn.Module):
-    def __init__(self):
-        super(ShuffleNetV2FeatureExtractor, self).__init__()
-        original_model = torchvision.models.shufflenet_v2_x1_0(pretrained=True)
-        self.features = nn.Sequential(
-            original_model.conv1,
-            original_model.maxpool,
-            original_model.stage2,
-            original_model.stage3,
-            original_model.stage4,
-            original_model.conv5,
-        )
-        del original_model
-
-    def forward(self, x):
-        x = self.features(x)
-        return x
 
 
 class ResNet(nn.Module):
@@ -230,82 +208,14 @@ class VPRModel(pl.LightningModule):
         layers_to_freeze=1,
         layers_to_crop=[],
         # ---- Aggregator
-        agg_arch="ConvAP",  # CosPlace, NetVLAD, GeM, AVG
+        agg_arch="ConvAP",
         agg_config={},
-        # ---- Train hyperparameters
-        lr=0.03,
-        optimizer="sgd",
-        weight_decay=1e-3,
-        momentum=0.9,
-        warmpup_steps=500,
-        milestones=[5, 10, 15],
-        lr_mult=0.3,
-        # ----- Loss
-        loss_name="MultiSimilarityLoss",
-        miner_name="MultiSimilarityMiner",
-        miner_margin=0.1,
-        faiss_gpu=False,
     ):
         super().__init__()
-        self.encoder_arch = backbone_arch
-        self.pretrained = pretrained
-        self.layers_to_freeze = layers_to_freeze
-        self.layers_to_crop = layers_to_crop
-
-        self.agg_arch = agg_arch
-        self.agg_config = agg_config
-
-        self.lr = lr
-        self.optimizer = optimizer
-        self.weight_decay = weight_decay
-        self.momentum = momentum
-        self.warmpup_steps = warmpup_steps
-        self.milestones = milestones
-        self.lr_mult = lr_mult
-
-        self.loss_name = loss_name
-        self.miner_name = miner_name
-        self.miner_margin = miner_margin
-
-        self.save_hyperparameters()  # write hyperparams into a file
-
-        self.batch_acc = (
-            []
-        )  # we will keep track of the % of trivial pairs/triplets at the loss level
-
-        self.faiss_gpu = faiss_gpu
-
-        # ----------------------------------
-        # get the backbone and the aggregator
-        if "mobilenetv2" in backbone_arch.lower():
-            self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-            self.aggregator = get_aggregator(agg_arch, agg_config)
-
-        elif "mobilenetv2_50" in backbone_arch.lower():
-            self.backbone = torchvision.models.mobilenet_v2(
-                pretrained=False, width_mult=0.5
-            ).features
-            self.aggregator = get_aggregator(agg_arch, agg_config)
-
-        elif "mobilenetv2_75" in backbone_arch.lower():
-            self.backbone = torchvision.models.mobilenet_v2(
-                pretrained=False, width_mult=0.75
-            ).features
-            self.aggregator = get_aggregator(agg_arch, agg_config)
-
-        elif "squeezenetv1" in backbone_arch.lower():
-            self.backbone = torchvision.models.squeezenet1_0(pretrained=True).features
-            self.aggregator = get_aggregator(agg_arch, agg_config)
-
-        elif "shufflenetv2" in backbone_arch.lower():
-            self.backbone = ShuffleNetV2FeatureExtractor()
-            self.aggregator = get_aggregator(agg_arch, agg_config)
-
-        else:
-            self.backbone = get_backbone(
-                backbone_arch, pretrained, layers_to_freeze, layers_to_crop
-            )
-            self.aggregator = get_aggregator(agg_arch, agg_config)
+        self.backbone = get_backbone(
+            backbone_arch, pretrained, layers_to_freeze, layers_to_crop
+        )
+        self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
     def forward(self, x, norm: bool = True):
@@ -315,25 +225,11 @@ class VPRModel(pl.LightningModule):
 
 
 ######################################### CONVAP MODEL ########################################################
-
-
 preprocess = transforms.Compose(
     [
         transforms.ToTensor(),
         transforms.Resize(
             (320, 320),
-            interpolation=transforms.InterpolationMode.BILINEAR,
-            antialias=True,
-        ),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-    ]
-)
-
-small_preprocess = transforms.Compose(
-    [
-        transforms.ToTensor(),
-        transforms.Resize(
-            (224, 224),
             interpolation=transforms.InterpolationMode.BILINEAR,
             antialias=True,
         ),
@@ -402,4 +298,3 @@ class ResNet34_ConvAP(SingleStageBaseModelWrapper):
             super().__init__(
                 model=self.model, preprocess=preprocess, name=name, weight_path=None
             )
-

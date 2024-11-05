@@ -41,6 +41,7 @@ df["Method"] = df["Method"].replace("ResNet50_GeM", "GeM")
 # Convert Matching Latency from seconds to milliseconds
 df["Matching Latency"] *= 1000
 
+
 # Filter by closest sparsity to 25%
 def filter_closest_sparsity(group):
     closest_row = group.iloc[(group["sparsity"] - 25).abs().argsort()[:1]]

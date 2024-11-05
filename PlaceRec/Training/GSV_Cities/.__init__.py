@@ -3,6 +3,5 @@ from .distillation_trainer import distillation_trainer
 from .sparse_semistructured_trainer import sparse_semistructured_trainer
 from .sparse_structured_trainer import sparse_structured_trainer
 from .sparse_unstructured_trainer import sparse_unstructured_trainer
-from .stuctured_sparse_distillation_trainer import (
-    sparse_structured_distillation_trainer,
-)
+from .stuctured_sparse_distillation_trainer import \
+    sparse_structured_distillation_trainer

@@ -1,9 +1,11 @@
+from os.path import join
 from pathlib import Path
+
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
+
 from PlaceRec.utils import get_config
-from os.path import join
 
 config = get_config()
 

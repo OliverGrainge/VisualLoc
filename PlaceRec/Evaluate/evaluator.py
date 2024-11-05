@@ -1,17 +1,18 @@
 import os
+import pickle
 import time
 import warnings
 from typing import Dict, List, Union
 
+import faiss
 import numpy as np
+import onnxruntime as ort
 import torch
 import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
 from tabulate import tabulate
-import onnxruntime as ort
-import faiss
-import pickle
+
 from PlaceRec.Methods.base_method import BaseTechnique
 from PlaceRec.utils import get_logger
 
@@ -61,7 +62,6 @@ class Eval:
 
         self.results = {}
 
-
     def setup_onnx_session_cpu(self):
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
@@ -88,7 +88,7 @@ class Eval:
         Returns:
             Dict: A dictionary containing all computed evaluation metrics.
         """
-        
+
         if self.dataset is not None:
             self.compute_all_matches()
             self.ratk(1)
@@ -114,7 +114,6 @@ class Eval:
         self.matches, self.distances = self.method.place_recognise(
             self.method.query_desc, k=k
         )
-        
 
     def ratk(self, k: int) -> Dict:
         """

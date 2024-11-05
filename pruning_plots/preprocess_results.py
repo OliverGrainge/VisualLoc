@@ -1,9 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 # Load data
 df_acc = pd.read_csv("accuracy_results.csv")
 df_lat = pd.read_csv("latency_results.csv")
+
 
 # Function to extract sparsity value
 def extract_sparsity(path):

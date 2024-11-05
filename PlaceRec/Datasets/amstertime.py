@@ -1,17 +1,17 @@
-from os.path import join
 import os
 from glob import glob
+from os.path import join
+
 import numpy as np
-from torchvision import transforms
 import torch
+import torchvision
 from PIL import Image
 from sklearn.neighbors import NearestNeighbors
 from torch.utils import data
-import torchvision
-from PlaceRec.utils import ImageIdxDataset
 from torch.utils.data import DataLoader
-from PlaceRec.utils import get_config
+from torchvision import transforms
 
+from PlaceRec.utils import ImageIdxDataset, get_config
 
 config = get_config()
 

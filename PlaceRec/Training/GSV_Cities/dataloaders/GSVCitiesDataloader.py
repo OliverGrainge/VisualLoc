@@ -4,12 +4,9 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision import transforms as T
 
 from PlaceRec.Training.GSV_Cities.dataloaders.train.GSVCitiesDataset import (
-    GSVCitiesDataset,
-    GSVCitiesDistillationDataset,
-)
-from PlaceRec.Training.GSV_Cities.dataloaders.val.PittsburghDataset import (
-    PittsburghDataset,
-)
+    GSVCitiesDataset, GSVCitiesDistillationDataset)
+from PlaceRec.Training.GSV_Cities.dataloaders.val.PittsburghDataset import \
+    PittsburghDataset
 from PlaceRec.utils import get_config
 
 config = get_config()
@@ -126,48 +123,42 @@ class GSVCitiesDataModule(pl.LightningDataModule):
                         )
                     )
                 if "mapillary" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import (
-                        MSLS,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import \
+                        MSLS
 
                     self.val_datasets.append(MSLS(input_transform=self.valid_transform))
 
                 if "sped" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import (
-                        SPEDDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import \
+                        SPEDDataset
 
                     self.val_datasets.append(
                         SPEDDataset(input_transform=self.valid_transform)
                     )
                 if "inria" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import (
-                        InriaDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import \
+                        InriaDataset
 
                     self.val_datasets.append(
                         InriaDataset(input_transform=self.valid_transform)
                     )
                 if "nordland" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import (
-                        NordlandDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import \
+                        NordlandDataset
 
                     self.val_datasets.append(
                         NordlandDataset(input_transform=self.valid_transform)
                     )
                 if "essex3in1" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import (
-                        EssexDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import \
+                        EssexDataset
 
                     self.val_datasets.append(
                         EssexDataset(input_transform=self.valid_transform)
                     )
                 if "corssseasons" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.CrossSeasonDataset import (
-                        CrossSeasonDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.CrossSeasonDataset import \
+                        CrossSeasonDataset
 
                     self.val_datasets.append(
                         CrossSeasonDataset(input_transform=self.valid_transform)
@@ -321,40 +312,35 @@ class GSVCitiesDataModuleDistillation(pl.LightningDataModule):
                         )
                     )
                 if "mapillary" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import (
-                        MSLS,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.MapillaryDataset import \
+                        MSLS
 
                     self.val_datasets.append(MSLS(input_transform=self.valid_transform))
 
                 if "spedtest" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import (
-                        SPEDDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.SpedDataset import \
+                        SPEDDataset
 
                     self.val_datasets.append(
                         SPEDDataset(input_transform=self.valid_transform)
                     )
                 if "inria" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import (
-                        InriaDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.InriaDataset import \
+                        InriaDataset
 
                     self.val_datasets.append(
                         InriaDataset(input_transform=self.valid_transform)
                     )
                 if "nordland" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import (
-                        NordlandDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.NordlandDataset import \
+                        NordlandDataset
 
                     self.val_datasets.append(
                         NordlandDataset(input_transform=self.valid_transform)
                     )
                 if "essex" in valid_set_name.lower():
-                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import (
-                        EssexDataset,
-                    )
+                    from PlaceRec.Training.GSV_Cities.dataloaders.val.EssexDataset import \
+                        EssexDataset
 
                     self.val_datasets.append(
                         EssexDataset(input_transform=self.valid_transform)

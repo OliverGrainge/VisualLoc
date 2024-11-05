@@ -1,9 +1,10 @@
-from pytorch_metric_learning import losses, miners
-from pytorch_metric_learning.distances import CosineSimilarity, DotProductSimilarity
-from pytorch_metric_learning.distances import LpDistance
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
+from pytorch_metric_learning import losses, miners
+from pytorch_metric_learning.distances import (CosineSimilarity,
+                                               DotProductSimilarity,
+                                               LpDistance)
 
 
 class MyMultiSimilarity(nn.Module):
