@@ -45,7 +45,6 @@ class Eval:
         self,
         method: BaseTechnique,
         dataset: Union[BaseTechnique, None] = None,
-        onnx_pth=None,
     ):
         """
         Initializes the Eval class with a recognition method and a dataset.
@@ -56,29 +55,91 @@ class Eval:
         """
         self.dataset = dataset
         self.method = method
-        self.onnx_pth = onnx_pth
-        if onnx_pth is None:
-            self.gt = dataset.ground_truth()
-
+        self.gt = dataset.ground_truth()
         self.results = {}
 
+
+    def convert_to_onnx(self):
+        """
+        Converts the PyTorch model to an ONNX model and saves it to the specified path.
+
+        Args:
+            input_size (tuple): The size of the input tensor (e.g., (1, 3, 224, 224) for a single RGB image).
+            onnx_file_path (str): The file path where the ONNX model will be saved.
+
+        Returns:
+            None
+        """
+
+        if not isinstance(self.method.model, nn.Module):
+            raise ValueError("The model must be a PyTorch nn.Module to convert to ONNX.")
+
+        model = self.method.model
+        model.eval()
+
+        dummy_input = self.method.example_input()
+        model = model.to("cpu")
+
+        try:
+            torch.onnx.export(
+                model,
+                dummy_input,
+                "/tmp/model.onnx",
+                export_params=True,
+                opset_version=11,
+                do_constant_folding=True,
+                input_names=['input'],
+                output_names=['output'],
+                dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+            )
+        except Exception as e:
+            logger.error(f"Error converting model to ONNX: {e}")
+
+
     def setup_onnx_session_cpu(self):
+        """
+        Sets up an ONNX Runtime inference session for CPU execution.
+
+        This method configures the session options for sequential execution mode
+        and initializes an inference session using the CPUExecutionProvider.
+
+        Returns:
+            ort.InferenceSession: An ONNX Runtime inference session configured for CPU execution.
+        """
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         session = ort.InferenceSession(
-            self.onnx_pth, sess_options, providers=["CPUExecutionProvider"]
+            "/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
         )
         return session
 
     def setup_onnx_session_gpu(self):
+        """
+        Sets up an ONNX Runtime inference session for GPU execution.
+
+        This method configures the session options for sequential execution mode
+        and extended graph optimization level, and initializes an inference session
+        using the CUDAExecutionProvider.
+
+        Returns:
+            ort.InferenceSession: An ONNX Runtime inference session configured for GPU execution.
+        """
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         sess_options.graph_optimization_level = (
             ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
-        session = ort.InferenceSession(
-            self.onnx_pth, sess_options, providers=["CUDAExecutionProvider"]
-        )
+        available_providers = ort.get_available_providers()
+        if "CUDAExecutionProvider" in available_providers:
+            session = ort.InferenceSession(
+                "/tmp/model.onnx", sess_options, providers=["CUDAExecutionProvider"]
+            )
+        elif "CoreMLExecutionProvider" in available_providers:
+            session = ort.InferenceSession(
+                "/tmp/model.onnx", sess_options, providers=["CoreMLExecutionProvider"]
+            )
+        else:
+            return None 
         return session
 
     def eval(self):
@@ -92,6 +153,8 @@ class Eval:
         if self.dataset is not None:
             self.compute_all_matches()
             self.ratk(1)
+        self.convert_to_onnx()
+
         self.extraction_cpu_latency()
         self.extraction_gpu_latency()
         self.matching_latency()
@@ -111,6 +174,8 @@ class Eval:
             None: On failure, returns None and does not modify results.
         """
         self.method.load_descriptors(self.dataset.name)
+        if self.method.query_desc is None:
+            raise Exception("Query descriptors not loaded. You must pre-compute them before calling this method.")
         self.matches, self.distances = self.method.place_recognise(
             self.method.query_desc, k=k
         )
@@ -139,14 +204,33 @@ class Eval:
         return ratk
 
     def descriptor_dim(self) -> float:
+        """
+        Returns the dimensionality of the global descriptors used in the method.
+
+        Returns:
+            float: The number of dimensions of the global descriptors.
+        """
         self.method.load_descriptors(self.dataset.name)
         return self.method.query_desc["global_descriptors"].shape[1]
 
     def map_memory(self) -> float:
+        """
+        Calculates and returns the memory usage of the map descriptors in megabytes.
+
+        Returns:
+            float: The memory usage of the map descriptors in MB.
+        """
         self.method.load_descriptors(self.dataset.name)
         return self.method.map_desc["global_descriptors"].nbytes / (1024**2)
 
     def model_memory(self) -> float:
+        """
+        Estimates and returns the memory usage of the model parameters in megabytes,
+        assuming the parameters are stored in fp16 precision.
+
+        Returns:
+            float: The memory usage of the model parameters in MB.
+        """
         params = self.count_params()
         return (params * 2) / (1024**2)
 
@@ -207,49 +291,27 @@ class Eval:
         Returns:
             float: The average CPU extraction latency in milliseconds.
         """
-        model = self.method.model
-        model.eval()
-        model = model.cpu()
-        img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
-        input_data = self.method.preprocess(img)[None, :]
-        input_data = input_data.repeat(batch_size, 1, 1, 1)
+        input_data = self.method.example_input()
+        input_data = input_data.to("cpu")
+        input_data = input_data.numpy()
 
-        if self.onnx_pth is not None:
-            input_data = input_data.to("cpu")
-            input_data = input_data.numpy()
+        session = self.setup_onnx_session_cpu()
 
-            session = self.setup_onnx_session_cpu()
+        for _ in range(10):
+            out = session.run(None, {"input": input_data})
+            self.desc_size = out[0].shape[1]
 
-            for _ in range(10):
-                out = session.run(None, {"input.1": input_data})
-                self.desc_size = out[0].shape[1]
+        # Measure inference time
+        start_time = time.time()
+        for _ in range(num_runs):
+            _ = session.run(None, {"input": input_data})
+        end_time = time.time()
+        average_time = (
+            (end_time - start_time) / num_runs
+        ) * 1000  # Convert to milliseconds
+        self.results["extraction_cpu_latency_ms"] = average_time
+        return average_time
 
-            # Measure inference time
-            start_time = time.time()
-            for _ in range(num_runs):
-                _ = session.run(None, {"input.1": input_data})
-            end_time = time.time()
-            average_time = (
-                (end_time - start_time) / num_runs
-            ) * 1000  # Convert to milliseconds
-            self.results["extraction_cpu_latency_ms"] = average_time
-            return average_time
-
-        else:
-
-            for _ in range(10):
-                _ = model(input_data)
-
-            # Measure inference time
-            start_time = time.time()
-            for _ in range(num_runs):
-                _ = model(input_data)
-            end_time = time.time()
-            average_time = (
-                (end_time - start_time) / num_runs * 1000
-            )  # Convert to milliseconds
-            self.results["extraction_cpu_latency_ms"] = average_time
-            return average_time
 
     def extraction_gpu_latency(self, batch_size: int = 1, num_runs: int = 100) -> float:
         """
@@ -261,52 +323,34 @@ class Eval:
         Returns:
             float: The average GPU extraction latency in milliseconds, or None if CUDA is not available.
         """
-        if self.onnx_pth is not None:
-            img = Image.fromarray(
-                np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8)
-            )
-            input_data = self.method.preprocess(img)[None, :]
-            input_data = input_data.repeat(batch_size, 1, 1, 1)
-            input_data = input_data.to("cpu")
-            input_data = input_data.numpy()
-
-            session = self.setup_onnx_session_gpu()
-
-            for _ in range(10):
-                _ = session.run(None, {"input.1": input_data})
-
-            # Measure inference time
-            start_time = time.time()
-            for _ in range(num_runs):
-                _ = session.run(None, {"input.1": input_data})
-            end_time = time.time()
-            average_time = (
-                (end_time - start_time) / num_runs * 1000
-            )  # Convert to milliseconds
-
-            self.results["extraction_gpu_latency_ms"] = average_time
-            return average_time
-        if not torch.cuda.is_available():
-            return None
-        model = self.method.model
-        model.cuda()
-        model.eval()
-        img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
-        input_data = self.method.preprocess(img)[None, :].cuda()
+        img = Image.fromarray(
+            np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8)
+        )
+        input_data = self.method.preprocess(img)[None, :]
         input_data = input_data.repeat(batch_size, 1, 1, 1)
+        input_data = input_data.to("cpu")
+        input_data = input_data.numpy()
+
+        session = self.setup_onnx_session_gpu()
+
+        if session is None: 
+            return
+
         for _ in range(10):
-            _ = model(input_data)
-        torch.cuda.synchronize()
-        start_event = torch.cuda.Event(enable_timing=True)
-        end_event = torch.cuda.Event(enable_timing=True)
-        start_event.record()
+            _ = session.run(None, {"input": input_data})
+
+        # Measure inference time
+        start_time = time.time()
         for _ in range(num_runs):
-            _ = model(input_data)
-        end_event.record()
-        torch.cuda.synchronize()
-        average_time = start_event.elapsed_time(end_event) / num_runs
+            _ = session.run(None, {"input": input_data})
+        end_time = time.time()
+        average_time = (
+            (end_time - start_time) / num_runs * 1000
+        )  # Convert to milliseconds
+
         self.results["extraction_gpu_latency_ms"] = average_time
         return average_time
+
 
     def count_params(self) -> int:
         """
@@ -348,4 +392,4 @@ class Eval:
             return flops
         except:
             logger.info(f"Could not compute flops for {self.method.name}")
-            return None
+            return None 
