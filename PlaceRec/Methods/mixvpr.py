@@ -174,7 +174,7 @@ class MixVPR_AGG(nn.Module):
         self.channel_proj = nn.Linear(in_channels, out_channels)
         self.row_proj = nn.Linear(hw, out_rows)
 
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = x.flatten(2)
         x = self.mix(x)
         x = x.permute(0, 2, 1)
@@ -182,8 +182,7 @@ class MixVPR_AGG(nn.Module):
         x = x.permute(0, 2, 1)
         x = self.row_proj(x)
         x = x.flatten(1)
-        if norm:
-            x = F.normalize(x, p=2, dim=-1)
+        x = F.normalize(x, p=2, dim=-1)
         return x
 
 
@@ -272,9 +271,9 @@ class VPRModel(pl.LightningModule):
         self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = self.backbone(x)
-        x = self.aggregator(x, norm=norm)
+        x = self.aggregator(x)
         return x
 
 

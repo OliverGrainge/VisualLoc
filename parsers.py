@@ -91,6 +91,13 @@ def eval_arguments():
     )
 
     parser.add_argument(
+        "--quantize",
+        action="store_true",
+        default=False,
+        help="enable quantization",
+    )
+
+    parser.add_argument(
         "--metrics", type=str, default=config["eval"]["metrics"], nargs="+"
     )
 

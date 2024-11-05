@@ -11,9 +11,46 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from ptflops import get_model_complexity_info
+from onnxruntime.quantization import quantize_dynamic, QuantType
 from tabulate import tabulate
+from onnxruntime.quantization import CalibrationDataReader
+import onnx
+from onnxruntime import quantization
 
 from PlaceRec.Methods.base_method import BaseTechnique
+
+
+class QuantizationDataReader(CalibrationDataReader):
+    def __init__(self, dataloader):
+        """
+        Initializes the QuantizationDataReader with a PyTorch DataLoader.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): PyTorch DataLoader providing calibration data.
+        """
+        self.dataloader = dataloader
+        self.data_iter = iter(dataloader)
+
+    def get_next(self):
+        """
+        Provides the next batch of inputs for ONNX Runtime calibration.
+
+        Returns:
+            Dict[str, np.ndarray] or None: A dictionary where the keys match the input names of the ONNX model
+                                           and the values are the input data as numpy arrays. Returns None when
+                                           the data is exhausted.
+        """
+        try:
+            data = next(self.data_iter)
+            inputs = data[1]
+            if isinstance(inputs, torch.Tensor):
+                inputs = inputs.cpu().numpy()
+            return {"input": inputs}
+        
+        except StopIteration:
+            return None
+
+
 
 class Eval:
     """
@@ -41,6 +78,7 @@ class Eval:
         self,
         method: BaseTechnique,
         dataset: Union[BaseTechnique, None] = None,
+        quantize: bool = True,
     ):
         """
         Initializes the Eval class with a recognition method and a dataset.
@@ -50,9 +88,11 @@ class Eval:
             dataset (Union[BaseTechnique, None], optional): The dataset to be used for evaluation. Defaults to None.
         """
         self.dataset = dataset
-        self.method = method
+        self.method = method    
         self.gt = dataset.ground_truth()
         self.results = {}
+        self.quantize = quantize
+
 
     def eval(self):
         """
@@ -73,6 +113,33 @@ class Eval:
         table_data = [(k, v) for k, v in self.results.items()]
         print(tabulate(table_data, headers=["Metric", "Value"]))
         return self.results
+
+
+    def quantize_model(self): 
+        quantization.shape_inference.quant_pre_process("PlaceRec/Evaluate/tmp/model.onnx", "PlaceRec/Evaluate/tmp/prep_model.onnx", skip_symbolic_shape=False)
+            
+        qdr = QuantizationDataReader(self.dataset.query_images_loader(batch_size=1, preprocess=self.method.preprocess, num_workers=0, pin_memory=False))
+            
+        q_static_opts = {"ActivationSymmetric":True,
+                 "WeightSymmetric":True}
+        
+        quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
+                                               model_output="PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
+                                               calibration_data_reader=qdr,
+                                               extra_options=q_static_opts)
+        
+        q_static_opts = {"ActivationSymmetric":True,
+                            "WeightSymmetric":True}
+        
+        qdr = QuantizationDataReader(self.dataset.query_images_loader(batch_size=1, preprocess=self.method.preprocess, num_workers=0, pin_memory=False))
+            
+        q_static_opts = {"ActivationSymmetric":False,
+                 "WeightSymmetric":True}
+        
+        quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
+                                               model_output="PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
+                                               calibration_data_reader=qdr,
+                                               extra_options=q_static_opts)
 
     def convert_to_onnx(self):
         """
@@ -95,13 +162,14 @@ class Eval:
         dummy_input = self.method.example_input()
         model = model.to("cpu")
 
+
         try:
             torch.onnx.export(
                 model,
                 dummy_input,
                 "PlaceRec/Evaluate/tmp/model.onnx",
                 export_params=True,
-                opset_version=11,
+                opset_version=14,
                 do_constant_folding=True,
                 input_names=['input'],
                 output_names=['output'],
@@ -109,6 +177,12 @@ class Eval:
             )
         except Exception as e:
             raise Exception(f"Error converting model to ONNX: {e}")
+        
+        model_onnx = onnx.load("PlaceRec/Evaluate/tmp/model.onnx")
+        onnx.checker.check_model(model_onnx)
+        
+        if self.quantize:
+            self.quantize_model()
 
 
     def setup_onnx_session_cpu(self):
@@ -123,9 +197,14 @@ class Eval:
         """
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
-        session = ort.InferenceSession(
-            "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
-        )
+        if self.quantize:
+            session = ort.InferenceSession(
+                "PlaceRec/Evaluate/tmp/qmodel_cpu.onnx", sess_options, providers=["CPUExecutionProvider"]
+            )
+        else:
+            session = ort.InferenceSession(
+                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
+            )
         return session
 
     def setup_onnx_session_gpu(self):
@@ -146,15 +225,20 @@ class Eval:
         )
         available_providers = ort.get_available_providers()
         if "CUDAExecutionProvider" in available_providers:
-            session = ort.InferenceSession(
-                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CUDAExecutionProvider"]
-            )
+            provider = ["CUDAExecutionProvider"]
         elif "CoreMLExecutionProvider" in available_providers:
+            provider = ["CoreMLExecutionProvider"]
+        else: 
+            return None
+
+        if self.quantize:
             session = ort.InferenceSession(
-                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CoreMLExecutionProvider"]
-            )
+                "PlaceRec/Evaluate/tmp/qmodel_gpu.onnx", sess_options, providers=provider
+            ) 
         else:
-            return None 
+            session = ort.InferenceSession(
+                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=provider
+            ) 
         return session
     
 

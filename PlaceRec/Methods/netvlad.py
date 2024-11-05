@@ -256,11 +256,10 @@ class NetVLADNet(nn.Module):
         self.aggregation = NetVLADagg(clusters_num=64, dim=128, work_with_tokens=False)
         self.norm = L2Norm()
 
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = self.backbone(x)
         x = self.aggregation(x)
-        if norm:
-            x = self.norm(x)
+        x = self.norm(x)
         return x
 
 
@@ -279,11 +278,10 @@ class ResNet34_NetVLADNet(nn.Module):
 
         self.norm = L2Norm()
 
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = self.backbone(x)
         x = self.aggregation(x)
-        if norm:
-            x = self.norm(x)
+        x = self.norm(x)
         return x
 
 

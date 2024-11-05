@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision
 from torch.nn import functional as F
-from torchvision import transforms
+from torchvision import models, transforms
 
 from PlaceRec.utils import L2Norm, get_config
 
@@ -143,11 +143,10 @@ class Resnet50gemModel(nn.Module):
         self.proj = nn.Linear(2048, fc_output_dim)
         self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
-        if norm:
-            x = self.norm(x)
+        x = self.norm(x)
         return x
 
 
@@ -165,12 +164,11 @@ class Resnet34gemModel(nn.Module):
         self.proj = nn.Linear(512, fc_output_dim)
         self.norm = L2Norm()
 
-    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
         x = self.aggregation(x)
         x = self.proj(x)
-        if norm:
-            x = self.norm(x)
+        x = self.norm(x)
         return x
 
 

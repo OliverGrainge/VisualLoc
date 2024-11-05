@@ -135,12 +135,11 @@ class ConvAPModel(nn.Module):
         )
         self.AAP = nn.AdaptiveAvgPool2d((s1, s2))
 
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = self.channel_pool(x)
         x = self.AAP(x)
         x = x.flatten(1)
-        if norm:
-            x = F.normalize(x, p=2, dim=1)
+        x = F.normalize(x, p=2, dim=1)
         return x
 
 
@@ -218,9 +217,9 @@ class VPRModel(pl.LightningModule):
         self.aggregator = get_aggregator(agg_arch, agg_config)
 
     # the forward pass of the lightning model
-    def forward(self, x, norm: bool = True):
+    def forward(self, x):
         x = self.backbone(x)
-        x = self.aggregator(x, norm=norm)
+        x = self.aggregator(x)
         return x
 
 

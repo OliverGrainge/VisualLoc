@@ -28,7 +28,7 @@ for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
     for dataset_name in args.datasets:
         dataset = get_dataset(dataset_name)
-        eval = Eval(method, dataset)
+        eval = Eval(method, dataset, quantize=args.quantize)
         new_result = eval.eval()
         result_path = f"PlaceRec/Evaluate/results/{method.name}.pkl"
         old_result = load_result(result_path)
