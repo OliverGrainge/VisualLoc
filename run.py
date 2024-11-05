@@ -1,7 +1,3 @@
-import argparse
-
-import yaml
-
 from parsers import run_arguments
 from PlaceRec.utils import get_config, get_dataset, get_method
 

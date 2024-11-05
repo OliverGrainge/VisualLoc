@@ -92,9 +92,6 @@ class Eval:
         if self.dataset is not None:
             self.compute_all_matches()
             self.ratk(1)
-            self.ratk(5)
-            self.ratk(10)
-            self.ratk(20)
         self.extraction_cpu_latency()
         self.extraction_gpu_latency()
         self.matching_latency()
@@ -103,7 +100,7 @@ class Eval:
         print(tabulate(table_data, headers=["Metric", "Value"]))
         return self.results
 
-    def compute_all_matches(self, k=20):
+    def compute_all_matches(self, k=1):
         """
         Attempts to load descriptors and compute place recognition matches up to rank k.
 
@@ -113,7 +110,6 @@ class Eval:
         Returns:
             None: On failure, returns None and does not modify results.
         """
-        print("hi")
         self.method.load_descriptors(self.dataset.name)
         self.matches, self.distances = self.method.place_recognise(
             self.method.query_desc, k=k

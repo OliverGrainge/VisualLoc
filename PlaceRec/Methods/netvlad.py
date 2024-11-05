@@ -291,49 +291,6 @@ class ResNet34_NetVLADNet(nn.Module):
         return x
 
 
-class ResNet18_NetVLADNet(nn.Module):
-    """The used networks are composed of a backbone and an aggregation layer."""
-
-    def __init__(self):
-        super().__init__()
-        self.backbone = ResNet(
-            model_name="resnet18",
-            pretrained=True,
-            layers_to_freeze=1,
-            layers_to_crop=[4],
-        )
-        self.aggregation = NetVLADagg(
-            clusters_num=64, dim=128, in_channels=256, work_with_tokens=False
-        )
-
-        self.norm = L2Norm()
-
-    def forward(self, x, norm: bool = True):
-        x = self.backbone(x)
-        x = self.aggregation(x)
-        if norm:
-            x = self.norm(x)
-        return x
-
-
-class MobileNetV2_NetVLADNet(nn.Module):
-    """The used networks are composed of a backbone and an aggregation layer."""
-
-    def __init__(self):
-        super().__init__()
-        self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features[:-1]
-        self.aggregation = NetVLADagg(
-            clusters_num=64, dim=128, in_channels=320, work_with_tokens=False
-        )
-        self.norm = L2Norm()
-
-    def forward(self, x, norm: bool = True):
-        x = self.backbone(x)
-        x = self.aggregation(x)
-        if norm:
-            x = self.norm(x)
-        return x
-
 
 preprocess = transforms.Compose(
     [
@@ -380,42 +337,6 @@ class NetVLAD(SingleStageBaseModelWrapper):
             )
 
 
-class MobileNetV2_NetVLAD(SingleStageBaseModelWrapper):
-    def __init__(self, pretrained: bool = True):
-        self.model = MobileNetV2_NetVLADNet()
-        if not pretrained:
-            if torch.cuda.is_available():
-                self.model.to("cuda")
-            elif torch.backends.mps.is_available():
-                self.model.to("mps")
-            else:
-                self.model.to("cpu")
-            ds = Pitts30k_Val()
-            dl = ds.query_images_loader(preprocess=preprocess)
-            cluster_ds = dl.dataset
-            self.model.aggregation.initialize_netvlad_layer(
-                cluster_ds, self.model.backbone
-            )
-            self.model.to("cpu")
-
-        name = "mobilenetv2_netvlad"
-        weight_path = join(config["weights_directory"], name + ".ckpt")
-        if pretrained:
-            if not os.path.exists(weight_path):
-                raise Exception(f"Could not find weights at {weight_path}")
-            self.load_weights(weight_path)
-            super().__init__(
-                model=self.model,
-                preprocess=preprocess,
-                name=name,
-                weight_path=weight_path,
-            )
-        else:
-            super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
-            )
-
-
 class ResNet34_NetVLAD(SingleStageBaseModelWrapper):
     def __init__(self, pretrained: bool = True):
         self.model = ResNet34_NetVLADNet()
@@ -437,42 +358,7 @@ class ResNet34_NetVLAD(SingleStageBaseModelWrapper):
         name = "resnet34_netvlad"
         weight_path = join(config["weights_directory"], name + ".ckpt")
         if pretrained:
-            if not os.path.exists(weight_path):
-                raise Exception(f"Could not find weights at {weight_path}")
-            self.load_weights(weight_path)
-            super().__init__(
-                model=self.model,
-                preprocess=preprocess,
-                name=name,
-                weight_path=weight_path,
-            )
-        else:
-            super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
-            )
-
-
-class ResNet18_NetVLAD(SingleStageBaseModelWrapper):
-    def __init__(self, pretrained: bool = True):
-        self.model = NetVLADNet()
-        if not pretrained:
-            if torch.cuda.is_available():
-                self.model.to("cuda")
-            elif torch.backends.mps.is_available():
-                self.model.to("mps")
-            else:
-                self.model.to("cpu")
-            ds = Pitts30k_Val()
-            dl = ds.query_images_loader(preprocess=preprocess)
-            cluster_ds = dl.dataset
-            self.model.aggregation.initialize_netvlad_layer(
-                cluster_ds, self.model.backbone
-            )
-            self.model.to("cpu")
-
-        name = "resnet18_netvlad"
-        weight_path = join(config["weights_directory"], name + ".ckpt")
-        if pretrained:
+            print("loading weights from: ", weight_path)
             if not os.path.exists(weight_path):
                 raise Exception(f"Could not find weights at {weight_path}")
             self.load_weights(weight_path)

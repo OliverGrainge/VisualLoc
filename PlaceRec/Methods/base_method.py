@@ -283,7 +283,6 @@ class BaseFunctionality(BaseTechnique):
                 raise ValueError("NaN values detected in map descriptors")
             faiss.normalize_L2(map_descriptors["global_descriptors"])
             self.map.add(map_descriptors["global_descriptors"])
-            print("map descriptors: ", map_descriptors["global_descriptors"].shape, map_descriptors["global_descriptors"].dtype, type(map_descriptors["global_descriptors"]))
         elif config["eval"]["distance"] == "l2":
             self.map = faiss.IndexFlatL2(map_descriptors["global_descriptors"].shape[1])
             faiss.normalize_L2(map_descriptors["global_descriptors"])
@@ -341,10 +340,7 @@ class BaseFunctionality(BaseTechnique):
 
         if config["eval"]["distance"] == "cosine":
             faiss.normalize_L2(query_desc)
-        print('query descriptors', query_desc.shape, query_desc.dtype, type(query_desc))
-        print('map', type(self.map))
         dist, idx = self.map.search(query_desc, k=k)
-        print("success")
         return idx, dist
 
     def similarity_matrix(

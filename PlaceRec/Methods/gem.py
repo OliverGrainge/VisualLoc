@@ -15,25 +15,6 @@ from .base_method import SingleStageBaseModelWrapper
 filepath = os.path.dirname(os.path.abspath(__file__))
 config = get_config()
 
-"""
-class GeM(nn.Module):
-    def __init__(self, p: int = 3, eps: float = 1e-6, fixed_size=(10,10)):
-        super().__init__()
-        self.p = nn.Parameter(torch.ones(1) * p)
-        self.flatten = nn.Flatten()
-        self.eps = eps
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        print("inpug: ", x.shape)
-        x = (
-            F.avg_pool2d(x.clamp(min=self.eps).pow(self.p), (x.size(-2), x.size(-1)))
-            .pow(1.0 / self.p)
-            .view(x.shape[0], -1)
-        )
-        print("output: ", x.shape)
-        return x.flatten(1)
-"""
-
 
 class GeM(nn.Module):
     def __init__(self, p=3, eps=1e-6):
@@ -194,44 +175,6 @@ class Resnet34gemModel(nn.Module):
         return x
 
 
-class Resnet18gemModel(nn.Module):
-    def __init__(self, fc_output_dim=2048):
-        super().__init__()
-        self.backbone = ResNet(
-            model_name="resnet18",
-            pretrained=True,
-            layers_to_freeze=1,
-            layers_to_crop=[],
-        )
-
-        self.aggregation = GeM()
-        self.proj = nn.Linear(512, fc_output_dim)
-        self.norm = L2Norm()
-
-    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
-        x = self.backbone(x)
-        x = self.aggregation(x)
-        x = self.proj(x)
-        if norm:
-            x = self.norm(x)
-        return x
-
-
-class MobilenetV2gemModel(nn.Module):
-    def __init__(self, fc_output_dim=2048):
-        super().__init__()
-        self.backbone = torchvision.models.mobilenet_v2(pretrained=True).features
-        self.aggregation = GeM()
-        self.proj = nn.Linear(1280, fc_output_dim)
-        self.norm = L2Norm()
-
-    def forward(self, x: torch.Tensor, norm: bool = True) -> torch.Tensor:
-        x = self.backbone(x)
-        x = self.aggregation(x)
-        x = self.proj(x)
-        if norm:
-            x = self.norm(x)
-        return x
 
 
 preprocess = transforms.Compose(
@@ -285,43 +228,4 @@ class ResNet34_GeM(SingleStageBaseModelWrapper):
             )
 
 
-class MobileNetV2_GeM(SingleStageBaseModelWrapper):
-    def __init__(self, pretrained: bool = True):
-        self.model = MobilenetV2gemModel()
-        name = "mobilenetv2_gem"
-        weight_path = join(config["weights_directory"], name + ".ckpt")
-        if pretrained:
-            if not os.path.exists(weight_path):
-                raise Exception(f"Could not find weights at {weight_path}")
-            self.load_weights(weight_path)
-            super().__init__(
-                model=self.model,
-                preprocess=preprocess,
-                name=name,
-                weight_path=weight_path,
-            )
-        else:
-            super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
-            )
 
-
-class ResNet18_GeM(SingleStageBaseModelWrapper):
-    def __init__(self, pretrained: bool = True):
-        self.model = Resnet18gemModel()
-        name = "resnet18_gem"
-        weight_path = join(config["weights_directory"], name + ".ckpt")
-        if pretrained:
-            if not os.path.exists(weight_path):
-                raise Exception(f"Could not find weights at {weight_path}")
-            self.load_weights(weight_path)
-            super().__init__(
-                model=self.model,
-                preprocess=preprocess,
-                name=name,
-                weight_path=weight_path,
-            )
-        else:
-            super().__init__(
-                model=self.model, preprocess=preprocess, name=name, weight_path=None
-            )
