@@ -15,7 +15,6 @@ from tabulate import tabulate
 
 from PlaceRec.Methods.base_method import BaseTechnique
 
-
 class Eval:
     """
     A class to evaluate various performance metrics for image recognition methods
@@ -55,6 +54,25 @@ class Eval:
         self.gt = dataset.ground_truth()
         self.results = {}
 
+    def eval(self):
+        """
+        Executes all evaluation metrics and stores results in the results dictionary.
+
+        Returns:
+            Dict: A dictionary containing all computed evaluation metrics.
+        """
+        if self.dataset is not None:
+            self.compute_all_matches()
+            self.ratk(1)
+        self.convert_to_onnx()
+
+        self.extraction_cpu_latency()
+        self.extraction_gpu_latency()
+        self.matching_latency()
+        self.count_params()
+        table_data = [(k, v) for k, v in self.results.items()]
+        print(tabulate(table_data, headers=["Metric", "Value"]))
+        return self.results
 
     def convert_to_onnx(self):
         """
@@ -138,27 +156,7 @@ class Eval:
         else:
             return None 
         return session
-
-    def eval(self):
-        """
-        Executes all evaluation metrics and stores results in the results dictionary.
-
-        Returns:
-            Dict: A dictionary containing all computed evaluation metrics.
-        """
-
-        if self.dataset is not None:
-            self.compute_all_matches()
-            self.ratk(1)
-        self.convert_to_onnx()
-
-        self.extraction_cpu_latency()
-        self.extraction_gpu_latency()
-        self.matching_latency()
-        self.count_params()
-        table_data = [(k, v) for k, v in self.results.items()]
-        print(tabulate(table_data, headers=["Metric", "Value"]))
-        return self.results
+    
 
     def compute_all_matches(self, k=1):
         """
