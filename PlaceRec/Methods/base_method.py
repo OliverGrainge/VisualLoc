@@ -12,12 +12,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from PlaceRec.utils import get_config, get_logger
+from PlaceRec.utils import get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 config = get_config()
-logger = get_logger()
 
 
 class BaseTechnique(ABC):

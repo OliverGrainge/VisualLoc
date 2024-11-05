@@ -86,15 +86,3 @@ def init_weights(m):
         nn.init.xavier_uniform_(m.weight.data)
         if m.bias is not None:
             nn.init.constant_(m.bias.data, 0)
-
-
-def get_logger():
-    import logging
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        filename="VisualLoc.log",
-        filemode="w",
-        format="%(name)s - %(levelname)s - %(message)s",
-    )
-    return logging

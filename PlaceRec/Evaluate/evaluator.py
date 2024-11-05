@@ -14,9 +14,6 @@ from ptflops import get_model_complexity_info
 from tabulate import tabulate
 
 from PlaceRec.Methods.base_method import BaseTechnique
-from PlaceRec.utils import get_logger
-
-logger = get_logger()
 
 
 class Eval:
@@ -84,7 +81,7 @@ class Eval:
             torch.onnx.export(
                 model,
                 dummy_input,
-                "/tmp/model.onnx",
+                "PlaceRec/Evaluate/tmp/model.onnx",
                 export_params=True,
                 opset_version=11,
                 do_constant_folding=True,
@@ -93,7 +90,7 @@ class Eval:
                 dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
             )
         except Exception as e:
-            logger.error(f"Error converting model to ONNX: {e}")
+            raise Exception(f"Error converting model to ONNX: {e}")
 
 
     def setup_onnx_session_cpu(self):
@@ -109,7 +106,7 @@ class Eval:
         sess_options = ort.SessionOptions()
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         session = ort.InferenceSession(
-            "/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
+            "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
         )
         return session
 
@@ -132,11 +129,11 @@ class Eval:
         available_providers = ort.get_available_providers()
         if "CUDAExecutionProvider" in available_providers:
             session = ort.InferenceSession(
-                "/tmp/model.onnx", sess_options, providers=["CUDAExecutionProvider"]
+                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CUDAExecutionProvider"]
             )
         elif "CoreMLExecutionProvider" in available_providers:
             session = ort.InferenceSession(
-                "/tmp/model.onnx", sess_options, providers=["CoreMLExecutionProvider"]
+                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CoreMLExecutionProvider"]
             )
         else:
             return None 
@@ -168,7 +165,7 @@ class Eval:
         Attempts to load descriptors and compute place recognition matches up to rank k.
 
         Args:
-            k (int, optional): The rank limit for match computation. Defaults to 20.
+            k (int, optional): The rank limit for match computation. Defaults to 20.s
 
         Returns:
             None: On failure, returns None and does not modify results.
@@ -391,5 +388,4 @@ class Eval:
             self.results["flops"] = flops
             return flops
         except:
-            logger.info(f"Could not compute flops for {self.method.name}")
-            return None 
+            raise Exception(f"Could not compute flops for {self.method.name}")

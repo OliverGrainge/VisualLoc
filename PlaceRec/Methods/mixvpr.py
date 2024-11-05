@@ -9,8 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.neighbors import NearestNeighbors
 
 from ..utils import get_config
 from .base_method import SingleStageBaseModelWrapper
