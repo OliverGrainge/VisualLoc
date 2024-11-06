@@ -55,6 +55,13 @@ def run_arguments():
         help="enable quantization",
     )
 
+    parser.add_argument(
+        "--load_checkpoint",
+        type=str,
+        default="",
+        help="path to model checkpoint",
+    )
+
     parser.add_argument("--device", type=str, default=config["run"]["device"])
 
     args = parser.parse_args()

@@ -69,8 +69,10 @@ class Eval:
             Dict: A dictionary containing all computed evaluation metrics.
         """
         if self.dataset is not None:
-            self.compute_all_matches()
+            self.compute_all_matches(10)
             self.ratk(1)
+            self.ratk(5)
+            self.ratk(10)
         self.convert_to_onnx()
 
         self.extraction_cpu_latency()
@@ -104,7 +106,7 @@ class Eval:
             model_output="PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
             calibration_data_reader=qdr,
             extra_options=q_static_opts,
-            quant_format=QuantFormat.QOperator,
+            quant_format=QuantFormat.QDQ,
         )
 
         q_static_opts = {"ActivationSymmetric": True, "WeightSymmetric": True}
@@ -125,7 +127,7 @@ class Eval:
             model_output="PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
             calibration_data_reader=qdr,
             extra_options=q_static_opts,
-            quant_format=QuantFormat.QOperator,
+            quant_format=QuantFormat.QDQ,
         )
 
     def convert_to_onnx(self):
@@ -150,6 +152,9 @@ class Eval:
 
         dummy_input = self.method.example_input()
         model = model.to("cpu")
+
+        if not os.path.exists("PlaceRec/Evaluate/tmp"):
+            os.makedirs("PlaceRec/Evaluate/tmp")
 
         try:
             torch.onnx.export(
@@ -215,13 +220,16 @@ class Eval:
             ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
         available_providers = ort.get_available_providers()
+        #if "TensorrtExecutionProvider" in available_providers:
+        #    provider = ["TensorrtExecutionProvider"]
+        print("============================================================================================", available_providers)
         if "CUDAExecutionProvider" in available_providers:
             provider = ["CUDAExecutionProvider"]
         elif "CoreMLExecutionProvider" in available_providers:
             provider = ["CoreMLExecutionProvider"]
         else:
             return None
-
+        
         if self.quantize:
             session = ort.InferenceSession(
                 "PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
@@ -365,12 +373,13 @@ class Eval:
             float: The average CPU extraction latency in milliseconds.
         """
         input_data = self.method.example_input()
+        input_data = input_data.repeat(batch_size, 1, 1, 1)
         input_data = input_data.to("cpu")
         input_data = input_data.numpy()
 
         session = self.setup_onnx_session_cpu()
 
-        for _ in range(10):
+        for _ in range(20):
             out = session.run(None, {"input": input_data})
             self.desc_size = out[0].shape[1]
 
@@ -393,7 +402,7 @@ class Eval:
             num_runs (int): The number of times the feature extraction is run on the GPU to calculate the average latency.
 
         Returns:
-            float: The average GPU extraction latency in milliseconds, or None if CUDA is not available.
+            float: The average GPU extraction latency in milliseconds, or NaN if CUDA is not available.
         """
         img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         input_data = self.method.preprocess(img)[None, :]
@@ -404,20 +413,23 @@ class Eval:
         session = self.setup_onnx_session_gpu()
 
         if session is None:
-            return
+            return float('nan')
 
-        for _ in range(10):
+        for _ in range(20):
             _ = session.run(None, {"input": input_data})
 
         # Measure inference time
         start_time = time.time()
         for _ in range(num_runs):
             _ = session.run(None, {"input": input_data})
+            # Ensure all GPU operations are complete
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
         end_time = time.time()
         average_time = (
             (end_time - start_time) / num_runs * 1000
         )  # Convert to milliseconds
-
+        print("============================================================================================", average_time)
         self.results["extraction_gpu_latency_ms"] = average_time
         return average_time
 

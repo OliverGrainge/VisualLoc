@@ -237,6 +237,10 @@ class BaseFunctionality(BaseTechnique):
         self.predict_state = True
         device = self.set_device()
         dummy_input = self.example_input().to(device)
+
+        if not os.path.exists("PlaceRec/Methods/tmp"):
+            os.makedirs("PlaceRec/Methods/tmp")
+
         torch.onnx.export(
             self.model,
             dummy_input,
@@ -296,7 +300,9 @@ class BaseFunctionality(BaseTechnique):
         Raises:
             onnxruntime.capi.onnxruntime_pybind11_state.Fail: If the ONNX model file cannot be loaded.
         """
-        if "CUDAExecutionProvider" in ort.get_available_providers():
+        if "TensorrtExecutionProvider" in ort.get_available_providers():
+            provider = ["TensorrtExecutionProvider"]
+        elif "CUDAExecutionProvider" in ort.get_available_providers():
             provider = ["CUDAExecutionProvider"]
         else:
             provider = ["CPUExecutionProvider"]
@@ -306,6 +312,7 @@ class BaseFunctionality(BaseTechnique):
         sess_options.graph_optimization_level = (
             ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
+
         if self.quantize_state:
             self.session = ort.InferenceSession(
                 "PlaceRec/Methods/tmp/qmodel.onnx", sess_options, providers=provider

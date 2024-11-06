@@ -39,7 +39,7 @@ class MapillarySLS(BaseDataset):
                 for pth in self.qImages[np.load(self.root + "/msls_val_qIdx.npy")]
             ]
         )
-        self.gt = np.load(self.root + "/msls_val_pIdx.npy", allow_pickle=True)
+        self.gt = np.load(self.root + "/msls_val_gt.npy", allow_pickle=True)
 
         count = 0
         for pth in self.map_paths:
