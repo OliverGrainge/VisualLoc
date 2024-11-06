@@ -8,9 +8,9 @@ args = run_arguments()
 # ================================ Compute Descriptors ==================================
 for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
-    method.set_device(args.device)
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
+        method.setup_predict()
         map_loader = ds.map_images_loader(
             preprocess=method.preprocess,
             num_workers=args.num_workers,

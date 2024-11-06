@@ -6,51 +6,18 @@ from typing import Dict, List, Union
 
 import faiss
 import numpy as np
+import onnx
 import onnxruntime as ort
 import torch
 import torch.nn as nn
+from onnxruntime import quantization
+from onnxruntime.quantization.quant_utils import QuantFormat
 from PIL import Image
 from ptflops import get_model_complexity_info
-from onnxruntime.quantization import quantize_dynamic, QuantType
 from tabulate import tabulate
-from onnxruntime.quantization import CalibrationDataReader
-from onnxruntime.quantization.quant_utils import QuantFormat
-import onnx
-from onnxruntime import quantization
 
 from PlaceRec.Methods.base_method import BaseTechnique
-
-
-class QuantizationDataReader(CalibrationDataReader):
-    def __init__(self, dataloader):
-        """
-        Initializes the QuantizationDataReader with a PyTorch DataLoader.
-
-        Args:
-            dataloader (torch.utils.data.DataLoader): PyTorch DataLoader providing calibration data.
-        """
-        self.dataloader = dataloader
-        self.data_iter = iter(dataloader)
-
-    def get_next(self):
-        """
-        Provides the next batch of inputs for ONNX Runtime calibration.
-
-        Returns:
-            Dict[str, np.ndarray] or None: A dictionary where the keys match the input names of the ONNX model
-                                           and the values are the input data as numpy arrays. Returns None when
-                                           the data is exhausted.
-        """
-        try:
-            data = next(self.data_iter)
-            inputs = data[1]
-            if isinstance(inputs, torch.Tensor):
-                inputs = inputs.cpu().numpy()
-            return {"input": inputs}
-        
-        except StopIteration:
-            return None
-
+from PlaceRec.utils import QuantizationDataReader
 
 
 class Eval:
@@ -89,11 +56,10 @@ class Eval:
             dataset (Union[BaseTechnique, None], optional): The dataset to be used for evaluation. Defaults to None.
         """
         self.dataset = dataset
-        self.method = method    
+        self.method = method
         self.gt = dataset.ground_truth()
         self.results = {}
         self.quantize = quantize
-
 
     def eval(self):
         """
@@ -115,34 +81,52 @@ class Eval:
         print(tabulate(table_data, headers=["Metric", "Value"]))
         return self.results
 
+    def quantize_model(self):
+        quantization.shape_inference.quant_pre_process(
+            "PlaceRec/Evaluate/tmp/model.onnx",
+            "PlaceRec/Evaluate/tmp/prep_model.onnx",
+            skip_symbolic_shape=False,
+        )
 
-    def quantize_model(self): 
-        quantization.shape_inference.quant_pre_process("PlaceRec/Evaluate/tmp/model.onnx", "PlaceRec/Evaluate/tmp/prep_model.onnx", skip_symbolic_shape=False)
-            
-        qdr = QuantizationDataReader(self.dataset.query_images_loader(batch_size=1, preprocess=self.method.preprocess, num_workers=0, pin_memory=False))
-            
-        q_static_opts = {"ActivationSymmetric":True,
-                 "WeightSymmetric":True}
-        
-        quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
-                                               model_output="PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
-                                               calibration_data_reader=qdr,
-                                               extra_options=q_static_opts,
-                                               quant_format=QuantFormat.QOperator)
-        
-        q_static_opts = {"ActivationSymmetric":True,
-                            "WeightSymmetric":True}
-        
-        qdr = QuantizationDataReader(self.dataset.query_images_loader(batch_size=1, preprocess=self.method.preprocess, num_workers=0, pin_memory=False))
-            
-        q_static_opts = {"ActivationSymmetric":False,
-                 "WeightSymmetric":True}
-        
-        quantization.quantize_static(model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
-                                               model_output="PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
-                                               calibration_data_reader=qdr,
-                                               extra_options=q_static_opts, 
-                                               quant_format=QuantFormat.QOperator)
+        qdr = QuantizationDataReader(
+            self.dataset.query_images_loader(
+                batch_size=24,
+                preprocess=self.method.preprocess,
+                num_workers=0,
+                pin_memory=False,
+            )
+        )
+
+        q_static_opts = {"ActivationSymmetric": True, "WeightSymmetric": True}
+
+        quantization.quantize_static(
+            model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
+            model_output="PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
+            calibration_data_reader=qdr,
+            extra_options=q_static_opts,
+            quant_format=QuantFormat.QOperator,
+        )
+
+        q_static_opts = {"ActivationSymmetric": True, "WeightSymmetric": True}
+
+        qdr = QuantizationDataReader(
+            self.dataset.query_images_loader(
+                batch_size=24,
+                preprocess=self.method.preprocess,
+                num_workers=0,
+                pin_memory=False,
+            )
+        )
+
+        q_static_opts = {"ActivationSymmetric": False, "WeightSymmetric": True}
+
+        quantization.quantize_static(
+            model_input="PlaceRec/Evaluate/tmp/prep_model.onnx",
+            model_output="PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
+            calibration_data_reader=qdr,
+            extra_options=q_static_opts,
+            quant_format=QuantFormat.QOperator,
+        )
 
     def convert_to_onnx(self):
         """
@@ -157,14 +141,15 @@ class Eval:
         """
 
         if not isinstance(self.method.model, nn.Module):
-            raise ValueError("The model must be a PyTorch nn.Module to convert to ONNX.")
+            raise ValueError(
+                "The model must be a PyTorch nn.Module to convert to ONNX."
+            )
 
         model = self.method.model
         model.eval()
 
         dummy_input = self.method.example_input()
         model = model.to("cpu")
-
 
         try:
             torch.onnx.export(
@@ -174,19 +159,18 @@ class Eval:
                 export_params=True,
                 opset_version=14,
                 do_constant_folding=True,
-                input_names=['input'],
-                output_names=['output'],
-                dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
+                input_names=["input"],
+                output_names=["output"],
+                dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
             )
         except Exception as e:
             raise Exception(f"Error converting model to ONNX: {e}")
-        
+
         model_onnx = onnx.load("PlaceRec/Evaluate/tmp/model.onnx")
         onnx.checker.check_model(model_onnx)
-        
+
         if self.quantize:
             self.quantize_model()
-
 
     def setup_onnx_session_cpu(self):
         """
@@ -202,11 +186,15 @@ class Eval:
         sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         if self.quantize:
             session = ort.InferenceSession(
-                "PlaceRec/Evaluate/tmp/qmodel_cpu.onnx", sess_options, providers=["CPUExecutionProvider"]
+                "PlaceRec/Evaluate/tmp/qmodel_cpu.onnx",
+                sess_options,
+                providers=["CPUExecutionProvider"],
             )
         else:
             session = ort.InferenceSession(
-                "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=["CPUExecutionProvider"]
+                "PlaceRec/Evaluate/tmp/model.onnx",
+                sess_options,
+                providers=["CPUExecutionProvider"],
             )
         return session
 
@@ -231,19 +219,20 @@ class Eval:
             provider = ["CUDAExecutionProvider"]
         elif "CoreMLExecutionProvider" in available_providers:
             provider = ["CoreMLExecutionProvider"]
-        else: 
+        else:
             return None
 
         if self.quantize:
             session = ort.InferenceSession(
-                "PlaceRec/Evaluate/tmp/qmodel_gpu.onnx", sess_options, providers=provider
-            ) 
+                "PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
+                sess_options,
+                providers=provider,
+            )
         else:
             session = ort.InferenceSession(
                 "PlaceRec/Evaluate/tmp/model.onnx", sess_options, providers=provider
-            ) 
+            )
         return session
-    
 
     def compute_all_matches(self, k=1):
         """
@@ -257,7 +246,9 @@ class Eval:
         """
         self.method.load_descriptors(self.dataset.name)
         if self.method.query_desc is None:
-            raise Exception("Query descriptors not loaded. You must pre-compute them before calling this method.")
+            raise Exception(
+                "Query descriptors not loaded. You must pre-compute them before calling this method."
+            )
         self.matches, self.distances = self.method.place_recognise(
             self.method.query_desc, k=k
         )
@@ -394,7 +385,6 @@ class Eval:
         self.results["extraction_cpu_latency_ms"] = average_time
         return average_time
 
-
     def extraction_gpu_latency(self, batch_size: int = 1, num_runs: int = 100) -> float:
         """
         Measures and returns the GPU latency of the feature extraction process for the model over a number of runs.
@@ -405,9 +395,7 @@ class Eval:
         Returns:
             float: The average GPU extraction latency in milliseconds, or None if CUDA is not available.
         """
-        img = Image.fromarray(
-            np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8)
-        )
+        img = Image.fromarray(np.random.randint(0, 244, (224, 224, 3)).astype(np.uint8))
         input_data = self.method.preprocess(img)[None, :]
         input_data = input_data.repeat(batch_size, 1, 1, 1)
         input_data = input_data.to("cpu")
@@ -415,7 +403,7 @@ class Eval:
 
         session = self.setup_onnx_session_gpu()
 
-        if session is None: 
+        if session is None:
             return
 
         for _ in range(10):
@@ -432,7 +420,6 @@ class Eval:
 
         self.results["extraction_gpu_latency_ms"] = average_time
         return average_time
-
 
     def count_params(self) -> int:
         """

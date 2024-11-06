@@ -5,14 +5,18 @@ from typing import Dict, Tuple, Union
 
 import faiss
 import numpy as np
+import onnx
+import onnxruntime as ort
 import torch
 import torch.nn as nn
+from onnxruntime import quantization
+from onnxruntime.quantization.quant_utils import QuantFormat
 from PIL import Image
 from sklearn.metrics.pairwise import cosine_similarity
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from PlaceRec.utils import get_config
+from PlaceRec.utils import QuantizationDataReader, get_config
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
@@ -207,15 +211,149 @@ class BaseFunctionality(BaseTechnique):
         self.map = None
         self.name = None
         self.model = None
+        # inference state
+        self.predict_state = False
+        self.quantize_state = False
+        self.session = None
 
-    @torch.no_grad()
-    def inference(self, x):
-        return self.model(x)
+    def setup_predict(self, cal_ds=None, quantize=False):
+        """
+        Set up the model for prediction by exporting it to ONNX format and optionally quantizing it.
+
+        This method exports the PyTorch model to an ONNX format, which is a standard for representing
+        machine learning models. It also checks the validity of the ONNX model. If quantization is
+        enabled, it prepares the model for quantization and performs either static or dynamic quantization
+        based on the availability of calibration data.
+
+        Args:
+            cal_ds (optional): A dataset providing calibration data for static quantization. If None,
+                               dynamic quantization is performed.
+            quantize (bool): A flag indicating whether to quantize the model. Defaults to False.
+
+        Raises:
+            onnxruntime.capi.onnxruntime_pybind11_state.Fail: If the ONNX model file cannot be loaded or checked.
+        """
+        self.quantize_state = quantize
+        self.predict_state = True
+        device = self.set_device()
+        dummy_input = self.example_input().to(device)
+        torch.onnx.export(
+            self.model,
+            dummy_input,
+            "PlaceRec/Methods/tmp/model.onnx",
+            export_params=True,
+            opset_version=14,
+            do_constant_folding=True,
+            input_names=["input"],
+            output_names=["output"],
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+        )
+
+        model_onnx = onnx.load("PlaceRec/Methods/tmp/model.onnx")
+        onnx.checker.check_model(model_onnx)
+
+        if quantize:
+            quantization.shape_inference.quant_pre_process(
+                "PlaceRec/Methods/tmp/model.onnx",
+                "PlaceRec/Methods/tmp/prep_model.onnx",
+                skip_symbolic_shape=False,
+            )
+
+            if cal_ds is not None:
+                qdr = QuantizationDataReader(
+                    cal_ds.query_images_loader(
+                        batch_size=1,
+                        preprocess=self.method.preprocess,
+                        num_workers=0,
+                        pin_memory=False,
+                    )
+                )
+
+            if torch.cuda.is_available():
+                q_static_opts = {"ActivationSymmetric": True, "WeightSymmetric": True}
+            else:
+                q_static_opts = {"ActivationSymmetric": False, "WeightSymmetric": True}
+
+            if cal_ds is not None:
+                quantization.quantize_static(
+                    model_input="PlaceRec/Methods/tmp/prep_model.onnx",
+                    model_output="PlaceRec/Methods/tmp/model.onnx",
+                    calibration_data_reader=qdr,
+                    extra_options=q_static_opts,
+                    quant_format=QuantFormat.QOperator,
+                )
+            else:
+                quantization.quantize_dynamic(
+                    model_input="PlaceRec/Methods/tmp/prep_model.onnx",
+                    model_output="PlaceRec/Methods/tmp/model.onnx",
+                    quant_format=QuantFormat.QOperator,
+                )
+
+    def setup_onnx_session(self):
+        """
+        Set up an ONNX runtime inference session for the model.
+
+        This method initializes an ONNX InferenceSession using the available execution providers.
+        It prioritizes GPU-based providers like CUDA and CoreML if available, otherwise defaults
+        to the CPU provider. The session is configured with specific options for execution mode
+        and graph optimization level to enhance performance.
+
+        Raises:
+            onnxruntime.capi.onnxruntime_pybind11_state.Fail: If the ONNX model file cannot be loaded.
+        """
+        if "CUDAExecutionProvider" in ort.get_available_providers():
+            provider = ["CUDAExecutionProvider"]
+        elif "CoreMLExecutionProvider" in ort.get_available_providers():
+            provider = ["CoreMLExecutionProvider"]
+        else:
+            provider = ["CPUExecutionProvider"]
+
+        sess_options = ort.SessionOptions()
+        sess_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.graph_optimization_level = (
+            ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+        )
+
+        self.session = ort.InferenceSession(
+            "PlaceRec/Methods/tmp/model.onnx", sess_options, providers=provider
+        )
+
+    def predict(self, query_images: torch.Tensor) -> torch.Tensor:
+        """
+        Perform prediction on the given query images using the model or ONNX session.
+
+        This method checks if the prediction state is active. If so, it uses an ONNX session
+        to run inference on the input query images. If the ONNX session is not set up, it initializes
+        the session and then performs inference. If the prediction state is not active, it uses the
+        PyTorch model to perform inference.
+
+        Args:
+            query_images (torch.Tensor): A tensor containing the query images for which predictions
+                                         are to be made.
+
+        Returns:
+            torch.Tensor: A tensor containing the predicted descriptors for the input query images.
+        """
+        if self.predict_state == True:
+            if self.session is not None:
+                query_images = query_images.detach().cpu().numpy()
+                out = self.session.run(None, {"input": query_images})
+                desc = out[0]
+                return torch.from_numpy(desc)
+            else:
+                self.setup_onnx_session()
+                query_images = query_images.detach().cpu().numpy()
+                out = self.session.run(None, {"input": query_images})
+                desc = out[0]
+                return torch.from_numpy(desc)
+        else:
+            with torch.no_grad():
+                return self.model(query_images)
 
     def load_weights(self, weights_path):
         state_dict = torch.load(
             weights_path, map_location="cpu", weights_only=False
-        )  # ["state_dict"]
+        )  
 
         if isinstance(state_dict, nn.Module):
             self.model = state_dict
@@ -305,7 +443,7 @@ class BaseFunctionality(BaseTechnique):
 
         img = self.preprocess(img)
         with torch.no_grad():
-            desc = self.model(img[None, :].to(self.device)).detach().cpu().numpy()
+            desc = self.predict(img[None, :].to(self.device)).detach().cpu().numpy()
         return desc.astype(np.float32)
 
     def place_recognise(
@@ -430,7 +568,7 @@ class BaseFunctionality(BaseTechnique):
             self.map_desc = pickle.load(f)
             self.set_map(self.map_desc)
 
-    def set_device(self, device: str = None) -> None:
+    def set_device(self, device: Union[str, None] = None) -> None:
         """
         Set the device for the model.
 
@@ -439,10 +577,10 @@ class BaseFunctionality(BaseTechnique):
 
         Args:
             device (str): The device to which the model should be moved.
-                        Common values are 'cpu', 'cuda:0', etc.
+                        Common values are 'cpu', 'cuda', 'cuda:0', 'mps', etc.
 
         Returns:
-            None
+            device (str): The device on which the model is running
         """
         if device is None:
             if torch.cuda.is_available():
@@ -452,9 +590,12 @@ class BaseFunctionality(BaseTechnique):
             else:
                 self.device = "cpu"
         else:
+            # Optionally, validate the device string here
             self.device = device
 
-        self.model = self.model.to(self.device)  # Make sure to use self.device
+        # Move model to the specified device
+        self.model = self.model.to(self.device)
+        return self.device
 
 
 class SingleStageBaseModelWrapper(BaseFunctionality):
@@ -530,14 +671,12 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
             (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
             dtype=np.float32,
         )
-        self.set_device(self.device)
+        device = self.set_device()
         with torch.no_grad():
             for indicies, batch in tqdm(
                 dataloader, desc=f"Computing {self.name} Query Desc", disable=not pbar
             ):
-                batch = batch.to(self.device)
-
-                features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                features = self.predict(batch.to(device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
@@ -560,7 +699,7 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
         Returns:
             dict: A dictionary containing the computed map descriptors.
         """
-        self.set_device(self.device)
+        device = self.set_device()
         all_desc = np.empty(
             (dataloader.dataset.__len__(), *self.features_dim["global_feature_shape"]),
             dtype=np.float32,
@@ -569,12 +708,10 @@ class SingleStageBaseModelWrapper(BaseFunctionality):
             for indicies, batch in tqdm(
                 dataloader, desc=f"Computing {self.name} Map Desc", disable=not pbar
             ):
-                features = self.model(batch.to(self.device)).detach().cpu().numpy()
+                features = self.predict(batch.to(device)).detach().cpu().numpy()
                 all_desc[indicies.numpy(), :] = features
 
         all_desc = all_desc / np.linalg.norm(all_desc, axis=1, keepdims=True)
         map_result = {"global_descriptors": all_desc}
         self.set_map(map_result)
         return map_result
-
-

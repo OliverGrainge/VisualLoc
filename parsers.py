@@ -48,6 +48,13 @@ def run_arguments():
         help="Choose whether to pin memory in GPU",
     )
 
+    parser.add_argument(
+        "--quantize",
+        action="store_true",
+        default=False,
+        help="enable quantization",
+    )
+
     parser.add_argument("--device", type=str, default=config["run"]["device"])
 
     args = parser.parse_args()

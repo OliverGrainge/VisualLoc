@@ -3,12 +3,14 @@ from typing import Union
 
 import numpy as np
 import torch.nn as nn
+import math 
 import torch.nn.functional as F
 import yaml
+from onnxruntime.quantization import CalibrationDataReader
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+import torch 
 
 class ImageIdxDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -86,3 +88,40 @@ def init_weights(m):
         nn.init.xavier_uniform_(m.weight.data)
         if m.bias is not None:
             nn.init.constant_(m.bias.data, 0)
+
+
+class QuantizationDataReader(CalibrationDataReader):
+    def __init__(self, dataloader, max_inputs: int = 500):
+        """
+        Initializes the QuantizationDataReader with a PyTorch DataLoader.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): PyTorch DataLoader providing calibration data.
+        """
+        self.dataloader = dataloader
+        self.data_iter = iter(dataloader)
+        self.max_batches = math.ceil(dataloader.batch_size / max_inputs)
+        self.batch_counter = 0
+
+
+    def get_next(self):
+        """
+        Provides the next batch of inputs for ONNX Runtime calibration.
+
+        Returns:
+            Dict[str, np.ndarray] or None: A dictionary where the keys match the input names of the ONNX model
+                                           and the values are the input data as numpy arrays. Returns None when
+                                           the data is exhausted.
+        """
+        try:
+            if self.batch_counter >= self.max_batches:
+                return None # End of data
+            data = next(self.data_iter)
+            inputs = data[1]
+            if isinstance(inputs, torch.Tensor):
+                inputs = inputs.cpu().numpy()
+            self.batch_counter += 1
+            return {"input": inputs}
+
+        except StopIteration:
+            return None
