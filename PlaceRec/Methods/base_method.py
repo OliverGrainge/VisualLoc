@@ -259,35 +259,30 @@ class BaseFunctionality(BaseTechnique):
                 skip_symbolic_shape=False,
             )
 
-            if cal_ds is not None:
-                qdr = QuantizationDataReader(
-                    cal_ds.query_images_loader(
-                        batch_size=1,
-                        preprocess=self.method.preprocess,
-                        num_workers=0,
-                        pin_memory=False,
-                    )
+            if cal_ds is None:
+                raise Exception("Calibration dataset is required for static quantization")
+            
+            qdr = QuantizationDataReader(
+                cal_ds.query_images_loader(
+                    batch_size=1,
+                    preprocess=self.preprocess,
+                    num_workers=0,
+                    pin_memory=False,
                 )
+            )
 
             if torch.cuda.is_available():
                 q_static_opts = {"ActivationSymmetric": True, "WeightSymmetric": True}
             else:
                 q_static_opts = {"ActivationSymmetric": False, "WeightSymmetric": True}
 
-            if cal_ds is not None:
-                quantization.quantize_static(
-                    model_input="PlaceRec/Methods/tmp/prep_model.onnx",
-                    model_output="PlaceRec/Methods/tmp/model.onnx",
-                    calibration_data_reader=qdr,
-                    extra_options=q_static_opts,
-                    quant_format=QuantFormat.QOperator,
-                )
-            else:
-                quantization.quantize_dynamic(
-                    model_input="PlaceRec/Methods/tmp/prep_model.onnx",
-                    model_output="PlaceRec/Methods/tmp/model.onnx",
-                    quant_format=QuantFormat.QOperator,
-                )
+            quantization.quantize_static(
+                model_input="PlaceRec/Methods/tmp/prep_model.onnx",
+                model_output="PlaceRec/Methods/tmp/qmodel.onnx",
+                calibration_data_reader=qdr,
+                extra_options=q_static_opts,
+                quant_format=QuantFormat.QDQ,
+            )
 
     def setup_onnx_session(self):
         """
@@ -303,8 +298,6 @@ class BaseFunctionality(BaseTechnique):
         """
         if "CUDAExecutionProvider" in ort.get_available_providers():
             provider = ["CUDAExecutionProvider"]
-        elif "CoreMLExecutionProvider" in ort.get_available_providers():
-            provider = ["CoreMLExecutionProvider"]
         else:
             provider = ["CPUExecutionProvider"]
 
@@ -313,10 +306,14 @@ class BaseFunctionality(BaseTechnique):
         sess_options.graph_optimization_level = (
             ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
-
-        self.session = ort.InferenceSession(
-            "PlaceRec/Methods/tmp/model.onnx", sess_options, providers=provider
-        )
+        if self.quantize_state:
+            self.session = ort.InferenceSession(
+                "PlaceRec/Methods/tmp/qmodel.onnx", sess_options, providers=provider
+            )
+        else:
+            self.session = ort.InferenceSession(
+                "PlaceRec/Methods/tmp/model.onnx", sess_options, providers=provider
+            )
 
     def predict(self, query_images: torch.Tensor) -> torch.Tensor:
         """
@@ -363,13 +360,7 @@ class BaseFunctionality(BaseTechnique):
             state_dict = state_dict["state_dict"]
         elif "model_state_dict" in list(state_dict.keys()):
             state_dict = state_dict["model_state_dict"]
-        """
-        for (
-            idx,
-            key,
-        ) in enumerate(list(state_dict.keys())):
-            print(key, list(self.model.state_dict().keys())[idx])
-        """
+ 
 
         def adapt_state_dict(model, state_dict):
             model_keys = list(model.state_dict().keys())

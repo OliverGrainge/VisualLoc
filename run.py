@@ -10,7 +10,7 @@ for method_name in args.methods:
     method = get_method(method_name, pretrained=True)
     for dataset_name in args.datasets:
         ds = get_dataset(dataset_name)
-        method.setup_predict()
+        method.setup_predict(quantize=args.quantize, cal_ds=ds)
         map_loader = ds.map_images_loader(
             preprocess=method.preprocess,
             num_workers=args.num_workers,

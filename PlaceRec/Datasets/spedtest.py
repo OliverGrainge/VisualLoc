@@ -28,16 +28,16 @@ class SpedTest(BaseDataset):
         self.map_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "SPED_dbImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/SPED_dbImages.npy")
             ]
         )
         self.query_paths = np.array(
             [
                 join(self.root, pth)
-                for pth in np.load(join(self.root, "SPED_qImages.npy"))
+                for pth in np.load("PlaceRec/Datasets/image_paths/SPED_qImages.npy")
             ]
         )
-        self.gt = np.load(join(self.root, "SPED_gt.npy"), allow_pickle=True)
+        self.gt = np.load("PlaceRec/Datasets/image_paths/SPED_gt.npy", allow_pickle=True)
         self.name = "spedtest"
 
     def query_images_loader(
