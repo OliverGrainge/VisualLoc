@@ -37,7 +37,9 @@ class SpedTest(BaseDataset):
                 for pth in np.load("PlaceRec/Datasets/image_paths/SPED_qImages.npy")
             ]
         )
-        self.gt = np.load("PlaceRec/Datasets/image_paths/SPED_gt.npy", allow_pickle=True)
+        self.gt = np.load(
+            "PlaceRec/Datasets/image_paths/SPED_gt.npy", allow_pickle=True
+        )
         self.name = "spedtest"
 
     def query_images_loader(

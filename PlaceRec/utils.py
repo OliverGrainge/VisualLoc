@@ -1,16 +1,17 @@
+import math
 from argparse import Namespace
 from typing import Union
 
 import numpy as np
+import torch
 import torch.nn as nn
-import math 
 import torch.nn.functional as F
 import yaml
 from onnxruntime.quantization import CalibrationDataReader
 from PIL import Image
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import torch 
+
 
 class ImageIdxDataset(Dataset):
     def __init__(self, img_paths, preprocess=None):
@@ -103,7 +104,6 @@ class QuantizationDataReader(CalibrationDataReader):
         self.max_batches = math.ceil(dataloader.batch_size / max_inputs)
         self.batch_counter = 0
 
-
     def get_next(self):
         """
         Provides the next batch of inputs for ONNX Runtime calibration.
@@ -115,7 +115,7 @@ class QuantizationDataReader(CalibrationDataReader):
         """
         try:
             if self.batch_counter >= self.max_batches:
-                return None # End of data
+                return None  # End of data
             data = next(self.data_iter)
             inputs = data[1]
             if isinstance(inputs, torch.Tensor):

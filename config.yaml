@@ -1,9 +1,9 @@
 # Desktop
-datasets_directory: "/home/oliver/Documents/github/Datasets"
-weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
+#datasets_directory: "/home/oliver/Documents/github/Datasets"
+#weights_directory: "/home/oliver/Documents/github/VisualLoc_Weights"
 # Laptop
-#weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
-#datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
+weights_directory: "/Users/olivergrainge/Documents/github/VisualLoc_Weights"
+datasets_directory: "/Users/olivergrainge/Documents/github/Datasets"
 #HPC
 #datasets_directory: "/scratch/oeg1n18/datasets"
 #weights_directory: "/scratch/oeg1n18/VisualLoc_Weights"

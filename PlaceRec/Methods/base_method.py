@@ -264,8 +264,10 @@ class BaseFunctionality(BaseTechnique):
             )
 
             if cal_ds is None:
-                raise Exception("Calibration dataset is required for static quantization")
-            
+                raise Exception(
+                    "Calibration dataset is required for static quantization"
+                )
+
             qdr = QuantizationDataReader(
                 cal_ds.query_images_loader(
                     batch_size=1,
@@ -355,9 +357,7 @@ class BaseFunctionality(BaseTechnique):
                 return self.model(query_images)
 
     def load_weights(self, weights_path):
-        state_dict = torch.load(
-            weights_path, map_location="cpu", weights_only=False
-        )  
+        state_dict = torch.load(weights_path, map_location="cpu", weights_only=False)
 
         if isinstance(state_dict, nn.Module):
             self.model = state_dict
@@ -367,7 +367,6 @@ class BaseFunctionality(BaseTechnique):
             state_dict = state_dict["state_dict"]
         elif "model_state_dict" in list(state_dict.keys()):
             state_dict = state_dict["model_state_dict"]
- 
 
         def adapt_state_dict(model, state_dict):
             model_keys = list(model.state_dict().keys())

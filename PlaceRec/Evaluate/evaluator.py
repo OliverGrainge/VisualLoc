@@ -220,16 +220,19 @@ class Eval:
             ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         )
         available_providers = ort.get_available_providers()
-        #if "TensorrtExecutionProvider" in available_providers:
+        # if "TensorrtExecutionProvider" in available_providers:
         #    provider = ["TensorrtExecutionProvider"]
-        print("============================================================================================", available_providers)
+        print(
+            "============================================================================================",
+            available_providers,
+        )
         if "CUDAExecutionProvider" in available_providers:
             provider = ["CUDAExecutionProvider"]
         elif "CoreMLExecutionProvider" in available_providers:
             provider = ["CoreMLExecutionProvider"]
         else:
             return None
-        
+
         if self.quantize:
             session = ort.InferenceSession(
                 "PlaceRec/Evaluate/tmp/qmodel_gpu.onnx",
@@ -413,7 +416,7 @@ class Eval:
         session = self.setup_onnx_session_gpu()
 
         if session is None:
-            return float('nan')
+            return float("nan")
 
         for _ in range(20):
             _ = session.run(None, {"input": input_data})
@@ -429,7 +432,10 @@ class Eval:
         average_time = (
             (end_time - start_time) / num_runs * 1000
         )  # Convert to milliseconds
-        print("============================================================================================", average_time)
+        print(
+            "============================================================================================",
+            average_time,
+        )
         self.results["extraction_gpu_latency_ms"] = average_time
         return average_time
 
